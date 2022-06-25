@@ -435,6 +435,32 @@ function set_quick_bar(index, pindex)
    end
 end
 
+function read_hand(pindex)
+   local cursor_stack=game.get_player(pindex).cursor_stack
+   if cursor_stack and cursor_stack.valid and cursor_stack.valid_for_read then
+      local out={"access.cursor-description"}
+      table.insert(out,cursor_stack.prototype.localised_name)
+      local build_entity = cursor_stack.prototype.place_result
+      if build_entity and build_entity.supports_direction then
+         table.insert(out,1)
+         table.insert(out,{"access.facing-direction",players[pindex].building_direction*2})
+      else
+         table.insert(out,0)
+         table.insert(out,"")
+      end
+      table.insert(out,cursor_stack.count)
+      local extra = game.get_player(pindex).character.get_main_inventory().get_item_count(cursor_stack.name)
+      if extra > 0 then
+         table.insert(out,cursor_stack.count+extra)
+      else
+         table.insert(out,0)
+      end
+      printout(out, pindex)
+   else
+      printout({"access.empty_cursor"}, pindex)
+   end
+end
+
 function read_quick_bar(index,pindex)
    page = game.get_player(pindex).get_active_quick_bar_page(1)-1
    local item = game.get_player(pindex).get_quick_bar_slot(index+ 10*page)
@@ -588,7 +614,7 @@ end
 
 function printout(str, pindex)
    players[pindex].last = str
-   print("out " .. str)
+   localised_print({"","out ",str})
 end
 
 function repeat_last_spoken (pindex)
@@ -731,34 +757,30 @@ function rescan(pindex)
    populate_categories(pindex)
 end
 
+directions={
+   [defines.direction.north]="North",
+   [defines.direction.northeast]="Northeast",
+   [defines.direction.east]="East",
+   [defines.direction.southeast]="Southeast",
+   [defines.direction.south]="South",
+   [defines.direction.southwest]="Southwest",
+   [defines.direction.west]="West",
+   [defines.direction.northwest]="Northwest",
+   [8] = ""
+}
+
 function direction (pos1, pos2)
    local x1 = pos1.x
    local x2 = pos2.x
-  local dx = x2 - x1
+   local dx = x2 - x1
    local y1 = pos1.y
    local y2 = pos2.y
-  local dy = y2 - y1
-   local result = math.atan2 (dy, dx)   
-   if result < math.pi/8 and result > -math.pi/8 then
-      return "East"
-   elseif result < 3*math.pi/8 and result > math.pi/8 then
-      return "South East"
-   elseif result < 5* math.pi / 8 and result > 3*math.pi/8 then
-      return "South"
-   elseif result < 7*math.pi/8 and result > 5*math.pi/8 then
-      return "South West"
-   elseif result  > 7*math.pi/8 or result < -7*math.pi/8 then
-      return "West"
-   elseif result < -math.pi/8 and result > -3*math.pi/8 then
-      return "North East"
-   elseif result < -3*math.pi/8 and result > -5*math.pi/8 then
-      return "North"
-      elseif result < -5*math.pi/8 and result > -7*math.pi/8 then
-      return "North West"
-   else
-      return "Error determining direction"
+   local dy = y2 - y1
+   local dir = math.floor(10.5 + 4*math.atan2(dy,dx)/math.pi)%8
+   if dx == 0 and dy == 0 then
+      dir = 8
    end
-
+   return directions[dir]
 end
 function distance ( pos1, pos2)
    local x1 = pos1.x
@@ -2544,7 +2566,7 @@ script.on_event("left-click", function(event)
       if players[pindex].menu == "inventory" then
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
          game.get_player(pindex).cursor_stack.swap_stack(stack)
-            players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+         players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
          read_inventory_slot(pindex)
       elseif players[pindex].menu == "crafting" then
          local T = {
@@ -3115,14 +3137,14 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
    pindex = event.player_index
    check_for_player(pindex)
    local stack = game.get_player(pindex).cursor_stack
-   if not(stack.valid_for_read) then 
-      players[pindex].previous_item = ""
---      players[pindex].building_direction = -1
+   local new_item = ""
+   if stack.valid_for_read then 
+      new_item = stack.name
+   end
+   if players[pindex].previous_item ~= new_item then
+      players[pindex].previous_item = new_item
       players[pindex].building_direction_lag = true
-   elseif stack.name ~= players[pindex].previous_item then
-      players[pindex].previous_item = stack.name
---      players[pindex].building_direction = -1
-      players[pindex].building_direction_lag = true
+      read_hand(pindex)
    end
 end)
 
@@ -3169,3 +3191,10 @@ script.on_event("recalibrate",function(event)
    pindex = event.player_index
    scale_start(pindex)
 end)
+
+script.on_event("read-hand",function(event)
+   pindex = event.player_index
+   check_for_player(pindex)
+   read_hand(pindex)
+end)
+

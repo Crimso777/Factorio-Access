@@ -1,4 +1,4 @@
-#Version 0.0.5
+# Version 0.0.5
 Updated 06/23/22
 New Features:
 -Manual Recalibration: Press CONTROL + END to recallibrate.  Very useful if you frequently zoom in
@@ -16,7 +16,7 @@ Various bugfixes:
    -Fixed bug where offshore pumps wouldn't read output correctly
    -fixed bug(hopefully) where a scanned item would disappear from the scan list requiring a re-scan
    -fixed bug where opening inventory during callibration would bypass callibration
-#Version 0.0.4
+# Version 0.0.4
 Updated 6/16/22
 -Variety of bug fixes:
    -Game will no longer crash when changing category before the initial scan
@@ -31,12 +31,12 @@ Note: The new movement system may have some undiscovered bugs, so please be pati
 -Significant improvements to scanning and initialization performance.
 -A fresh new .jkm file for Jaws users.  This should also speed up performance.  Consult the readme for instructions on how to install this file.
 
-#Version 0.0.3
+# Version 0.0.3
 Updated 6/15/22
 -Added accessible menu for placing offshore pumps
 -Added f to the list of keybinds in the readme
 
-#Version 0.0.2
+# Version 0.0.2
 Updated 6/15/22
 -Started a changelog, version numbers will be reflected here but not in the mods folder just to keep things simple
 -Added tile based descriptions of a buildings input/output.  To see this information, use cursor mode and move around the perimeter of the building.  

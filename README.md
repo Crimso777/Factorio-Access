@@ -1,4 +1,4 @@
-#Welcome to Factorio Access!
+# Welcome to Factorio Access!
 
 This is an accessibility mod for the popular game Factorio.  The goal of this mod is to make the game completely accessible to the blind and visually impaired.
 
@@ -7,7 +7,7 @@ To update to the most recent patch, follow instructions for patch install
 Note:  If you have done a full installation using the .zip instructions, there is no need to follow the patch install directions until a new patch comes out.  
 Final note: Jaws users should also follow the instructions for installing the .jkm file
 
-#.zip install:
+# .zip install:
 1.  Download "Factorio Access.zip"
 2.  Open the .zip file and copy its contents
 3.  Navigate to the folder you have factorio installed.  It should already contain a /bin folder, a /data folder etc.  
@@ -17,7 +17,7 @@ Final note: Jaws users should also follow the instructions for installing the .j
    Copy Factorio.jkm from the .zip into your JAWS settings folder in your user appdata
    an example file path is "C:\Users\Crimso\AppData\Roaming\Freedom Scientific\JAWS\2022\Settings\enu\"
 
-#Patch Install:
+# Patch Install:
 1.  Download control.lua, data.lua, and config.ini 
 2.  Navigate to your Factorio folder
 3.  Go to mods/FactorioAccess_0.0.1
@@ -27,7 +27,7 @@ Final note: Jaws users should also follow the instructions for installing the .j
 7. Paste config.ini into this folder
 8.  All done!  You can now run launcher.exe in admin mode to play the game with the new patch
 
-#Mod Controls:
+# Mod Controls:
 Movement:  W A S D
 note: When you change direction, your character doesn't immediately move a tile in that direction.  Think of it like turning your head before taking a step.
 Change movement mode: CONTROL + W
@@ -82,7 +82,7 @@ Press W to jump to previous category level
 Press A and d to select a category from the currently selected tier.
 Set Quickbar #: CONTROL any number
 
-#FAQ:
+# FAQ:
 Q: Does this mod work with the steam version?
 A:  Not yet, however if you buy the game on steam you can use your product key to redeem the standalone version on factorio.com
 
@@ -98,13 +98,13 @@ A:  This mod is currently still in early access.  Bugs are normal and expectted.
 Q:  Do I have to pay to use the mod?
 A:  The mod is and always will be free.  The game itself costs $30 on [Factorio.com](www.factorio.com)
 
-#Help and Support
+# Help and Support
 If your question wasn't answered here, please check out our [Discord](https://discord.gg/CC4QA6KtzP) server, and ask your question there.
 
-#Changes
+# Changes
 An updated changelog can be found [here](https://github.com/Crimso777/Factorio-Access/blob/main/CHANGES.md)
 
-#Donations
+# Donations
 While this mod is completely free for all, I am a full time student working on this mod in my free time, thus any and all support is greatly appreciated.
 If you are so inclined, you can donate at my [Patreon](https://www.patreon.com/Crimso777)
 

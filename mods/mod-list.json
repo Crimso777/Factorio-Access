@@ -1,0 +1,16 @@
+
+{
+  "mods": 
+  [
+    
+    {
+      "name": "base",
+      "enabled": true
+    },
+    
+    {
+      "name": "FactorioAccess",
+      "enabled": true
+    }
+  ]
+}

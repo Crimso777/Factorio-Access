@@ -734,10 +734,10 @@ end
 function direction (pos1, pos2)
    local x1 = pos1.x
    local x2 = pos2.x
-  local dx = x2 - x1
+   local dx = x2 - x1
    local y1 = pos1.y
    local y2 = pos2.y
-  local dy = y2 - y1
+   local dy = y2 - y1
    local result = math.atan2 (dy, dx)   
    if result < math.pi/8 and result > -math.pi/8 then
       return "East"
@@ -2560,7 +2560,7 @@ script.on_event("left-click", function(event)
       if players[pindex].menu == "inventory" then
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
          game.get_player(pindex).cursor_stack.swap_stack(stack)
-            players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+         players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
          read_inventory_slot(pindex)
       elseif players[pindex].menu == "crafting" then
          local T = {
@@ -2984,13 +2984,10 @@ script.on_event("right-click", function(event)
       elseif players[pindex].menu == "building" then
          local stack = game.get_player(pindex).cursor_stack
          if stack.valid_for_read and stack.valid and stack.count > 0 then
-            if players[pindex].building.sector <= #players[pindex].building.sectors then
-               T = {
-                  name = stack.name,
-                  count = 1
-               }                  
-               local inserted = players[pindex].building.sectors[players[pindex].building.sector].inventory.insert(T)
-               if inserted == 1 then
+            local building=players[pindex].building
+            if building.sector <= #building.sectors then
+               local target_stack = building.sectors[building.sector].inventory[building.index]
+               if target_stack and target_stack.transfer_stack{name=stack.name} then 
                   printout("Inserted 1 " .. stack.name, pindex)
                   stack.count = stack.count - 1
                else

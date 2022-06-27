@@ -1295,6 +1295,7 @@ function initialize(player)
 
 
    scale_start(index)
+   if player.name == "Crimso" then
 --   player.insert{name="pipe", count=100}
 --   printout("Character loaded." .. #game.surfaces,  player.index)
 --   player.insert{name="accumulator", count=10}
@@ -1326,6 +1327,7 @@ function initialize(player)
 --   player.insert{name="underground-belt", count=100}
 
 --   player.force.research_all_technologies()
+   end
 
    script.on_event(defines.events.on_player_changed_position,function(event)
       local pindex = event.player_index

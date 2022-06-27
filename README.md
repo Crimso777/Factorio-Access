@@ -2,7 +2,6 @@
 
 This is an accessibility mod for the popular game Factorio.  The goal of this mod is to make the game completely accessible to the blind and visually impaired.
 
-
 To install the full version, follow the instructions for .zip install.
 
 To update to the most recent patch, follow instructions for patch install
@@ -10,6 +9,7 @@ To update to the most recent patch, follow instructions for patch install
 Note:  If you have done a full installation using the .zip instructions, there is no need to follow the patch install directions until a new patch comes out.  
 
 Final note: Jaws users should also follow the instructions for installing the .jkm file
+
 
 
 # .zip install:
@@ -31,7 +31,6 @@ Final note: Jaws users should also follow the instructions for installing the .j
    an example file path is "C:\Users\Crimso\AppData\Roaming\Freedom Scientific\JAWS\2022\Settings\enu\"
 
 
-
 # Patch Install:
 
 1.  Download control.lua, data.lua, and config.ini 
@@ -49,7 +48,6 @@ Final note: Jaws users should also follow the instructions for installing the .j
 7. Paste config.ini into this folder
 
 8.  All done!  You can now run launcher.exe in admin mode to play the game with the new patch
-
 
 
 # Mod Controls:
@@ -148,6 +146,7 @@ Unqueue all items:  shift [
 
 Smart Insert/Smart Withdrawal: SHIFT + LEFT BRACKET
 
+
 note: This will insert an item stack, or withdraw an item stack from a building.  It is smart because it will decide the proper inventory to send the item to.  For instance, smart inserting coal into a furnace will attempt to put it in the fuel category, as opposed to the input category.
 
 In item selector:
@@ -193,11 +192,9 @@ Q:  Do I have to pay to use the mod?
 A:  The mod is and always will be free.  The game itself costs $30 on [Factorio.com](www.factorio.com)
 
 
-
 # Help and Support
 
 If your question wasn't answered here, please check out our [Discord](https://discord.gg/CC4QA6KtzP) server, and ask your question there.
-
 
 
 # Changes

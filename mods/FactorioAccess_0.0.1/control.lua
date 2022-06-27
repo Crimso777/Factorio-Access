@@ -187,11 +187,11 @@ function get_adjacent_source(box, pos, dir)
       ebox.right_bottom.x = box.right_bottom.y
       ebox.right_bottom.y = box.right_bottom.x
    end
+   print(ebox.left_top.x .. " " .. ebox.left_top.y)
    ebox.left_top.x = math.ceil(ebox.left_top.x * 2)/2
    ebox.left_top.y = math.ceil(ebox.left_top.y * 2)/2
    ebox.right_bottom.x = math.floor(ebox.right_bottom.x * 2)/2
    ebox.right_bottom.y = math.floor(ebox.right_bottom.y * 2)/2
-
 
    if pos.x < ebox.left_top.x then
       result.position.x = result.position.x + 1
@@ -938,7 +938,21 @@ function read_tile(pindex)
          local direction = ent.direction/2
          for i, box in pairs(ent.prototype.fluidbox_prototypes) do
             for i1, pipe in pairs(box.pipe_connections) do
-               local adjusted = get_adjacent_source(ent.prototype.selection_box, pipe.positions[direction + 1], direction)
+               local adjusted = {position, direction}
+               if ent.name == "offshore-pump" then
+                  adjusted.position = {x = 0, y = 0}
+                  if direction == 0 then 
+                     adjusted.direction = "North"
+                  elseif direction == 1 then 
+                     adjusted.direction = "West"
+                  elseif direction == 2 then 
+                     adjusted.direction = "North"
+                  elseif direction == 3 then 
+                     adjusted.direction = "East"
+                  end
+               else
+                  adjusted = get_adjacent_source(ent.prototype.selection_box, pipe.positions[direction + 1], direction)
+               end
                if adjusted.position.x == relative_position.x and adjusted.position.y == relative_position.y then
                   result = result .. pipe.type .. " 1 " .. adjusted.direction .. " "
                end
@@ -1291,7 +1305,7 @@ function initialize(player)
 --   player.insert{name="electric-mining-drill", count=10}
 --   player.insert{name="heat-exchanger", count=10}
 --   player.insert{name="nuclear-reactor", count=10}
---   player.insert{name="offshore-pump", count=10}
+   player.insert{name="offshore-pump", count=10}
 --   player.insert{name="oil-refinery", count=10}
 --   player.insert{name="pumpjack", count=10}
 --   player.insert{name="rocket-silo", count=1}

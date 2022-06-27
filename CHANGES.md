@@ -1,6 +1,6 @@
-#Version 0.0.5
-Updated 06/23/22
+# Version 0.0.5
 
+Updated 06/23/22
 New Features:
 
 -Manual Recalibration: Press CONTROL + END to recallibrate.  Very useful if you frequently zoom in
@@ -33,7 +33,8 @@ Various bugfixes:
 
    -fixed bug where opening inventory during callibration would bypass callibration
 
-#Version 0.0.4
+# Version 0.0.4
+
 Updated 6/16/22
 
 -Variety of bug fixes:
@@ -61,7 +62,8 @@ Note: The new movement system may have some undiscovered bugs, so please be pati
 -A fresh new .jkm file for Jaws users.  This should also speed up performance.  Consult the readme for instructions on how to install this file.
 
 
-#Version 0.0.3
+# Version 0.0.3
+
 Updated 6/15/22
 
 -Added accessible menu for placing offshore pumps
@@ -69,7 +71,8 @@ Updated 6/15/22
 -Added f to the list of keybinds in the readme
 
 
-#Version 0.0.2
+# Version 0.0.2
+
 Updated 6/15/22
 
 -Started a changelog, version numbers will be reflected here but not in the mods folder just to keep things simple

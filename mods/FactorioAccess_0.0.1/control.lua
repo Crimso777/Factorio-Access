@@ -1316,7 +1316,7 @@ function initialize(player)
 --   player.insert{name="gun-turret", count=10}
 --   player.insert{name="transport-belt", count=100}
 --   player.insert{name="coal", count=100}
---   player.insert{name="filter-inserter", count=10}
+   player.insert{name="filter-inserter", count=10}
 --   player.insert{name="fast-transport-belt", count=100}
 --   player.insert{name="express-transport-belt", count=100}
 --   player.insert{name="small-electric-pole", count=100}
@@ -2983,19 +2983,32 @@ script.on_event("right-click", function(event)
          end
       elseif players[pindex].menu == "building" then
          local stack = game.get_player(pindex).cursor_stack
-         if stack.valid_for_read and stack.valid and stack.count > 0 then
-            if players[pindex].building.sector <= #players[pindex].building.sectors then
-               T = {
-                  name = stack.name,
-                  count = 1
-               }                  
-               local inserted = players[pindex].building.sectors[players[pindex].building.sector].inventory.insert(T)
-               if inserted == 1 then
-                  printout("Inserted 1 " .. stack.name, pindex)
-                  stack.count = stack.count - 1
-               else
-                  printout("Cannot insert " .. stack.name .. " into " .. players[pindex].building.sectors[players[pindex].building.sector].name, pindex)
+         if players[pindex].building.sector <= #players[pindex].building.sectors then
+            if stack.valid_for_read and stack.valid and stack.count > 0 then
+               local iName = players[pindex].building.sectors[players[pindex].building.sector].name
+               if iName ~= "Fluid" and iName ~= "Filters" then
+                  T = {
+                     name = stack.name,
+                     count = 1
+                  }                  
+                  local inserted = players[pindex].building.sectors[players[pindex].building.sector].inventory.insert(T)
+                  if inserted == 1 then
+                     printout("Inserted 1 " .. stack.name, pindex)
+                     stack.count = stack.count - 1
+                  else
+                     printout("Cannot insert " .. stack.name .. " into " .. players[pindex].building.sectors[players[pindex].building.sector].name, pindex)
+                  end
+               
+               elseif iName == "Filters" and players[pindex].item_selection == false and players[pindex].building.index < #players[pindex].building.sectors[players[pindex].building.sector].inventory then 
+                  players[pindex].building.ent.set_filter(players[pindex].building.index, nil)
+                  players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index] = "No filter selected."
+                  printout("Filter cleared", pindex)
+
                end
+            elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Filters" and players[pindex].building.item_selection == false and players[pindex].building.index < #players[pindex].building.sectors[players[pindex].building.sector].inventory then
+               players[pindex].building.ent.set_filter(players[pindex].building.index, nil)
+               players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index] = "No filter selected."
+               printout("Filter cleared.", pindex)
             end
          end
 

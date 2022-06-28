@@ -2991,9 +2991,11 @@ script.on_event("right-click", function(event)
                      name = stack.name,
                      count = 1
                   }                  
-                  local inserted = players[pindex].building.sectors[players[pindex].building.sector].inventory.insert(T)
-                  if inserted == 1 then
-                     printout("Inserted 1 " .. stack.name, pindex)
+                  local building = players[pindex].building
+                  local target_stack = building.sectors[building.sector].inventory[building.index]
+
+                  if target_stack and target_stack.transfer_stack{name=stack.name} then
+                      printout("Inserted 1 " .. stack.name, pindex)
                      stack.count = stack.count - 1
                   else
                      printout("Cannot insert " .. stack.name .. " into " .. players[pindex].building.sectors[players[pindex].building.sector].name, pindex)

@@ -52,27 +52,31 @@ Final note: Jaws users should also follow the instructions for installing the .j
 
 # Mod Controls:
 
-Movement:  W A S D
 
-note: When you change direction, your character doesn't immediately move a tile in that direction.  Think of it like turning your head before taking a step.
+## Movement
+
+Movement: W A S D
+
+Note: When you change direction, your character doesn't immediately move a tile in that direction.  Think of it like turning your head before taking a step.
 
 Change movement mode: CONTROL + W
 
 Note the 3 movement types are as follows:
 
-   1- Telestep: Press a direction to turn in that direction, then continue pressing in that direction to move
+   1- Telestep: Press a direction to turn in that direction, then continue pressing in that direction to move.
 
    2- Step-By-Walk:  This mode is similar to Telestep, however the player character will physically take steps in the direction chosen.  The biggest difference is footsteps.
 
-   3- Smooth-Walking: In this mode the character will move similarly to in a sighted game.  The player will be notified if they run into something, but otherwise will not be notified of entities they are passing.  Very fast, and great for getting around!
+   3- Smooth-Walking: In this mode the character will move similarly to in a sighted game. The player will be notified if they run into something, but otherwise will not be notified of entities they are passing. Very fast, and great for getting around!
+
+
+## Interactions
 
 Mine: X
 
 Open a building's menu: [
 
-Open Inventory: E
-
-Speak cursor coordinates: K
+Open inventory: E
 
 Place building: [
 
@@ -80,7 +84,12 @@ Rotate: R
 
 Note: If you have something in your hand, you will rotate that.  Otherwise you will rotate the building your cursor is over.
 
-Additional Note:  The first time you press the rotate key, it will simply say the direction a building is facing.  Subsequent presses will actually rotate the building
+Additional Note: The first time you press the rotate key, it will simply say the direction a building is facing. Subsequent presses will actually rotate the building
+
+
+## Cursor
+
+Speak cursor coordinates: K
 
 Cursor mode: I
 
@@ -88,23 +97,20 @@ Increase cursor size: CONTROL + I
 
 Decrease cursor size: CONTROL + SHIFT + I
 
-note: You must be in cursor mode for the size of the cursor to make any difference
+Note: You must be in cursor mode for the size of the cursor to make any difference.
 
 Jump cursor to character: J
 
 Teleport player to cursor: shift T
 
-Quickbar: Any number key
 
-Recalibrate: CONTROL + END
-
-Note: If you zoom in and out frequently, you should also recalibrate in order for certain actions like mining and opening buildings to work
+## Scanning
 
 Scan for nearby entities: END
 
-navigate scanned entity list: PAGE UP and PAGE DOWN
+Navigate scanned entity list: PAGE UP and PAGE DOWN
 
-Change scanned category:  CONTROL PAGE UP and CONTROL PAGE DOWN
+Change scanned category: CONTROL PAGE UP and CONTROL PAGE DOWN
 
 Change Sorting mode for scanned list: SHIFT + PAGEUP and SHIFT + PAGEDOWN
 
@@ -114,11 +120,23 @@ Move cursor to scanned target: CONTROL + HOME
 
 Note: This only works while in cursor mode
 
+
+## Others
+
 Time of day and current research: T
 
 Save game: F1
 
-While in a menu:
+Set quickbar #: CONTROL any number
+
+Quickbar: Any number key
+
+Recalibrate: CONTROL + END
+
+Note: If you zoom in and out frequently, you should also recalibrate in order for certain actions like mining and opening buildings to work.
+
+
+## While in a menu
 
 Note: Many functions are implemented only in the inventory screen, such as shift tab and item information.  Soon these features will be in building menus, but for now it is expected behavior
 
@@ -126,11 +144,18 @@ Change tabs within a menu: tab/shift tab
 
 Select Item: [
 
+Item information: L
+
 Coordinates of current inventory slot: K
 
-Crafting components required: K
+Smart Insert/Smart Withdrawal: SHIFT + LEFT BRACKET
 
-Item information: L
+Note: This will insert an item stack, or withdraw an item stack from a building. It is smart because it will decide the proper inventory to send the item to.  For instance, smart inserting coal into a furnace will attempt to put it in the fuel category, as opposed to the input category.
+
+
+### Crafting
+
+Crafting components required: K
 
 Craft 1 item: [
 
@@ -144,20 +169,15 @@ Unqueue 5 items: ]
 
 Unqueue all items:  shift [
 
-Smart Insert/Smart Withdrawal: SHIFT + LEFT BRACKET
 
 
-note: This will insert an item stack, or withdraw an item stack from a building.  It is smart because it will decide the proper inventory to send the item to.  For instance, smart inserting coal into a furnace will attempt to put it in the fuel category, as opposed to the input category.
-
-In item selector:
+## In item selector
 
 Press Left-Bracket or s to select a category.
 
 Press W to jump to previous category level
 
 Press A and d to select a category from the currently selected tier.
-
-Set Quickbar #: CONTROL any number
 
 
 

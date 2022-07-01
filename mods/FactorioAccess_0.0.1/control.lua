@@ -588,7 +588,7 @@ end
 
 function printout(str, pindex)
    players[pindex].last = str
-   print("out " .. str)
+   localised_print{"","out ",str}
 end
 
 function repeat_last_spoken (pindex)
@@ -3181,6 +3181,36 @@ script.on_event("save", function(event)
    game.auto_save("manual")
    printout("Saving Game, please do not quit yet.", pindex)
 
+end)
+script.on_nth_tick(10, function(event)
+   for pindex, player in pairs(players) do
+      if player.past_flying_texts == nil then
+         player.past_flying_texts = {}
+      end
+      local flying_texts = {}
+      local search = {
+         type = "flying-text",
+         position = player.cursor_pos,
+         radius = 80,
+      }
+      
+      for _, ftext in pairs(game.get_player(pindex).surface.find_entities_filtered(search)) do
+         local id = ftext.text
+         if type(id) == 'table' then
+            id = serpent.line(id)
+         end
+         flying_texts[id] = (flying_texts[id] or 0) + 1
+      end
+      for id, count in pairs(flying_texts) do
+         if count > (player.past_flying_texts[id] or 0) then
+            local ok, local_text = serpent.load(id)
+            if ok then
+               printout(local_text,pindex)
+            end
+         end
+      end
+      player.past_flying_texts = flying_texts
+   end
 end)
 
 walk_type_speech={

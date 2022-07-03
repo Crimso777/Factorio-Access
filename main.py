@@ -15,6 +15,20 @@ import pywinauto
 import ctypes
 gui.FAILSAFE = False
 
+def show_exception_and_exit(exc_type, exc_value, tb):
+    import traceback
+    traceback.print_exception(exc_type, exc_value, tb)
+    raw_input("Press key to exit.")
+    sys.exit(-1)
+
+sys.excepthook = show_exception_and_exit
+
+FACTORIO_INSTALL_PATH = "./"
+FACTORIO_BIN_PATH = FACTORIO_INSTALL_PATH+'bin/x64/factorio.exe'
+
+if len(sys.argv) > 1 and os.path.exists(sys.argv[1]):
+    os.chdir(os.path.dirname(sys.argv[0]))
+    FACTORIO_BIN_PATH=sys.argv[1]
 
 
 tolk.load()
@@ -273,7 +287,7 @@ def customMapSettings():
         fp.write("}\n")
 #      pass
     try:
-        proc = subprocess.run(["bin/x64/factorio.exe", "--map-gen-settings", os.path.join(path, result+"MapGenSettings.json"), "--map-settings",
+        proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", os.path.join(path, result+"MapGenSettings.json"), "--map-settings",
                               "Map Settings/PeacefulSettings.json", "--create", "Maps/"+result], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except:
         print("Error saving map, make sure the name is a valid filename for windows.")
@@ -303,7 +317,7 @@ def customMapList():
         for k in range(len(l)):
             if int(i) == k+1:
                 print("loading", l[k][:])
-                proc = subprocess.run(["bin/x64/factorio.exe", "--map-gen-settings", "Map Settings/Custom Settings/" + l[k] + "/mapGenSettings.json", "--map-settings",
+                proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", "Map Settings/Custom Settings/" + l[k] + "/mapGenSettings.json", "--map-settings",
                                       "Map Settings/Custom Settings/" + l[k] + "/mapSettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 command = k+1
 
@@ -311,8 +325,7 @@ def customMapList():
 def launch(path):
     try:
         #      return 0
-        return subprocess.Popen(["bin/x64/factorio.exe", "--load-game", path, "--fullscreen", "TRUE", "--config", "config/config.ini", "--mod-directory", "mods"], stdout=subprocess.PIPE)
-#      subprocess.run(["bin/x64/factorio.exe", "--instrument-mod","FactorioAccess", "--load-game", path])
+        return subprocess.Popen([FACTORIO_BIN_PATH, "--load-game", path, "--fullscreen", "TRUE", "--config", "config/config.ini", "--mod-directory", "mods"], stdout=subprocess.PIPE)
     except:
         print("error launching game")
 
@@ -341,7 +354,6 @@ def newGame():
         for k in range(len(l)):
             if int(i) == k+1:
                 print("loading", l[k][:-4])
-#            proc = subprocess.run(["bin/x64/factorio.exe", "--instrument-mod","FactorioAccess", "--load-game", "Maps/"+l[k]])
                 return launch("Maps/"+l[k])
                 command = k+1
 
@@ -361,7 +373,7 @@ def chooseDifficulty():
             print("Please enter a name for your new map:\n")
             i1 = input()
             try:
-                proc = subprocess.run(["bin/x64/factorio.exe", "--map-gen-settings", "Map Settings/gen/PeacefulMap.json", "--map-settings",
+                proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", "Map Settings/gen/PeacefulMap.json", "--map-settings",
                                       "Map Settings/PeacefulSettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except:
                 print(
@@ -372,7 +384,7 @@ def chooseDifficulty():
             print("Please enter a name for your new map:\n")
             i1 = input()
             try:
-                proc = subprocess.run(["bin/x64/factorio.exe", "--map-gen-settings", "Map Settings/gen/EasyMap.json", "--map-settings",
+                proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", "Map Settings/gen/EasyMap.json", "--map-settings",
                                       "Map Settings/PeacefulSettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except:
                 print(
@@ -383,7 +395,7 @@ def chooseDifficulty():
             print("Please enter a name for your new map:\n")
             i1 = input()
             try:
-                proc = subprocess.run(["bin/x64/factorio.exe", "--map-gen-settings", "Map Settings/gen/NormalMap.json", "--map-settings",
+                proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", "Map Settings/gen/NormalMap.json", "--map-settings",
                                       "Map Settings/PeacefulSettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except:
                 print(
@@ -395,7 +407,7 @@ def chooseDifficulty():
             print("Please enter a name for your new map:\n")
             i1 = input()
             try:
-                proc = subprocess.run(["bin/x64/factorio.exe", "--map-gen-settings", "Map Settings/gen/HardMap.json", "--map-settings",
+                proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", "Map Settings/gen/HardMap.json", "--map-settings",
                                       "Map Settings/PeacefulSettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except:
                 print(
@@ -440,8 +452,6 @@ def loadGame():
             return 0
         for k in range(len(l)):
             if int(i) == k+1:
-                #            print("loading", l[k][:-4])
-                #            proc = subprocess.Popen (["bin/x64/factorio.exe", "--load-game", l[k]] )
                 return launch(l[k])
 
                 command = k+1
@@ -506,7 +516,6 @@ while not exit:
 #         tolk.output(line[10:].decode(), True)
         elif len(line) > 16 and line[-17:-2] == b"Saving finished":
           tolk.output("Saving Complete", True)
-          gui.hotkey('insert', 'shift', 's')
         elif len(line) >= 10 and line[:10] == b"time start":
           debug_time = time.time
         elif len(line) >= 9 and line[:9] == b"time start":

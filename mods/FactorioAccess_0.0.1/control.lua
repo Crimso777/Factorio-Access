@@ -769,19 +769,23 @@ directions={
    [8] = ""
 }
 
-function direction (pos1, pos2)
+function dir(pos1,pos2)
    local x1 = pos1.x
    local x2 = pos2.x
-  local dx = x2 - x1
+   local dx = x2 - x1
    local y1 = pos1.y
    local y2 = pos2.y
-  local dy = y2 - y1
-   local dir = math.floor(10.5 + 4*math.atan2(dy,dx)/math.pi)%8
+   local dy = y2 - y1
    if dx == 0 and dy == 0 then
-      dir = 8
+      return 8
    end
-   return directions[dir]
+   return math.floor(10.5 + 4*math.atan2(dy,dx)/math.pi)%8
 end
+
+function direction (pos1, pos2)
+   return directions[dir(pos1,pos2)]
+end
+
 function distance ( pos1, pos2)
    local x1 = pos1.x
    local x2 = pos2.x
@@ -789,8 +793,6 @@ function distance ( pos1, pos2)
    local y1 = pos1.y
    local y2 = pos2.y
   local dy = math.abs(y2 - y1)
-   if direction(pos1,pos2) == "North" then 
-   end
   return math.abs(math.sqrt (dx * dx + dy * dy ))
 end
 

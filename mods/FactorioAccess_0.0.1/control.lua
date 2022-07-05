@@ -484,7 +484,7 @@ function target(pindex)
       move_cursor_map(players[pindex].cursor_pos,pindex)
 end
 function move_cursor_map(position,pindex)
-   player = game.get_player(pindex)
+   player = players[pindex]
    move_cursor((position.x-player.position.x)*players[pindex].scale.x + (players[pindex].resolution.width/2), (position.y - player.position.y) * players[pindex].scale.y + (players[pindex].resolution.height/2), pindex)
 end
 function move_cursor(x,y, pindex)
@@ -603,7 +603,51 @@ function tile_cycle(pindex)
       end
    end
 end
-      
+
+--todo move to globals
+path_requests={}
+
+function navigate(pos,pindex)
+   local player = game.get_player(pindex)
+   local character = player.character
+   if character == nil then
+      return
+   end
+   local surf = player.surface
+   local path_request = {
+      bounding_box = character.prototype.collision_box,
+      collision_mask = character.prototype.collision_mask_with_flags,
+      start = player.position,
+      goal = pos,
+      force = player.force,
+      can_open_gates = true,
+      entity_to_ignore = character
+      }
+   -- print(serpent.block(path_request))
+   local request_id = surf.request_path(path_request)
+   players[pindex].latest_path_request_id = request_id
+   path_requests[request_id] = pindex
+   print(request_id)
+end
+
+script.on_event(defines.events.on_script_path_request_finished,function(event)
+   -- print(serpent.block(event))
+   local pindex = path_requests[event.id]
+   table.remove(path_requests,event.id)
+   if players[pindex].latest_path_request_id ~= event.id then
+      return
+   end
+   if not event.path then
+      printout({"access.no-character-path"},pindex)
+      return
+   end
+   local move_queue = {}
+   for _ , waypoint in pairs(event.path) do
+      table.insert(move_queue,waypoint.position)
+   end
+   players[pindex].move_queue = move_queue
+end)
+   
 
 
 function check_for_player(index)
@@ -1840,28 +1884,25 @@ end
 function move_characters(event)
    for pindex, player in pairs(players) do
       if player.walk ~= 2 or player.cursor or player.in_menu then
-         local walk = false
          while #player.move_queue > 0 do
             local next_move = player.move_queue[1]
-            player.player.walking_state = {walking = true, direction = next_move.direction}
-            if next_move.direction == defines.direction.north then
-               walk = player.player.position.y > next_move.dest.y
-            elseif next_move.direction == defines.direction.south then
-               walk = player.player.position.y < next_move.dest.y
-            elseif next_move.direction == defines.direction.east then
-               walk = player.player.position.x < next_move.dest.x
-            elseif next_move.direction == defines.direction.west then
-               walk = player.player.position.x > next_move.dest.x
+            local current_dist = distance(player.player.position,next_move)
+            if current_dist > 0 then
+               local direction = dir(player.player.position,next_move)
+               player.player.walking_state = {walking = true, direction = direction}
             end
-            
-            if walk then
+            if current_dist > player.player.character_running_speed then
                break
             else
                table.remove(player.move_queue,1)
+               -- print("made it to:" .. next_move.x .. ', ' .. next_move.y .. ' by being at ' .. player.player.position.x .. ', ' .. player.player.position.y)
+               if #player.move_queue == 0 then
+                  -- target(pindex)
+               end
             end
          end
-         if not walk then
-            player.player.walking_state = {walking = false}
+         if #player.move_queue == 0 then
+            player.player.walking_state = {walking = false, player.player_direction}
          end
       end
    end
@@ -1901,7 +1942,7 @@ function move(direction,pindex)
       can_port = first_player.surface.can_place_entity{name = "character", position = new_pos}
       if can_port then
          if players[pindex].walk == 1 then
-            table.insert(players[pindex].move_queue,{direction=direction,dest=new_pos})
+            table.insert(players[pindex].move_queue,new_pos)
          else
             teleported = first_player.teleport(new_pos)
             if not teleported then
@@ -1918,7 +1959,7 @@ function move(direction,pindex)
       end
    else
       if players[pindex].walk == 2 then
-         table.insert(players[pindex].move_queue,{direction=direction,dest=pos})
+         table.insert(players[pindex].move_queue,offset_position(pos,direction,0.0001))
       end
       players[pindex].player_direction = direction
       players[pindex].cursor_pos = new_pos

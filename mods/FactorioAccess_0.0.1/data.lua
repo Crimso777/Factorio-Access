@@ -2,16 +2,7 @@ data.raw.character.character.has_belt_immunity = true
 
 
 data:extend({
-  {
-    type = "custom-input",
-    name = "test",
-    key_sequence = "KP_7",
-    consuming = "none",
-    action = "lua",
-    enabled_while_in_cutscene = true,
-    enabled_while_spectating = true
-},
-  {
+{
     type = "custom-input",
     name = "cursor-up",
     key_sequence = "W",
@@ -82,15 +73,15 @@ data:extend({
     type = "custom-input",
     name = "scan-up",
     key_sequence = "PAGEUP",
+    alternative_key_sequence = "UP",
     consuming = "none"
 },
-
-
 
 {
     type = "custom-input",
     name = "scan-down",
     key_sequence = "PAGEDOWN",
+    alternative_key_sequence = "DOWN",
     consuming = "none"
 },
 
@@ -98,18 +89,14 @@ data:extend({
     type = "custom-input",
     name = "scan-middle",
     key_sequence = "HOME",
+    alternative_key_sequence = "RSHIFT",
     consuming = "none"
 },
 {
     type = "custom-input",
     name = "jump-to-scan",
     key_sequence = "CONTROL + HOME",
-    consuming = "none"
-},
-{
-    type = "custom-input",
-    name = "scan-coords",
-    key_sequence = "HOME",
+    alternative_key_sequence = "CONTROL + RSHIFT",
     consuming = "none"
 },
 
@@ -131,6 +118,7 @@ data:extend({
     type = "custom-input",
     name = "rescan",
     key_sequence = "END",
+    alternative_key_sequence = "RCTRL",
     consuming = "none"
 },
 
@@ -138,6 +126,7 @@ data:extend({
     type = "custom-input",
     name = "recalibrate",
     key_sequence = "CONTROL + END",
+    alternative_key_sequence = "CONTROL + RCTRL",
     consuming = "none"
 },
 
@@ -145,6 +134,7 @@ data:extend({
     type = "custom-input",
     name = "scan-category-up",
     key_sequence = "CONTROL + PAGEUP",
+    alternative_key_sequence = "CONTROL + UP",
     consuming = "none"
 },
 
@@ -152,6 +142,7 @@ data:extend({
     type = "custom-input",
     name = "scan-category-down",
     key_sequence = "CONTROL + PAGEDOWN",
+    alternative_key_sequence = "CONTROL + DOWN",
     consuming = "none"
 },
 
@@ -159,6 +150,7 @@ data:extend({
     type = "custom-input",
     name = "scan-mode-up",
     key_sequence = "SHIFT + PAGEUP",
+    alternative_key_sequence = "SHIFT + UP",
     consuming = "none"
 },
 
@@ -167,6 +159,7 @@ data:extend({
     type = "custom-input",
     name = "scan-mode-down",
     key_sequence = "SHIFT + PAGEDOWN",
+    alternative_key_sequence = "SHIFT + DOWN",
     consuming = "none"
 },
 
@@ -406,6 +399,13 @@ data:extend({
     type = "custom-input",
     name = "toggle-walk",
     key_sequence = "CONTROL + W",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "read-hand",
+    key_sequence = "Q",
     consuming = "none"
 }
 

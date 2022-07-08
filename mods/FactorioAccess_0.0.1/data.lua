@@ -1,8 +1,68 @@
+--data:
 data.raw.character.character.has_belt_immunity = true
+local resource_map_node = table.deepcopy(data.raw["container"]) 
+resource_map_node.name = "map-node"
+resource_map_node.type = "simple-entity-with-force"
+--resource_map_node.inventory_size = 0
+
+resource_map_node["collision_box"] = {{-0, -0}, {0, 0}}
+resource_map_node["collision_mask"] = {}
+resource_map_node["selection_box"] = nil
+resource_map_node["order"] = "z"
+resource_map_node["max_health"] = 2147483648
+resource_map_node["picture"] = {
+	filename = "__FactorioAccess__/graphics/invisible.png",
+	width = 1,
+	height = 1,
+	direction_count = 1
+}
+
+
 
 
 data:extend({
+ resource_map_node,
 {
+   type = "sound",
+   name = "Face-Dir",
+   filename = "__FactorioAccess__/Audio/1face_dir.ogg",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "Open-Inventory-Sound",
+   filename = "__core__/sound/gui-green-button.ogg",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "Close-Inventory-Sound",
+   filename = "__core__/sound/gui-green-confirm.ogg",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "Change-Menu-Tab-Sound",
+   filename = "__core__/sound/gui-switch.ogg",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "Rotate-Hand-Sound",
+   filename = "__core__/sound/gui-back.ogg",
+   volume = 1,
+   preload = true
+},
+
+  {
     type = "custom-input",
     name = "cursor-up",
     key_sequence = "W",
@@ -363,6 +423,13 @@ data:extend({
     type = "custom-input",
     name = "item-info",
     key_sequence = "L",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "list-warnings",
+    key_sequence = "P",
     consuming = "none"
 },
 

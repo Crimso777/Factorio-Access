@@ -103,7 +103,18 @@ Repeat scanned entry: HOME
 
 Move cursor to scanned target: CONTROL + HOME
 
-Note: This only works while in cursor mode.
+
+## Warnings
+
+Warnings Menu: P
+
+Navigate woarnings menu:    WASD to navigate a single range
+
+Switch Range: TAB
+
+Teleport cursor to Ent with warning: LEFT BRACKET
+
+Close Warnings menu: E
 
 
 ## Others

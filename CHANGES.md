@@ -1,3 +1,28 @@
+#Version 0.1.0
+
+Updated 07/07/2022
+
+New Features:
+
+-Added transport line analyzer:  LEFT BRACKET while facing a belt to open the new and improved transport belt menu.  Use tab to toggle between the contents of the single tile you are looking at, the entire transport line's contents, and analysis of belts upstream and downstream from the examined belt.
+
+-Added Warnings menu:  Press P to see the new warnings menu.  Warnings are little icons that appear over buildings graphically and indicate something is wrong with the building.  Examples include not connected, no power, and no fuel.  LEFT BRACKET while over a warning to jump to the building in question.
+
+-Added localised descriptions for all items and entities in the game.  Press L while over an item in inventory to get detailed information about the item.  Special shoutout to @Sir Fendi and @MyNameIsTres for making this possible.  
+
+-Selecting items will now notify the player what is currently in the hand.  Thanks to @Eph for making this happen
+
+-Added various mouse controls while on the main map.  Examples include CONTROL + LEFT BRACKET and CONTROL + RIGHT BRACKET for fast transfer and fast split respectively.  This means to put the entire stack you are holding in a building, press CONTROL and LEFT BRACKET while focused on a building.  To put half, press CONTROL + RIGHT BRACKET.  Thanks again to @Eph for his work in this regard
+
+-Jumping cursor to scan items no longer requires entering cursor mode.  This should make it easier to get where you need to go.
+
+-Read-Tile now gives additional information including the recipe that a production building is using, whether it is connected to power or out of fuel.
+
+-Q now speaks the item held in hand.  SHIFT + Q now performs actions that Q previously executed.
+
+Various Bug Fixes.
+
+
 # Version 0.0.5
 
 Updated 06/23/22

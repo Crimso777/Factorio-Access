@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import pyautogui as gui
-#import cytolk.tolk as tolk
 import time
 import math
 import os
@@ -10,7 +9,7 @@ import threading
 import queue
 
 import accessible_output2.outputs.auto
-tolk = accessible_output2.outputs.auto.Auto()
+ao_output = accessible_output2.outputs.auto.Auto()
 
 gui.FAILSAFE = False
 
@@ -30,9 +29,7 @@ if len(sys.argv) > 1 and os.path.exists(sys.argv[1]):
     FACTORIO_BIN_PATH=sys.argv[1]
 
 
-#tolk.load()
-
-tolk.output("Hello Factorio!", False)
+ao_output.output("Hello Factorio!", False)
 
 
 def enqueue_output(out, queue):
@@ -497,7 +494,7 @@ while not exit:
         pass
     else:
         if len(line) > 5 and line[:3] == 'out':
-            tolk.output(line[4:], True)
+            ao_output.output(line[4:], True)
         elif len(line) > 5 and line[:4] == 'resx':
             game_res["x"] = int(line[5:])
         elif len(line) > 5 and line[:4] == 'resy':
@@ -509,12 +506,12 @@ while not exit:
             print(coords)
             gui.moveTo(coords[0], coords[1], _pause=False)
         elif len(line) > 16 and line[-15:] == "Saving finished":
-          tolk.output("Saving Complete", True)
+          ao_output.output("Saving Complete", True)
         elif len(line) >= 10 and line[:10] == "time start":
           debug_time = time.time
         elif len(line) >= 9 and line[:9] == "time start":
           print(time.time - debug_time)
-        elif len(line) > 8 and line[-9:-2] == "Goodbye":
+        elif len(line) > 8 and line[-7:] == "Goodbye":
             exit = True
 try:
     l = os.listdir("saves")
@@ -553,5 +550,4 @@ else:
             os.remove(dst)
             os.rename(src, dst)
 
-tolk.output("Goodbye Factorio", False)
-tolk.unload()
+ao_output.output("Goodbye Factorio", False)

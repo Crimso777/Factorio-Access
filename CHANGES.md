@@ -1,3 +1,11 @@
+# Version 0.1.1
+
+Updated 07/09/22
+
+Bug Fixes:
+
+-Fixed errors when mining things such as trees.  Thanks @Eph
+
 # Version 0.1.0
 
 Updated 07/07/2022

@@ -2832,15 +2832,17 @@ function move(direction,pindex)
          end
          players[pindex].position = new_pos
          players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction,1)
-         if players[pindex].tile.previous ~= nil and players[pindex].tile.previous.type == "transport-belt" then
-            game.get_player(pindex).play_sound{path = "utility/metal_walking_sound"}
-            game.get_player(pindex).play_sound{path = "utility/metal_walking_sound"}
+         if players[pindex].tile.previous ~= nil
+            and players[pindex].tile.previous.valid
+            and players[pindex].tile.previous.type == "transport-belt"
+         then
             game.get_player(pindex).play_sound{path = "utility/metal_walking_sound"}
          else
             local tile = game.get_player(pindex).surface	.get_tile(new_pos.x, new_pos.y)
-            game.get_player(pindex).play_sound{path = "tile-walking/" .. tile.name}
-            game.get_player(pindex).play_sound{path = "tile-walking/" .. tile.name}
-            game.get_player(pindex).play_sound{path = "tile-walking/" .. tile.name}
+            local sound_path = "tile-walking/" .. tile.name
+            if game.is_valid_sound_path(sound_path) then
+               game.get_player(pindex).play_sound{path = "tile-walking/" .. tile.name}
+            end
          end
          read_tile(pindex)
          target(pindex)

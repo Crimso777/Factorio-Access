@@ -17,4 +17,4 @@ if not os.path.isdir('./'+venv):
 if os.path.isfile('main.spec'):
 	os.system(venv_python+' -m PyInstaller main.spec')
 else:
-	os.system(venv_python+' -m PyInstaller --onefile main.py')
+	os.system(venv_python+' -m PyInstaller --onefile --hidden-import=espeak --hidden-import=python_espeak-0.5.egg-info --hidden-import=speechd_config --hidden-import=speechd main.py')

@@ -2,9 +2,8 @@
 !*/
 # Git essentials
 !.gitignore
-!.git/**
 !.gitattributes
-!license
+!LICENSE
 
 #Documentation
 !README.md
@@ -30,3 +29,7 @@
 !main.spec
 
 #Jaws File
+Factorio.jkm
+
+#build scripts
+!gen_release.py

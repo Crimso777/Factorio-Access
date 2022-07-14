@@ -1673,7 +1673,7 @@ function read_tile(pindex)
                if ent.name == "offshore-pump" then
                   adjusted.position = {x = 0, y = 0}
                   if direction == 0 then 
-                     adjusted.direction = "North"
+                     adjusted.direction = "South"
                   elseif direction == 1 then 
                      adjusted.direction = "West"
                   elseif direction == 2 then 
@@ -2128,7 +2128,7 @@ function initialize(player)
 --   player.insert{name="gun-turret", count=10}
    player.insert{name="transport-belt", count=100}
    player.insert{name="coal", count=100}
-   player.insert{name="burner-inserter", count=10}
+   player.insert{name="filter-inserter", count=10}
 --   player.insert{name="fast-transport-belt", count=100}
 --   player.insert{name="express-transport-belt", count=100}
    player.insert{name="small-electric-pole", count=100}
@@ -2417,7 +2417,11 @@ function menu_cursor_down(pindex)
          game.get_player(pindex).play_sound{path = "utility/inventory_move"}
          players[pindex].inventory.index = players[pindex].inventory.index +10
          if players[pindex].inventory.index > players[pindex].inventory.max then
-            players[pindex].inventory.index = players[pindex].inventory.index%10 
+            players[pindex].inventory.index = players[pindex].inventory.index%10
+            if players[pindex].inventory.index == 0 then
+               players[pindex].inventory.index = 10
+            end
+
          end
          read_inventory_slot(pindex)
       else
@@ -2436,6 +2440,9 @@ function menu_cursor_down(pindex)
             players[pindex].inventory.index = players[pindex].inventory.index +10
             if players[pindex].inventory.index > players[pindex].inventory.max then
                players[pindex].inventory.index = players[pindex].inventory.index%10
+               if players[pindex].inventory.index == 0 then
+                  players[pindex].inventory.index = 10
+               end
             end
             read_inventory_slot(pindex)
             end
@@ -3649,6 +3656,11 @@ script.on_event("left-click", function(event)
                return
             end
             local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
+               if game.get_player(pindex).cursor_stack.valid_for_read and stack.valid_for_read and game.get_player(pindex).cursor_stack.prototype.name == stack.prototype.name then
+                  stack.transfer_stack(game.get_player(pindex).cursor_stack)
+                  return
+               end
+
             if game.get_player(pindex).cursor_stack.swap_stack(stack) then
                game.get_player(pindex).play_sound{path = "utility/inventory_click"}
 --               read_building_slot(pindex)
@@ -3713,6 +3725,10 @@ script.on_event("left-click", function(event)
             end
          end
       elseif players[pindex].menu == "pump" then
+         if players[pindex].pump.index == 0 then
+            printout("Move up and down to select a location.", pindex)
+            return
+         end
          local entry = players[pindex].pump.positions[players[pindex].pump.index]
          game.get_player(pindex).build_from_cursor{position = entry.position, direction = entry.direction}
          players[pindex].in_menu = false
@@ -4147,7 +4163,6 @@ script.on_event("item-info", function(event)
       if players[pindex].menu == "inventory" then
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
          if stack.valid_for_read and stack.valid == true then
-            local dimensions = get_tile_dimensions(stack.prototype)
                      local str = ""
                   if stack.prototype.place_result ~= nil then
                      str = stack.prototype.place_result.localised_description
@@ -4179,6 +4194,23 @@ script.on_event("item-info", function(event)
             end
             printout(string.sub(result, 1, -3), pindex)
          end
+
+      elseif players[pindex].menu == "crafting" then
+         local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
+         if recipe ~= nil and #recipe.products > 0 then
+            local product_name = recipe.products[1].name
+            local product = game.item_prototypes[product_name]
+                     local str = ""
+                  if product.place_result ~= nil then
+                     str = product.place_result.localised_description
+                  else
+                     str = product.localised_description
+                  end
+                  printout(str, pindex)
+         else
+            printout("Blank", pindex)
+         end
+
       end
 
    end

@@ -2873,21 +2873,23 @@ end
 
 function move_key(direction,event)
    check_for_player(event.player_index)
-   if players[event.player_index].in_menu and players[pindex].menu ~= "prompt" then
-      menu_cursor_move(direction,event.player_index)
-   elseif players[event.player_index].cursor then
-      players[event.player_index].cursor_pos = offset_position(players[event.player_index].cursor_pos, direction,1 + players[pindex].cursor_size*2)
-      if players[pindex].cursor_size == 0 then
-         read_tile(pindex)
-         target(event.player_index)
+   if players[pindex].menu ~= "prompt" then
+      if players[event.player_index].in_menu  then
+         menu_cursor_move(direction,event.player_index)
+      elseif players[event.player_index].cursor then
+         players[event.player_index].cursor_pos = offset_position(players[event.player_index].cursor_pos, direction,1 + players[pindex].cursor_size*2)
+         if players[pindex].cursor_size == 0 then
+            read_tile(pindex)
+            target(event.player_index)
+         else
+            players[pindex].nearby.index = 1
+            players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size, math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size, players[pindex].cursor_size * 2 + 1, players[pindex].cursor_size * 2 + 1, pindex)
+            populate_categories(pindex)
+            read_scan_summary(pindex)
+         end
       else
-         players[pindex].nearby.index = 1
-         players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size, math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size, players[pindex].cursor_size * 2 + 1, players[pindex].cursor_size * 2 + 1, pindex)
-         populate_categories(pindex)
-         read_scan_summary(pindex)
+         move(direction,event.player_index)
       end
-   else
-      move(direction,event.player_index)
    end
 end
 

@@ -1,0 +1,2 @@
+pyautogui
+git+https://github.com/accessibleapps/accessible_output2.git

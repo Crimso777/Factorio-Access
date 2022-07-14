@@ -1261,7 +1261,7 @@ function tile_cycle(pindex)
          if ent.type == "resource" then
             result = result .. " x " .. ent.amount
          end
-         if ent.prototype.is_building and ent.prototype.supports_direction then
+         if ent.prototype.is_building and ent.supports_direction then
             result = result .. "Facing "
             if ent.direction == 0 then 
                result = result .. "North "
@@ -1635,7 +1635,7 @@ function read_tile(pindex)
          result = result .. " x " .. ent.amount
       end
 
-      if ent.prototype.is_building and ent.prototype.supports_direction then
+      if ent.prototype.is_building and ent.supports_direction then
          result = result .. "Facing "
          if ent.direction == 0 then 
             result = result .. "North "
@@ -4105,7 +4105,7 @@ script.on_event("rotate-building", function(event)
          end
       elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[players[pindex].tile.index-1].valid then
          local ent = players[pindex].tile.ents[players[pindex].tile.index-1]
-         if ent.prototype.supports_direction then
+         if ent.supports_direction then
             if not(players[pindex].building_direction_lag) then
                local T = {
                   reverse = false,

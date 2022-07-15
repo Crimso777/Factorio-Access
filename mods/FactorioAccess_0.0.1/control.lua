@@ -1,3 +1,4 @@
+
 players = {}
 groups = {}
 entity_types = {}
@@ -1261,7 +1262,7 @@ function tile_cycle(pindex)
          if ent.type == "resource" then
             result = result .. " x " .. ent.amount
          end
-         if ent.prototype.is_building and ent.supports_direction then
+         if ent.prototype.is_building and ent.prototype.supports_direction then
             result = result .. "Facing "
             if ent.direction == 0 then 
                result = result .. "North "
@@ -1303,11 +1304,16 @@ end
 function check_for_player(index)
    if players[index] == nil then
    initialize(game.get_player(index))
+   return false
+   else
+      return true
    end
 end
 
 function printout(str, pindex)
-   players[pindex].last = str
+   if pindex > 0 then
+      players[pindex].last = str
+   end
    localised_print{"","out ",str}
 end
 
@@ -1635,7 +1641,7 @@ function read_tile(pindex)
          result = result .. " x " .. ent.amount
       end
 
-      if ent.prototype.is_building and ent.supports_direction then
+      if ent.prototype.is_building and ent.prototype.supports_direction then
          result = result .. "Facing "
          if ent.direction == 0 then 
             result = result .. "North "
@@ -2128,7 +2134,7 @@ function initialize(player)
 --   player.insert{name="gun-turret", count=10}
    player.insert{name="transport-belt", count=100}
    player.insert{name="coal", count=100}
-   player.insert{name="filter-inserter", count=10}
+   player.insert{name="inserter", count=10}
 --   player.insert{name="fast-transport-belt", count=100}
 --   player.insert{name="express-transport-belt", count=100}
    player.insert{name="small-electric-pole", count=100}
@@ -2143,7 +2149,9 @@ function initialize(player)
 
    script.on_event(defines.events.on_player_changed_position,function(event)
       local pindex = event.player_index
-      check_for_player(pindex)
+      if not check_for_player(pindex) then
+               return
+      end
       if players[pindex].walk == 2 then
          local pos = game.get_player(pindex).position
          pos.x = math.floor(pos.x)+0.5
@@ -2872,24 +2880,24 @@ end
 
 
 function move_key(direction,event)
-   check_for_player(event.player_index)
-   if players[pindex].menu ~= "prompt" then
-      if players[event.player_index].in_menu  then
-         menu_cursor_move(direction,event.player_index)
-      elseif players[event.player_index].cursor then
-         players[event.player_index].cursor_pos = offset_position(players[event.player_index].cursor_pos, direction,1 + players[pindex].cursor_size*2)
-         if players[pindex].cursor_size == 0 then
-            read_tile(pindex)
-            target(event.player_index)
-         else
-            players[pindex].nearby.index = 1
-            players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size, math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size, players[pindex].cursor_size * 2 + 1, players[pindex].cursor_size * 2 + 1, pindex)
-            populate_categories(pindex)
-            read_scan_summary(pindex)
-         end
+   if not check_for_player(event.player_index) then
+      return 
+   end
+   if players[event.player_index].in_menu and players[pindex].menu ~= "prompt" then
+      menu_cursor_move(direction,event.player_index)
+   elseif players[event.player_index].cursor then
+      players[event.player_index].cursor_pos = offset_position(players[event.player_index].cursor_pos, direction,1 + players[pindex].cursor_size*2)
+      if players[pindex].cursor_size == 0 then
+         read_tile(pindex)
+         target(event.player_index)
       else
-         move(direction,event.player_index)
+         players[pindex].nearby.index = 1
+         players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size, math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size, players[pindex].cursor_size * 2 + 1, players[pindex].cursor_size * 2 + 1, pindex)
+         populate_categories(pindex)
+         read_scan_summary(pindex)
       end
+   else
+      move(direction,event.player_index)
    end
 end
 
@@ -2914,13 +2922,17 @@ end)
 
 script.on_event("read-coords", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    read_coords(pindex)
 end
 )
 script.on_event("jump-to-player", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
       if players[pindex].cursor then jump_to_player(pindex)
       end
@@ -2929,7 +2941,9 @@ end
 )
 script.on_event("teleport-to-cursor", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
    teleport_to_cursor(pindex)
    end
@@ -2938,7 +2952,9 @@ end
 
 script.on_event("toggle-cursor", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
 
       toggle_cursor(pindex)
@@ -2948,7 +2964,9 @@ end
 
 script.on_event("cursor-size-increment", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
       if players[pindex].cursor_size == 0 then
          players[pindex].cursor_size = 5
@@ -2963,7 +2981,9 @@ end)
 
 script.on_event("cursor-size-decrement", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
       if players[pindex].cursor_size == 5 then
          players[pindex].cursor_size = 0
@@ -2978,7 +2998,9 @@ end)
 
 script.on_event("rescan", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
       rescan(pindex)
    end
@@ -2986,7 +3008,9 @@ end
 )
 script.on_event("scan-up", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
 
    scan_up(pindex)
@@ -2996,7 +3020,9 @@ end
 
 script.on_event("scan-down", function(event)
    pindex = event.player_index
-      check_for_player(pindex)
+      if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
       scan_down(pindex)
    end
@@ -3005,7 +3031,9 @@ end
 
 script.on_event("scan-middle", function(event)
    pindex = event.player_index
-      check_for_player(pindex)
+      if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
       scan_middle(pindex)
    end
@@ -3014,7 +3042,9 @@ end
 
 script.on_event("jump-to-scan", function(event)
    pindex = event.player_index
-      check_for_player(pindex)
+      if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
       if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) or (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) or (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) or (players[pindex].nearby.category == 4 and next(players[pindex].nearby.buildings) == nil) or (players[pindex].nearby.category == 5 and next(players[pindex].nearby.other) == nil) then
          printout("No entities found.  Try refreshing with end key.", pindex)
@@ -3060,7 +3090,9 @@ end
 
 script.on_event("scan-category-up", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
       local new_category = players[pindex].nearby.category - 1
       while new_category > 0 and ((new_category == 1 and next(players[pindex].nearby.ents) == nil) or (new_category == 2 and next(players[pindex].nearby.resources) == nil) or (new_category == 3 and next(players[pindex].nearby.containers) == nil) or (new_category == 4 and next(players[pindex].nearby.buildings) == nil) or (new_category == 5 and next(players[pindex].nearby.other) == nil)) do
@@ -3087,7 +3119,9 @@ end
 )
 script.on_event("scan-category-down", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
       local new_category  = players[pindex].nearby.category + 1
       while new_category < 6 and ((new_category == 1 and next(players[pindex].nearby.ents) == nil) or (new_category == 2 and next(players[pindex].nearby.resources) == nil) or (new_category == 3 and next(players[pindex].nearby.containers) == nil) or (new_category == 4 and next(players[pindex].nearby.buildings) == nil) or (new_category == 5 and next(players[pindex].nearby.other) == nil)) do
@@ -3116,7 +3150,9 @@ end
 
 script.on_event("scan-mode-up", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
       players[pindex].nearby.index = 1
       players[pindex].nearby.count = false
@@ -3127,7 +3163,9 @@ end)
 
 script.on_event("scan-mode-down", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
       players[pindex].nearby.index = 1
       players[pindex].nearby.count = true
@@ -3138,7 +3176,9 @@ end)
 
 script.on_event("repeat-last-spoken", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    repeat_last_spoken(pindex)
 end   
 )
@@ -3146,7 +3186,9 @@ end
 
 script.on_event("tile-cycle", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
       tile_cycle(pindex)
    end
@@ -3155,7 +3197,9 @@ end
 
 script.on_event("open-inventory", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then
       game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
       players[pindex].in_menu = true
@@ -3217,7 +3261,9 @@ end
 
 script.on_event("quickbar-1", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[pindex].in_menu) then
       read_quick_bar(1,pindex)
    end
@@ -3226,7 +3272,9 @@ end
 
 script.on_event("quickbar-2", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[pindex].in_menu) then
       read_quick_bar(2,pindex)
    end
@@ -3235,7 +3283,9 @@ end
 
 script.on_event("quickbar-3", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[pindex].in_menu) then
       read_quick_bar(3,pindex)
    end
@@ -3244,7 +3294,9 @@ end
 
 script.on_event("quickbar-4", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[pindex].in_menu) then
       read_quick_bar(4,pindex)
    end
@@ -3253,7 +3305,9 @@ end
 
 script.on_event("quickbar-5", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[pindex].in_menu) then
       read_quick_bar(5,pindex)
    end
@@ -3262,7 +3316,9 @@ end
 
 script.on_event("quickbar-6", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[pindex].in_menu) then
       read_quick_bar(6,pindex)
    end
@@ -3271,7 +3327,9 @@ end
 
 script.on_event("quickbar-7", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[pindex].in_menu) then
       read_quick_bar(7,pindex)
    end
@@ -3280,7 +3338,9 @@ end
 
 script.on_event("quickbar-8", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[pindex].in_menu) then
       read_quick_bar(8,pindex)
    end
@@ -3289,7 +3349,9 @@ end
 
 script.on_event("quickbar-9", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[pindex].in_menu) then
       read_quick_bar(9,pindex)
    end
@@ -3298,7 +3360,9 @@ end
 
 script.on_event("quickbar-10", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[pindex].in_menu) then
       read_quick_bar(10,pindex)
    end
@@ -3307,7 +3371,9 @@ end
 
 script.on_event("set-quickbar-1", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].menu == "inventory" then
       set_quick_bar(1, pindex)
    end
@@ -3316,7 +3382,9 @@ end
 
 script.on_event("set-quickbar-2", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].menu == "inventory" then
       set_quick_bar(2, pindex)
    end
@@ -3325,7 +3393,9 @@ end
 
 script.on_event("set-quickbar-3", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].menu == "inventory" then
       set_quick_bar(3, pindex)
    end
@@ -3334,7 +3404,9 @@ end
 
 script.on_event("set-quickbar-4", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].menu == "inventory" then
       set_quick_bar(4, pindex)
    end
@@ -3343,7 +3415,9 @@ end
 
 script.on_event("set-quickbar-5", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].menu == "inventory" then
       set_quick_bar(5, pindex)
    end
@@ -3352,7 +3426,9 @@ end
 
 script.on_event("set-quickbar-6", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].menu == "inventory" then
       set_quick_bar(6, pindex)
    end
@@ -3361,7 +3437,9 @@ end
 
 script.on_event("set-quickbar-7", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].menu == "inventory" then
       set_quick_bar(7, pindex)
    end
@@ -3370,7 +3448,9 @@ end
 
 script.on_event("set-quickbar-8", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].menu == "inventory" then
       set_quick_bar(8, pindex)
    end
@@ -3379,7 +3459,9 @@ end
 
 script.on_event("set-quickbar-9", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].menu == "inventory" then
       set_quick_bar(9, pindex)
    end
@@ -3388,7 +3470,9 @@ end
 
 script.on_event("set-quickbar-10", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].menu == "inventory" then
       set_quick_bar(10, pindex)
    end
@@ -3397,7 +3481,9 @@ end
 
 script.on_event("switch-menu", function(event)
    pindex = event.player_index
-      check_for_player(pindex)
+      if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       game.get_player(pindex).play_sound{path="Change-Menu-Tab-Sound"}
       if players[pindex].menu == "building" then
@@ -3486,7 +3572,9 @@ end)
 
 script.on_event("reverse-switch-menu", function(event)
    pindex = event.player_index
-      check_for_player(pindex)
+      if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       game.get_player(pindex).play_sound{path="Change-Menu-Tab-Sound"}
       if players[pindex].menu == "building" then
@@ -3573,7 +3661,9 @@ end)
 
 script.on_event("mine-access", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if not (players[event.player_index].in_menu) then   
       target(pindex)
    end
@@ -3582,7 +3672,9 @@ end
 
 script.on_event("left-click", function(event)
    pindex = event.player_index
-      check_for_player(pindex)
+      if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].in_menu then
       if players[pindex].menu == "inventory" then
          game.get_player(pindex).play_sound{path = "utility/inventory_click"}
@@ -3616,6 +3708,9 @@ script.on_event("left-click", function(event)
                return
             elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Filters" then
                if players[pindex].building.index == #players[pindex].building.sectors[players[pindex].building.sector].inventory then
+               if not players[pindex].building.ent.valid then
+                  return
+               end
                   if players[pindex].building.ent.inserter_filter_mode == "whitelist" then
                      players[pindex].building.ent.inserter_filter_mode = "blacklist"
                   else
@@ -3965,7 +4060,9 @@ end
 )
 script.on_event("shift-click", function(event)
    pindex = event.player_index
-      check_for_player(pindex)
+      if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].in_menu then
       if players[pindex].menu == "crafting" then
          local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
@@ -4033,7 +4130,9 @@ end
 
 script.on_event("right-click", function(event)
    pindex = event.player_index
-      check_for_player(pindex)
+      if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].in_menu then
       if players[pindex].menu == "crafting" then
          local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
@@ -4096,7 +4195,9 @@ end
 
 script.on_event("rotate-building", function(event)
    pindex = event.player_index
-      check_for_player(pindex)
+      if not check_for_player(pindex) then
+      return
+   end
    if not(players[pindex].in_menu) then
       local stack = game.get_player(pindex).cursor_stack
       if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
@@ -4123,7 +4224,7 @@ script.on_event("rotate-building", function(event)
          end
       elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[players[pindex].tile.index-1].valid then
          local ent = players[pindex].tile.ents[players[pindex].tile.index-1]
-         if ent.supports_direction then
+         if ent.prototype.supports_direction then
             if not(players[pindex].building_direction_lag) then
                local T = {
                   reverse = false,
@@ -4160,7 +4261,9 @@ end
 
 script.on_event("item-info", function(event)
    pindex = event.player_index
-      check_for_player(pindex)
+      if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].in_menu then
       if players[pindex].menu == "inventory" then
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
@@ -4221,7 +4324,9 @@ end
 
 script.on_event("time", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    local surf = game.get_player(pindex).surface
    local hour = math.floor(24*surf.daytime)
    local minute = math.floor((24* surf.daytime - hour) * 60)
@@ -4236,7 +4341,9 @@ end)
 
 script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    local stack = game.get_player(pindex).cursor_stack
    local new_item = ""
    if stack.valid_for_read then 
@@ -4256,9 +4363,17 @@ script.on_event(defines.events.on_cutscene_cancelled, function(event)
    rescan(event.player_index)
 end)
 
+script.on_event(defines.events.on_player_created, function(event)
+   if not game.is_multiplayer() then
+      printout("Press tab to continue.", 0)
+   end
+end)
+
 script.on_event(defines.events.on_gui_closed, function(event)
    pindex = event.player_index
-   check_for_player(pindex)   
+   if not check_for_player(pindex) then
+      return
+   end
 --   rescan(pindex)
    if players[pindex].in_menu == true and players[pindex].menu ~= "prompt"then
       if players[pindex].menu == "inventory" then
@@ -4272,7 +4387,9 @@ end
 
 script.on_event("save", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    game.auto_save("manual")
    printout("Saving Game, please do not quit yet.", pindex)
 
@@ -4316,7 +4433,9 @@ walk_type_speech={
 
 script.on_event("toggle-walk",function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    players[pindex].walk = (players[pindex].walk + 1) % 3
    printout(walk_type_speech[players[pindex].walk +1], pindex)
 end)
@@ -4328,13 +4447,17 @@ end)
 
 script.on_event("read-hand",function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    read_hand(pindex)
 end)
 
 script.on_event("list-warnings", function(event)
    pindex = event.player_index
-   check_for_player(pindex)
+   if not check_for_player(pindex) then
+      return
+   end
    if players[pindex].in_menu == false then
       players[pindex].warnings.short = scan_for_warnings(30, 30, pindex)
       players[pindex].warnings.medium = scan_for_warnings(100, 100, pindex)

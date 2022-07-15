@@ -2134,7 +2134,7 @@ function initialize(player)
 --   player.insert{name="gun-turret", count=10}
    player.insert{name="transport-belt", count=100}
    player.insert{name="coal", count=100}
-   player.insert{name="inserter", count=10}
+   player.insert{name="filter-inserter", count=10}
 --   player.insert{name="fast-transport-belt", count=100}
 --   player.insert{name="express-transport-belt", count=100}
    player.insert{name="small-electric-pole", count=100}
@@ -3489,6 +3489,15 @@ script.on_event("switch-menu", function(event)
       if players[pindex].menu == "building" then
          players[pindex].building.index = 1
          players[pindex].building.sector = players[pindex].building.sector + 1
+         players[pindex].building.item_selection = false
+         players[pindex].item_selection = false
+         players[pindex].item_cache = {}
+         players[pindex].item_selector = {
+            index = 0,
+            group = 0,
+            subgroup = 0
+         }
+
          if players[pindex].building.sector <= #players[pindex].building.sectors then
             local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
             local len = 0
@@ -3580,6 +3589,15 @@ script.on_event("reverse-switch-menu", function(event)
       if players[pindex].menu == "building" then
          players[pindex].building.index = 1
          players[pindex].building.sector = players[pindex].building.sector - 1
+         players[pindex].building.item_selection = false
+         players[pindex].item_selection = false
+         players[pindex].item_cache = {}
+         players[pindex].item_selector = {
+            index = 0,
+            group = 0,
+            subgroup = 0
+         }
+
          if players[pindex].building.sector < 1 then
             if players[pindex].building.recipe_list == nil then
                players[pindex].building.sector = #players[pindex].building.sectors + 1
@@ -3708,7 +3726,12 @@ script.on_event("left-click", function(event)
                return
             elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Filters" then
                if players[pindex].building.index == #players[pindex].building.sectors[players[pindex].building.sector].inventory then
-               if not players[pindex].building.ent.valid then
+               if players[pindex].building.ent == nil or not players[pindex].building.ent.valid then
+                  if players[pindex].building.ent == nil then 
+                     printout("Nil entity", pindex)
+                  else
+                     printout("Invalid Entity", pindex)
+                  end
                   return
                end
                   if players[pindex].building.ent.inserter_filter_mode == "whitelist" then
@@ -3976,6 +3999,7 @@ script.on_event("left-click", function(event)
                players[pindex].building.recipe_list = nil
                players[pindex].building.category = 0
             end
+            players[pindex].building.item_selection = false
             players[pindex].inventory.lua_inventory = game.get_player(pindex).get_main_inventory()
             players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
             players[pindex].building.sectors = {}
@@ -4023,6 +4047,13 @@ script.on_event("left-click", function(event)
                   table.insert(players[pindex].building.sectors[#players[pindex].building.sectors].inventory, filter)
                end
                table.insert(players[pindex].building.sectors[#players[pindex].building.sectors].inventory, ent.inserter_filter_mode)
+               players[pindex].item_selection = false
+               players[pindex].item_cache = {}
+               players[pindex].item_selector = {
+                  index = 0,
+                  group = 0,
+                  subgroup = 0
+               }
 
             end
 
@@ -4381,6 +4412,15 @@ script.on_event(defines.events.on_gui_closed, function(event)
       end
       players[pindex].in_menu = false
       players[pindex].menu = "none"
+      players[pindex].item_selection = false
+      players[pindex].item_cache = {}
+      players[pindex].item_selector = {
+         index = 0,
+         group = 0,
+         subgroup = 0
+      }
+      players[pindex].building.item_selection = false
+
    end
 end
 )

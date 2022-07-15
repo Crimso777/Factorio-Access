@@ -1,3 +1,28 @@
+# Version 0.1.2
+
+Updated 07/15/22
+
+Bug Fixes:
+
+-Pumps should now say the correct output direction, even when they are facing north.
+
+-Fixed a crash involving pumps and left clicking before navigating the pump menu
+
+-Fixed bugs regarding filter inserters and their unique menu structure
+
+-Fixed game crashing if butttons were pressed before callibration
+
+Features:
+
+-Game will now announce to player when tab is necessary to start the game
+
+-Updated descriptions for certain entities
+
+-Objects that cannot be rotated will now appropriately say so
+
+-Added item information in crafting menu.  Press L to get a description of a recipe's product
+
+
 # Version 0.1.1
 
 Updated 07/09/22

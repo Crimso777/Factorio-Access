@@ -474,6 +474,14 @@ data:extend({
     name = "read-hand",
     key_sequence = "Q",
     consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "open-fast-travel",
+    key_sequence = "V",
+    consuming = "none"
 }
+
 
 })

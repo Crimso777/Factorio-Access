@@ -5,6 +5,45 @@ entity_types = {}
 production_types = {}
 local util = require('util')
 
+function read_travel_slot(pindex)
+   if #global.players[pindex].travel == 0 then
+      printout("Move towards the right and select Create to get started.", pindex)
+   else
+      local entry = global.players[pindex].travel[players[pindex].travel.index.y]
+      printout(entry.name .. " at " .. math.floor(entry.position.x) .. ", " .. math.floor(entry.position.y), pindex)
+   end
+end
+function teleport_to_closest(pindex, pos)
+   local first_player = game.get_player(pindex)
+   local surf = first_player.surface
+   local radius = .5
+   local new_pos = surf.find_non_colliding_position("character", pos, radius, .1, true)
+   while new_pos == nil do
+      radius = radius + 1 
+      new_pos = surf.find_non_colliding_position("character", pos, radius, .1, true)
+   end
+
+   local can_port = first_player.surface.can_place_entity{name = "character", position = new_pos} 
+   if can_port then
+      local teleported = first_player.teleport(new_pos)
+      if teleported then
+         players[pindex].position = table.deepcopy(new_pos)
+         if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
+            printout("Teleported " .. math.ceil(distance(pos,new_pos)) .. " " .. direction(pos, new_pos) .. " of target", pindex)
+         else
+            printout("Teleported to target", pindex)
+         end
+
+      else
+         printout("Teleport Failed", pindex)
+      end
+   else
+      printout("Tile Occupied", pindex)
+   end
+
+
+end
+
 function read_warnings_slot(pindex)
    local warnings = {}
    if players[pindex].warnings.sector == 1 then
@@ -1585,20 +1624,7 @@ function toggle_cursor(pindex)
 end
 
 function teleport_to_cursor(pindex)
-   first_player = game.get_player(pindex)
-   can_port = first_player.surface.can_place_entity{name = "character", position = players[pindex].cursor_pos}
-   if can_port then
-      teleported = first_player.teleport(players[pindex].cursor_pos)
-      if teleported then
-         read_tile(pindex)
-         players[pindex].position=table.deepcopy(players[pindex].cursor_pos)
-
-      else
-         printout("Teleport Failed", pindex)
-      end
-   else
-      printout("Tile Occupied", pindex)
-   end
+teleport_to_closest(pindex, players[pindex].cursor_pos)
 end
 function jump_to_player(pindex)
    local first_player = game.get_player(pindex)
@@ -1953,6 +1979,14 @@ end
 
 function initialize(player)
    index = player.index
+   if global.players == nil then
+      global.players = {}
+   end
+   if global.players[index] == nil then
+      global.players[index] = {
+         travel = {}
+      }
+   end
    player.character_reach_distance_bonus = math.max(player.character_reach_distance_bonus, 1)
 --   player.surface.daytime = .5
    players[index] = {
@@ -1987,6 +2021,7 @@ function initialize(player)
       item_selection = false,
       item_cache = {},
       item_selector = {},
+      travel = {},
       resolution = nil
    }
    players[index].cursor_pos = offset_position(players[index].position,players[index].player_direction,1)
@@ -2076,6 +2111,13 @@ function initialize(player)
       subgroup = 0
    }
 
+   players[index].travel = {
+      index = {x = 1, y = 0},
+      creating = false,
+      renaming = false
+   }
+
+      
 
    scale_start(index)
 
@@ -2357,7 +2399,15 @@ function menu_cursor_up(pindex)
       end
 
       printout("Option " .. players[pindex].pump.index .. ": " .. math.floor(distance(game.get_player(pindex).position, players[pindex].pump.positions[players[pindex].pump.index].position)) .. " meters " .. direction(game.get_player(pindex).position, players[pindex].pump.positions[players[pindex].pump.index].position) .. " Facing " .. dir, pindex)
-
+   elseif players[pindex].menu == "travel" then
+      if players[pindex].travel.index.y > 1 then
+         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         players[pindex].travel.index.y = players[pindex].travel.index.y - 1
+      else
+         players[pindex].travel.index.y = 1
+         end
+      players[pindex].travel.index.x = 1
+      read_travel_slot(pindex)
    end
 end
 
@@ -2540,7 +2590,15 @@ function menu_cursor_down(pindex)
       end
 
       printout("Option " .. players[pindex].pump.index .. ": " .. math.floor(distance(game.get_player(pindex).position, players[pindex].pump.positions[players[pindex].pump.index].position)) .. " meters " .. direction(game.get_player(pindex).position, players[pindex].pump.positions[players[pindex].pump.index].position) .. " Facing " .. dir, pindex)
-
+   elseif players[pindex].menu == "travel" then
+      if players[pindex].travel.index.y < #global.players[pindex].travel then
+         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         players[pindex].travel.index.y = players[pindex].travel.index.y + 1
+      else
+         players[pindex].travel.index.y = #global.players[pindex].travel
+      end
+      players[pindex].travel.index.x = 1
+      read_travel_slot(pindex)
    end
 end
 
@@ -2642,6 +2700,21 @@ function menu_cursor_left(pindex)
          game.get_player(pindex).play_sound{path = "utility/inventory_move"}
       end
       read_warnings_slot(pindex)
+   elseif players[pindex].menu == "travel" then
+      if players[pindex].travel.index.x > 1 then
+         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         players[pindex].travel.index.x = players[pindex].travel.index.x - 1
+      end
+      if players[pindex].travel.index.x == 1 then
+         printout("Travel", pindex)
+      elseif players[pindex].travel.index.x == 2 then
+         printout("Rename", pindex)
+      elseif players[pindex].travel.index.x == 3 then
+         printout("Delete", pindex)
+      elseif players[pindex].travel.index.x == 4 then
+         printout("Create New", pindex)
+      end
+
    end
 end
 
@@ -2768,6 +2841,21 @@ function menu_cursor_right(pindex)
          end
       end
       read_warnings_slot(pindex)
+   elseif players[pindex].menu == "travel" then
+      if players[pindex].travel.index.x < 4 then
+         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         players[pindex].travel.index.x = players[pindex].travel.index.x + 1
+      end
+      if players[pindex].travel.index.x == 1 then
+         printout("Travel", pindex)
+      elseif players[pindex].travel.index.x == 2 then
+         printout("Rename", pindex)
+      elseif players[pindex].travel.index.x == 3 then
+         printout("Delete", pindex)
+      elseif players[pindex].travel.index.x == 4 then
+         printout("Create New", pindex)
+      end
+
 
    end
 end
@@ -3080,9 +3168,14 @@ script.on_event("jump-to-scan", function(event)
             end
             ent = game.get_player(pindex).surface.get_closest(game.get_player(pindex).position, ents[players[pindex].nearby.index].ents)
          end
-      players[pindex].cursor_pos = center_of_tile(ent.position)
-      players[pindex].cursor = true
-      printout("Cursor has jumped to " .. ent.name .. " at " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
+      if players[pindex].cursor then
+         players[pindex].cursor_pos = center_of_tile(ent.position)
+         printout("Cursor has jumped to " .. ent.name .. " at " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
+      else
+         teleport_to_closest(pindex, ent.position)
+         players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
+
+         end
       end
    end
 end
@@ -3247,6 +3340,9 @@ script.on_event("open-inventory", function(event)
       players[pindex].in_menu = false
       if players[pindex].menu == "inventory" or players[pindex].menu == "crafting" or players[pindex].menu == "technology" or players[pindex].menu == "crafting_queue" then
          game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
+      end
+      if players[pindex].menu == "travel" then
+         game.get_player(pindex).gui.screen["travel"].destroy()
       end
 
       players[pindex].menu = "none"
@@ -3878,7 +3974,42 @@ script.on_event("left-click", function(event)
             printout("No warnings for this range.  Press tab to pick a larger range, or press E to close this menu.", pindex)
          end
 
-      
+      elseif players[pindex].menu == "travel" then
+         if #global.players[pindex].travel == 0 and players[pindex].travel.index.x < 4 then
+            printout("Move towards the right and select Create to get started.", pindex)
+         elseif players[pindex].travel.index.y == 0 and players[pindex].travel.index.x < 4 then
+            printout("Navigate up and down to select a fastt travel point, then press left bracket to get there quickly.", pindex)
+         elseif players[pindex].travel.index.x == 1 then
+            teleport_to_closest(pindex, global.players[pindex].travel[players[pindex].travel.index.y].position)
+            if players[pindex].cursor then
+               players[pindex].cursor_pos = table.deepcopy(global.players[pindex].travel[players[pindex].travel.index.y].position)
+            else
+               players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
+            end
+            game.get_player(pindex).opened = nil
+         elseif players[pindex].travel.index.x == 2 then
+            printout("Enter a new name for this fast travel point, then press enter to confirm.", pindex)
+            players[pindex].travel.renaming = true
+            local frame = game.get_player(pindex).gui.screen["travel"]
+            local input = frame.add{type="textfield", name = "input"}
+            input.focus()
+input.select(1, 0)
+         elseif players[pindex].travel.index.x == 3 then
+            printout("Deleted " .. global.players[pindex].travel[players[pindex].travel.index.y].name, pindex)
+            table.remove(global.players[pindex].travel, players[pindex].travel.index.y)
+            players[pindex].travel.x = 1
+            players[pindex].travel.index.y = players[pindex].travel.index.y - 1
+         elseif players[pindex].travel.index.x == 4 then
+            printout("Enter a name for this fast travel point, then press enter to confirm.", pindex)
+            players[pindex].travel.creating = true
+            local frame = game.get_player(pindex).gui.screen["travel"]
+            local input = frame.add{type="textfield", name = "input"}
+            input.focus()
+input.select(1, 0)
+         end
+         
+
+
       end
    else
       local stack = game.get_player(pindex).cursor_stack
@@ -4409,6 +4540,8 @@ script.on_event(defines.events.on_gui_closed, function(event)
    if players[pindex].in_menu == true and players[pindex].menu ~= "prompt"then
       if players[pindex].menu == "inventory" then
          game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
+      elseif players[pindex].menu == "travel" then
+         event.element.destroy()
       end
       players[pindex].in_menu = false
       players[pindex].menu = "none"
@@ -4420,7 +4553,6 @@ script.on_event(defines.events.on_gui_closed, function(event)
          subgroup = 0
       }
       players[pindex].building.item_selection = false
-
    end
 end
 )
@@ -4512,3 +4644,45 @@ script.on_event("list-warnings", function(event)
 
    end
 end)
+script.on_event("open-fast-travel", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu == false then
+      move_cursor(math.floor(players[pindex].resolution.width/2), math.floor(players[pindex].resolution.height/2), pindex)
+      players[pindex].menu = "travel"
+      players[pindex].in_menu = true
+      players[pindex].travel.index = {x = 1, y = 0}
+      players[pindex].travel.creating = false
+      printout("Navigate up and down to select a fast travel location, and jump to it with LEFT BRACKET.  Alternatively, select an option by navigating left and right.", pindex)
+      local screen = game.get_player(pindex).gui.screen
+      local frame = screen.add{type = "frame", name = "travel"}
+      frame.bring_to_front()
+      frame.force_auto_center()
+      frame.focus()
+      game.get_player(pindex).opened = frame      
+
+   end
+
+end)
+
+
+   script.on_event(defines.events.on_gui_confirmed,function(event)
+   if players[pindex].menu == "travel" then
+      if players[pindex].travel.creating then
+         players[pindex].travel.creating = false
+         table.insert(global.players[pindex].travel, {name = event.element.text, position = players[pindex].cursor_pos})
+         table.sort(global.players[pindex].travel, function(k1, k2)
+            return k1.name < k2.name
+         end)
+         printout("Fast travel point created at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
+      elseif players[pindex].travel.renaming then
+         players[pindex].travel.renaming = false
+         global.players[pindex].travel[players[pindex].travel.index.y].name = event.element.text
+         read_travel_slot(pindex)
+      end
+      players[pindex].travel.index.x = 1
+      event.element.destroy()
+   end
+end)   

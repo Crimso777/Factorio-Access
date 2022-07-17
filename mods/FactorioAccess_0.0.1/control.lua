@@ -1379,7 +1379,7 @@ function scan_index(pindex)
       local ent = nil
       if ents[players[pindex].nearby.index].name == "water" then
          table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
-            local pos = game.get_player(pindex).position
+            local pos = players[pindex].cursor_pos
             return distance(pos, k1.position) < distance(pos, k2.position)
          end)
          ent = ents[players[pindex].nearby.index].ents[1]
@@ -1405,7 +1405,7 @@ function scan_index(pindex)
          ent = game.get_player(pindex).surface.get_closest(game.get_player(pindex).position, ents[players[pindex].nearby.index].ents)
       end
       if players[pindex].nearby.count == false then
-         printout (ent.name .. " " .. math.floor(distance(game.get_player(pindex).position, ent.position)) .. " " .. direction(game.get_player(pindex).position, ent.position), pindex)
+         printout (ent.name .. " " .. math.floor(distance(players[pindex].cursor_pos, ent.position)) .. " " .. direction(players[pindex].cursor_pos, ent.position), pindex)
       else
          printout (ent.name .. " x " .. ents[players[pindex].nearby.index].count , pindex)
       end
@@ -1492,7 +1492,7 @@ function scan_middle(pindex)
 function rescan(pindex)
    players[pindex].nearby.index = 1
    first_player = game.get_player(pindex)
-   players[pindex].nearby.ents = scan_area(math.floor(first_player.position.x)-100, math.floor(first_player.position.y)-100, 200, 200, pindex)
+   players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-100, math.floor(players[pindex].cursor_pos.y)-100, 200, 200, pindex)
    populate_categories(pindex)
 end
 
@@ -1581,7 +1581,7 @@ function scan_area (x,y,w,h, pindex)
    end
    if players[pindex].nearby.count == false then
       table.sort(result, function(k1, k2) 
-         local pos = game.get_player(pindex).position
+         local pos = players[pindex].cursor_pos
          local ent1 = nil
          local ent2 = nil
          if k1.name == "water" then
@@ -2185,7 +2185,7 @@ function initialize(player)
 --   player.insert{name="solar-panel", count=100}
 --   player.insert{name="pipe-to-ground", count=100}
 --   player.insert{name="underground-belt", count=100}
-
+   game.get_player(index).surface.create_entity{name = "dead-grey-trunk", position = {5.5, 5.5}}
 --   player.force.research_all_technologies()
    end
 
@@ -2968,7 +2968,7 @@ end
 
 
 function move_key(direction,event)
-   if not check_for_player(event.player_index) then
+   if not check_for_player(event.player_index) or players[pindex].menu == "prompt" then
       return 
    end
    if players[event.player_index].in_menu and players[pindex].menu ~= "prompt" then

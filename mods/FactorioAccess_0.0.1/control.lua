@@ -4656,6 +4656,7 @@ script.on_event("list-warnings", function(event)
 
    end
 end)
+
 script.on_event("open-fast-travel", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -4698,3 +4699,7 @@ end)
       event.element.destroy()
    end
 end)   
+
+script.on_event({"fa-alt-zoom-in","fa-alt-zoom-out","fa-zoom-in","fa-zoom-out"}, function(event)
+   print(serpent.line(event))
+end)

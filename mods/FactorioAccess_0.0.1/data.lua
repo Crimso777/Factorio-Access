@@ -481,6 +481,38 @@ data:extend({
     name = "open-fast-travel",
     key_sequence = "V",
     consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-alt-zoom-in",
+    key_sequence = "X",
+    linked_game_control = "alt-zoom-in",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-alt-zoom-out",
+    key_sequence = "X",
+    linked_game_control = "alt-zoom-out",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-zoom-out",
+    key_sequence = "X",
+    linked_game_control = "zoom-out",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-zoom-in",
+    key_sequence = "X",
+    linked_game_control = "zoom-in",
+    consuming = "none"
 }
 
 

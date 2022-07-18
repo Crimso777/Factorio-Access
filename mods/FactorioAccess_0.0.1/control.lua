@@ -1,5 +1,4 @@
 
-players = {}
 groups = {}
 entity_types = {}
 production_types = {}
@@ -1345,6 +1344,10 @@ end
 
 
 function check_for_player(index)
+   if not players then
+      global.players = global.players or {}
+      players = global.players
+   end
    if players[index] == nil then
    initialize(game.get_player(index))
    return false
@@ -2972,16 +2975,17 @@ end
 
 
 function move_key(direction,event)
-   if not check_for_player(event.player_index) or players[pindex].menu == "prompt" then
+   local pindex = event.player_index
+   if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
    end
-   if players[event.player_index].in_menu and players[pindex].menu ~= "prompt" then
-      menu_cursor_move(direction,event.player_index)
-   elseif players[event.player_index].cursor then
-      players[event.player_index].cursor_pos = offset_position(players[event.player_index].cursor_pos, direction,1 + players[pindex].cursor_size*2)
+   if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
+      menu_cursor_move(direction,pindex)
+   elseif players[pindex].cursor then
+      players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction,1 + players[pindex].cursor_size*2)
       if players[pindex].cursor_size == 0 then
          read_tile(pindex)
-         target(event.player_index)
+         target(pindex)
       else
          players[pindex].nearby.index = 1
          players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size, math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size, players[pindex].cursor_size * 2 + 1, players[pindex].cursor_size * 2 + 1, pindex)
@@ -2989,7 +2993,7 @@ function move_key(direction,event)
          read_scan_summary(pindex)
       end
    else
-      move(direction,event.player_index)
+      move(direction,pindex)
    end
 end
 
@@ -4522,7 +4526,13 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
    end
 end)
 
+script.on_load(function()
+   players = global.players
+end)
 
+script.on_init(function()
+   global.players={}
+end)
 
 script.on_event(defines.events.on_cutscene_cancelled, function(event)
    check_for_player(event.player_index)

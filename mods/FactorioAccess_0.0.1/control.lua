@@ -1,5 +1,4 @@
 
-players = {}
 groups = {}
 entity_types = {}
 production_types = {}
@@ -1849,6 +1848,10 @@ end
 
 
 function check_for_player(index)
+   if not players then
+      global.players = global.players or {}
+      players = global.players
+   end
    if players[index] == nil then
    initialize(game.get_player(index))
    return false
@@ -4887,7 +4890,13 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
    end
 end)
 
+script.on_load(function()
+   players = global.players
+end)
 
+script.on_init(function()
+   global.players={}
+end)
 
 script.on_event(defines.events.on_cutscene_cancelled, function(event)
    pindex = event.player_index

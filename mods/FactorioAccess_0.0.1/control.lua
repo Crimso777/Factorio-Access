@@ -2333,7 +2333,7 @@ function initialize(player)
          travel = {}
       }
    end
---   player.character_reach_distance_bonus = math.max(player.character_reach_distance_bonus, 1)
+   --player.character_reach_distance_bonus = math.max(player.character_reach_distance_bonus, 1)
 --   player.surface.daytime = .5
    players[index] = {
       player = player,
@@ -2555,15 +2555,15 @@ game.write_file('map.txt', game.table_to_json(game.parse_map_exchange_string(">>
 --   player.force.research_all_technologies()
    end
 
-   script.on_event(defines.events.on_player_changed_position,function(event)
+end
+
+script.on_event(defines.events.on_player_changed_position,function(event)
       local pindex = event.player_index
       if not check_for_player(pindex) then
                return
       end
       if players[pindex].walk == 2 then
-         local pos = game.get_player(pindex).position
-         pos.x = math.floor(pos.x)+0.5
-         pos.y = math.floor(pos.y)+0.5
+      local pos = center_of_tile(game.get_player(pindex).position)
          if game.get_player(pindex).walking_state.direction ~= players[pindex].direction then
             players[pindex].direction = game.get_player(pindex).walking_state.direction
             local new_pos = offset_position(pos,players[pindex].direction,1)
@@ -2582,10 +2582,8 @@ game.write_file('map.txt', game.table_to_json(game.parse_map_exchange_string(">>
             target(pindex)
          end
       end
-   end)
+end)
 
-
-end
 
 
 function menu_cursor_move(direction,pindex)

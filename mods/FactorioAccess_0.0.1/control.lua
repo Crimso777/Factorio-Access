@@ -1218,7 +1218,7 @@ function target(pindex)
    if #players[pindex].tile.ents > 0 then
          move_cursor_map(players[pindex].tile.ents[players[pindex].tile.index - 1].position,pindex)
    else
-         move_cursor(math.floor(players[pindex].resolution.width/2), math.floor(players[pindex].resolution.height), pindex)
+         move_cursor_map(players[pindex].cursor_pos,pindex)
    end
 end
 function move_cursor_map(position,pindex)

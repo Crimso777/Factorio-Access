@@ -1,5 +1,5 @@
+require('zoom')
 
-players = {}
 groups = {}
 entity_types = {}
 production_types = {}
@@ -1218,77 +1218,22 @@ function target(pindex)
    if #players[pindex].tile.ents > 0 then
          move_cursor_map(players[pindex].tile.ents[players[pindex].tile.index - 1].position,pindex)
    else
-         move_cursor(math.floor(players[pindex].resolution.width/2), math.floor(players[pindex].resolution.height), pindex)
+         move_cursor_map(players[pindex].cursor_pos, pindex)
    end
 end
 function move_cursor_map(position,pindex)
-   player = game.get_player(pindex)
-   move_cursor((position.x-player.position.x)*players[pindex].scale.x + (players[pindex].resolution.width/2), (position.y - player.position.y) * players[pindex].scale.y + (players[pindex].resolution.height/2), pindex)
+   local player = players[pindex]
+   local pixels = mult_position( sub_position(position, player.position), 32*player.zoom)
+   local screen = game.players[pindex].display_resolution
+   screen = {x = screen.width, y = screen.height}
+   pixels = add_position(pixels,mult_position(screen,0.5))
+   move_cursor(pixels.x, pixels.y, pindex)
 end
 function move_cursor(x,y, pindex)
-   if x >= 0 and y >=0 and x < players[pindex].resolution.width and y < players[pindex].resolution.height then
+   if x >= 0 and y >=0 and x < game.players[pindex].display_resolution.width and y < game.players[pindex].display_resolution.height then
       print ("setCursor " .. math.ceil(x) .. "," .. math.ceil(y))
    end
 end
-
-function scale_stop(position, pindex)
-   player = game.get_player(pindex)
-   move_cursor(players[pindex].resolution.width/2, players[pindex].resolution.height/2, pindex)
-   x1 = player.position.x
-   y1 = player.position.y
-   x2 = position.x
-   y2 = position.y
-   dx = math.abs(x2-x1)
-   dy = math.abs(y2-y1)
-   pptx = players[pindex].resolution.width/dx/2
-   ppty = players[pindex].resolution.height/dy/2
-   players[pindex].scale.x = math.floor(pptx + .5)
-   players[pindex].scale.y = math.floor(ppty + .5)
-
-   local success = true
-   if pptx > 50 or ppty > 50 then
-      success = false
-   end
-   printout("Callibration complete", pindex)
-   game.speed = 1
-   players[pindex].in_menu = false
-   players[pindex].menu = "none"
-   local check = true
-   for i = 1, #players,1 do
-      if players[i].menu == "prompt" then
-         check = false
-      end
-   end
-   if check then
-      script.on_event("prompt", nil)
-   end
-   if not(success) then
-      scale_start(pindex)
-   end
-end
-
-function scale_start(pindex)
-   local player = game.get_player(pindex)
-   players[pindex].resolution = player.display_resolution
-   print ("resx="..players[pindex].resolution.width)
-   print ("resy="..players[pindex].resolution.height)
-      
-   move_cursor(0,0,pindex)
-   if #players < 2 then
---      game.speed = .1
-      end
-   printout("Calibration Started.  Press space to continue", pindex)
-   players[pindex].in_menu = true
-   players[pindex].menu = "prompt"
-   script.on_event("prompt", function(event)
-      if event.player_index == pindex then
-         scale_stop(event.cursor_position,pindex)
-      end
-   end)
-      
-end
-
-
 
 function tile_cycle(pindex)
    players[pindex].tile.index = players[pindex].tile.index + 1
@@ -1345,6 +1290,10 @@ end
 
 
 function check_for_player(index)
+   if not players then
+      global.players = global.players or {}
+      players = global.players
+   end
    if players[index] == nil then
    initialize(game.get_player(index))
    return false
@@ -1991,21 +1940,19 @@ function initialize(player)
          travel = {}
       }
    end
-   player.character_reach_distance_bonus = math.max(player.character_reach_distance_bonus, 1)
---   player.surface.daytime = .5
+   --player.character_reach_distance_bonus = math.max(player.character_reach_distance_bonus, 1)
+   local character = player.cutscene_character or player.character
    players[index] = {
       player = player,
       in_menu = false,
       in_item_selector = false,
-      on_target = false,
       menu = "none",
       cursor = false,
       cursor_pos = nil,
       cursor_size = 0 ,
-      scale = {x,y},
       num_elements = 0,
-      player_direction = player.walking_state.direction,
-      position = {x= math.floor(player.position.x) + .5, y= math.floor(player.position.y)+.5},
+      player_direction = character.walking_state.direction,
+      position = center_of_tile(character.position),
       walk = 0,
       move_queue = {},
       building_direction = 0,
@@ -2026,8 +1973,9 @@ function initialize(player)
       item_cache = {},
       item_selector = {},
       travel = {},
-      resolution = nil
+      zoom = 1
    }
+
    players[index].cursor_pos = offset_position(players[index].position,players[index].player_direction,1)
    players[index].nearby = {
       index = 0,
@@ -2123,8 +2071,6 @@ function initialize(player)
 
       
 
-   scale_start(index)
-
    local recipes = player.force.recipes
    local types = {}
    for i, recipe in pairs(recipes) do
@@ -2193,37 +2139,35 @@ function initialize(player)
 --   player.force.research_all_technologies()
    end
 
-   script.on_event(defines.events.on_player_changed_position,function(event)
-      local pindex = event.player_index
-      if not check_for_player(pindex) then
-               return
-      end
-      if players[pindex].walk == 2 then
-         local pos = game.get_player(pindex).position
-         pos.x = math.floor(pos.x)+0.5
-         pos.y = math.floor(pos.y)+0.5
-         if game.get_player(pindex).walking_state.direction ~= players[pindex].direction then
-            players[pindex].direction = game.get_player(pindex).walking_state.direction
-            local new_pos = offset_position(pos,players[pindex].direction,1)
-            players[pindex].cursor_pos = new_pos
-            players[pindex].position = pos
---            target(pindex)
-         else
-         
-            players[pindex].cursor_pos.x = players[pindex].cursor_pos.x + pos.x - players[pindex].position.x
-            players[pindex].cursor_pos.y = players[pindex].cursor_pos.y + pos.y - players[pindex].position.y
-            players[pindex].position = pos
-         end
-         -- print("checking:".. players[pindex].cursor_pos.x .. "," .. players[pindex].cursor_pos.y)
-         if not game.get_player(pindex).surface.can_place_entity{name = "character", position = players[pindex].cursor_pos} then
-            read_tile(pindex)
-            target(pindex)
-         end
-      end
-   end)
-
-
 end
+
+script.on_event(defines.events.on_player_changed_position,function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].walk == 2 then
+      local pos = center_of_tile(game.get_player(pindex).position)
+      if game.get_player(pindex).walking_state.direction ~= players[pindex].direction then
+         players[pindex].direction = game.get_player(pindex).walking_state.direction
+         local new_pos = offset_position(pos,players[pindex].direction,1)
+         players[pindex].cursor_pos = new_pos
+         players[pindex].position = pos
+--            target(pindex)
+      else
+      
+         players[pindex].cursor_pos.x = players[pindex].cursor_pos.x + pos.x - players[pindex].position.x
+         players[pindex].cursor_pos.y = players[pindex].cursor_pos.y + pos.y - players[pindex].position.y
+         players[pindex].position = pos
+      end
+      -- print("checking:".. players[pindex].cursor_pos.x .. "," .. players[pindex].cursor_pos.y)
+      if not game.get_player(pindex).surface.can_place_entity{name = "character", position = players[pindex].cursor_pos} then
+         read_tile(pindex)
+         target(pindex)
+      end
+   end
+end)
+
 
 
 function menu_cursor_move(direction,pindex)
@@ -2864,7 +2808,24 @@ function menu_cursor_right(pindex)
    end
 end
 
+function on_player_join(pindex)
+   fix_zoom(pindex)
+end
 
+script.on_event(defines.events.on_player_joined_game,function(event)
+   on_player_join(event.player_index)
+end)
+
+local should_single_player_join_in = 3
+function on_tick(event)
+   if should_single_player_join_in > 0 then
+      should_single_player_join_in = should_single_player_join_in - 1
+      if should_single_player_join_in == 0 and not game.is_multiplayer() then
+         on_player_join(game.connected_players[1].index)
+      end
+   end
+   move_characters(event)
+end
 
 function move_characters(event)
    for pindex, player in pairs(players) do
@@ -2895,8 +2856,20 @@ function move_characters(event)
       end
    end
 end
-script.on_event({defines.events.on_tick},move_characters)
+script.on_event({defines.events.on_tick},on_tick)
 
+
+function add_position(p1,p2)
+   return { x = p1.x + p2.x, y = p1.y + p2.y}
+end
+
+function sub_position(p1,p2)
+   return { x = p1.x - p2.x, y = p1.y - p2.y}
+end
+
+function mult_position(p,m)
+   return { x = p.x * m, y = p.y * m }
+end
 
 function offset_position(oldpos,direction,distance)
    if direction == defines.direction.north then
@@ -2972,16 +2945,17 @@ end
 
 
 function move_key(direction,event)
-   if not check_for_player(event.player_index) or players[pindex].menu == "prompt" then
+   local pindex = event.player_index
+   if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
    end
-   if players[event.player_index].in_menu and players[pindex].menu ~= "prompt" then
-      menu_cursor_move(direction,event.player_index)
-   elseif players[event.player_index].cursor then
-      players[event.player_index].cursor_pos = offset_position(players[event.player_index].cursor_pos, direction,1 + players[pindex].cursor_size*2)
+   if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
+      menu_cursor_move(direction,pindex)
+   elseif players[pindex].cursor then
+      players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction,1 + players[pindex].cursor_size*2)
       if players[pindex].cursor_size == 0 then
          read_tile(pindex)
-         target(event.player_index)
+         target(pindex)
       else
          players[pindex].nearby.index = 1
          players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size, math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size, players[pindex].cursor_size * 2 + 1, players[pindex].cursor_size * 2 + 1, pindex)
@@ -2989,7 +2963,7 @@ function move_key(direction,event)
          read_scan_summary(pindex)
       end
    else
-      move(direction,event.player_index)
+      move(direction,pindex)
    end
 end
 
@@ -4522,7 +4496,13 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
    end
 end)
 
+script.on_load(function()
+   players = global.players
+end)
 
+script.on_init(function()
+   global.players={}
+end)
 
 script.on_event(defines.events.on_cutscene_cancelled, function(event)
    check_for_player(event.player_index)
@@ -4530,6 +4510,7 @@ script.on_event(defines.events.on_cutscene_cancelled, function(event)
 end)
 
 script.on_event(defines.events.on_player_created, function(event)
+   initialize(game.players[event.player_index])
    if not game.is_multiplayer() then
       printout("Press tab to continue.", 0)
    end
@@ -4618,7 +4599,7 @@ end)
 
 script.on_event("recalibrate",function(event)
    pindex = event.player_index
-   scale_start(pindex)
+   fix_zoom(pindex)
 end)
 
 script.on_event("read-hand",function(event)
@@ -4648,13 +4629,13 @@ script.on_event("list-warnings", function(event)
 
    end
 end)
+
 script.on_event("open-fast-travel", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
    if players[pindex].in_menu == false then
-      move_cursor(math.floor(players[pindex].resolution.width/2), math.floor(players[pindex].resolution.height/2), pindex)
       players[pindex].menu = "travel"
       players[pindex].in_menu = true
       players[pindex].travel.index = {x = 1, y = 0}
@@ -4672,7 +4653,7 @@ script.on_event("open-fast-travel", function(event)
 end)
 
 
-   script.on_event(defines.events.on_gui_confirmed,function(event)
+script.on_event(defines.events.on_gui_confirmed,function(event)
    if players[pindex].menu == "travel" then
       if players[pindex].travel.creating then
          players[pindex].travel.creating = false
@@ -4689,4 +4670,4 @@ end)
       players[pindex].travel.index.x = 1
       event.element.destroy()
    end
-end)   
+end)

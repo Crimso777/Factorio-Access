@@ -513,7 +513,22 @@ data:extend({
     key_sequence = "X",
     linked_game_control = "zoom-in",
     consuming = "none"
-}
+},
 
+{
+    type = "custom-input",
+    name = "fa-debug-reset-zoom-2x",
+    key_sequence = "X",
+    linked_game_control = "debug-reset-zoom-2x",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-debug-reset-zoom",
+    key_sequence = "X",
+    linked_game_control = "debug-reset-zoom",
+    consuming = "none"
+}
 
 })

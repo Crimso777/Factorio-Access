@@ -549,6 +549,22 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "fa-debug-reset-zoom-2x",
+    key_sequence = "X",
+    linked_game_control = "debug-reset-zoom-2x",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-debug-reset-zoom",
+    key_sequence = "X",
+    linked_game_control = "debug-reset-zoom",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "open-structure-travel",
     key_sequence = "CONTROL + S",
     consuming = "none"

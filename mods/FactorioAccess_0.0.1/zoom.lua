@@ -1,7 +1,7 @@
 
 
 local MIN_ZOOM = 0.275
-local MAX_ZOOM = 3.233
+local MAX_ZOOM = 3.282
 
 local ZOOM_PER_TICK = 1.104086977
 
@@ -21,16 +21,18 @@ function fix_zoom(pindex)
 end
 
 function zoom_change(pindex,etick,change_by_tick)
-   if global.players[pindex].last_zoom_event_tick == etick then
-      return
-   end
-   global.players[pindex].last_zoom_event_tick == etick
+   -- if global.players[pindex].last_zoom_event_tick == etick then
+      -- print("maybe duplicate")
+      -- return
+   -- end
+   -- global.players[pindex].last_zoom_event_tick = etick
    if game.players[pindex].render_mode == defines.render_mode.game then
-      local tick = zoom_to_tick(pindex)
+      local tick = get_zoom_tick(pindex)
       tick = tick + change_by_tick
       local zoom = tick_to_zoom(tick)
       if zoom < MAX_ZOOM and zoom > MIN_ZOOM then
          global.players[pindex].zoom = zoom
+         target(pindex)
       end
    end
 end

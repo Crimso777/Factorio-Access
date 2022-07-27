@@ -4074,6 +4074,13 @@ script.on_event("reverse-switch-menu", function(event)
    end
 end)
 
+function play_mining_sound(pindex)
+   local player= game.players[index]
+   if player and player.mining_state.mining and player.selected and player.selected.prototype.is_building then
+      player.play_sound{path = "Mine-Building"}
+      schedule(25, play_mining_sound, pindex)
+   end
+end
 
 
 script.on_event("mine-access", function(event)
@@ -4085,6 +4092,7 @@ script.on_event("mine-access", function(event)
       target(pindex)
       if #players[pindex].tile.ents > 0 and players[pindex].tile.ents[players[pindex].tile.index-1].prototype.is_building then
          game.get_player(pindex).play_sound{path = "Mine-Building"}
+         schedule(25, play_mining_sound, pindex)
       end
    end
 end
@@ -5112,12 +5120,4 @@ script.on_event("nudge-left", function(event)
 end)
 script.on_event("nudge-right", function(event)
    nudge_key(defines.direction.east,event)
-end)
-
-script.on_nth_tick(25, function(event)
-   for pindex, player in pairs(players) do
-      if game.get_player(pindex).character_mining_progress > 0 and  #players[pindex].tile.ents > 0 and players[pindex].tile.ents[players[pindex].tile.index-1].prototype.is_building then
-         game.get_player(pindex).play_sound{path = "Mine-Building"}
-      end
-   end
 end)

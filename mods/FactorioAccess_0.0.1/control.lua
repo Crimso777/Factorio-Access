@@ -3230,7 +3230,26 @@ function menu_cursor_right(pindex)
    end
 end
 
+function schedule(ticks_in_the_future,func_to_call, data_to_pass)
+   if ticks_in_the_future <=0 then
+      func_to_call(data_to_pass)
+      return
+   end
+   local tick = game.tick + ticks_in_the_future
+   local schedule = global.scheduled_events
+   schedule[tick] = schedule[tick] or {}
+   table.insert(schedule[tick], {func_to_call,data_to_pass})
+end
 
+function on_tick(event)
+   if global.scheduled_events[event.tick] then
+      for _, to_call in pairs(global.scheduled_events[event.tick]) do
+         to_call[1](to_call[2])
+      end
+      global.scheduled_events[event.tick] = nil
+   end
+   move_characters(event)
+end
 
 function move_characters(event)
    for pindex, player in pairs(players) do
@@ -3261,7 +3280,7 @@ function move_characters(event)
       end
    end
 end
-script.on_event({defines.events.on_tick},move_characters)
+script.on_event({defines.events.on_tick},on_tick)
 
 
 function offset_position(oldpos,direction,distance)

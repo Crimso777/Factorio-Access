@@ -4075,7 +4075,7 @@ script.on_event("reverse-switch-menu", function(event)
 end)
 
 function play_mining_sound(pindex)
-   local player= game.players[index]
+   local player= game.players[pindex]
    if player and player.mining_state.mining and player.selected and player.selected.prototype.is_building then
       player.play_sound{path = "Mine-Building"}
       schedule(25, play_mining_sound, pindex)

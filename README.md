@@ -104,7 +104,7 @@ Move cursor to scanned target: CONTROL + HOME
 
 note: If you are not in cursor mode, this will simply teleport the player to the nearest position to the target.
 
-##Fast Travel
+## Fast Travel
 
 Open Fast Travel Menu: V
 
@@ -116,7 +116,7 @@ Confirm an option: LEFT BRACKET
 
 Note:  Options include Teleporting to a saved point, renaming a saved point, deleting a saved point, and creating a new point.
 
-##BStride
+## BStride
 
 Travel freely from building to building as if they were laid out in a grid pattern.
 

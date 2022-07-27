@@ -1,4 +1,4 @@
-#Version 0.2.0
+# Version 0.2.0
 
 Updated 07/27/22
 
@@ -15,6 +15,8 @@ New Features
 -Trying to teleport to a building will no longer give an error.  Now you will teleport to the nearest free position, and the mod will tell you where you are in relation to your target.
 
 -Pressing CONTROL + HOME will now teleport the player to the closest available position near the target, or if in cursor mode the old behavior will still occur.
+
+-Mining a building now has audible feedback
 
 And Many Many bug fixes thanks to @MyNameIsTrez
 

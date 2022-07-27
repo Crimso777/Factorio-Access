@@ -6,30 +6,31 @@
 !LICENSE
 
 #Documentation
-!README.md
-!CHANGES.md
+!/README.md
+!/CHANGES.md
 
 #Config
-!config/
-!config/config.ini
+!/config/
+!/config/config.ini
 
 #Map settings
-!Map Settings/
-!Map Settings/PeacefulSettings.json
-!Map Settings/Custom Settings/
-!Map Settings/gen/**
+!/Map Settings/
+!/Map Settings/PeacefulSettings.json
+!/Map Settings/CompassValleySettings.json
+!/Map Settings/Custom Settings/
+!/Map Settings/gen/**
 
 #Mod Files
-!mods/
-!mods/mod-list.json
-!mods/FactorioAccess_0.0.1/**
+!/mods/
+!/mods/mod-list.json
+!/mods/FactorioAccess_0.0.1/**
 
 #Launcher
-!main.py
-!main.spec
+!/main.py
+!/main.spec
 
 #Jaws File
-Factorio.jkm
+!/Factorio.jkm
 
 #build scripts
-!gen_release.py
+!/gen_release.py

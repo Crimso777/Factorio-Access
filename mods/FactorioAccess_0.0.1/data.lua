@@ -29,6 +29,13 @@ data:extend({
    volume = 1,
    preload = true
 },
+{
+   type = "sound",
+   name = "Mine-Building",
+   filename = "__FactorioAccess__/Audio/mine_02.ogg",
+   volume = 1,
+   preload = true
+},
 
 {
    type = "sound",
@@ -90,6 +97,31 @@ data:extend({
     linked_game_control = "move-right",
     consuming = "none"
 },
+  {
+    type = "custom-input",
+    name = "nudge-up",
+    key_sequence = "CONTROL + SHIFT + W",
+    consuming = "none"
+},
+{
+    type = "custom-input",
+    name = "nudge-down",
+    key_sequence = "CONTROL + SHIFT + S",
+    consuming = "none"
+},
+{
+    type = "custom-input",
+    name = "nudge-left",
+    key_sequence = "CONTROL + SHIFT + A",
+    consuming = "none"
+},
+{
+    type = "custom-input",
+    name = "nudge-right",
+    key_sequence = "CONTROL + SHIFT + D",
+    consuming = "none"
+},
+
 {
     type = "custom-input",
     name = "read-coords",
@@ -481,7 +513,13 @@ data:extend({
     name = "open-fast-travel",
     key_sequence = "V",
     consuming = "none"
-}
+},
 
+{
+    type = "custom-input",
+    name = "open-structure-travel",
+    key_sequence = "CONTROL + S",
+    consuming = "none"
+}
 
 })

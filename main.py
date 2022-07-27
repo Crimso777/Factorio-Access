@@ -361,7 +361,7 @@ def newGame():
 def chooseDifficulty():
     command = 0
     while command == 0:
-        print("Select type of map:\n1: Peaceful\n2: Easy\n3: Normal\n4: Hard\n5: Custom\n")
+        print("Select type of map:\n1:Compass Valley\n2: Peaceful\n3: Easy\n4: Normal\n5: Hard\n6: Custom\n")
         i = input()
 
         try:
@@ -373,14 +373,26 @@ def chooseDifficulty():
             print("Please enter a name for your new map:\n")
             i1 = input()
             try:
+                proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", "Map Settings/gen/CompassValleyMap.json", "--map-settings",
+                                      "Map Settings/CompassValleySettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except:
+                print(
+                    "Error saving map, make sure the name is a valid filename for windows.")
+                continue
+            command = 1
+
+        elif int(i) == 2:
+            print("Please enter a name for your new map:\n")
+            i1 = input()
+            try:
                 proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", "Map Settings/gen/PeacefulMap.json", "--map-settings",
                                       "Map Settings/PeacefulSettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except:
                 print(
                     "Error saving map, make sure the name is a valid filename for windows.")
                 continue
-            command = 1
-        elif int(i) == 2:
+            command = 2
+        elif int(i) == 3:
             print("Please enter a name for your new map:\n")
             i1 = input()
             try:
@@ -390,8 +402,8 @@ def chooseDifficulty():
                 print(
                     "Error saving map, make sure the name is a valid filename for windows.")
                 continue
-            command = 2
-        elif int(i) == 3:
+            command = 3
+        elif int(i) == 4:
             print("Please enter a name for your new map:\n")
             i1 = input()
             try:
@@ -413,10 +425,10 @@ def chooseDifficulty():
                 print(
                     "Error saving map, make sure the name is a valid filename for windows.")
                 continue
-            command = 4
-        elif int(i) == 5:
-            i1 = customMapList()
             command = 5
+        elif int(i) == 6:
+            i1 = customMapList()
+            command = 6
 
             print("Creating Custom game...")
     return launch("Maps/"+i1+".zip")

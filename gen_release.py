@@ -21,4 +21,7 @@ with zipfile.ZipFile("FactorioAccess"+release, mode='w') as zipfp:
     add_to_zip(zipfp,'launcher.exe')
     add_to_zip(zipfp,'LICENSE')
     add_to_zip(zipfp,'README.md')    
+    add_to_zip(zipfp,'nvdaControllerClient64.dll')    
+    add_to_zip(zipfp,'SAAPI64.dll')    
+
 

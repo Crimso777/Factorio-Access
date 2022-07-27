@@ -2075,7 +2075,7 @@ local waters = {}
    end
 
    for i=1, #ents, 1 do
-      index = index_of_entity(result, ents[i].name)
+      local index = index_of_entity(result, ents[i].name)
       if index == nil then
          table.insert(result, {name = ents[i].name, count = 1, ents = {ents[i]}})
 
@@ -2321,7 +2321,7 @@ function read_coords(pindex)
 end
 
 function initialize(player)
-   index = player.index
+   local index = player.index
    if global.players == nil then
       global.players = {}
    end
@@ -3308,7 +3308,7 @@ function move(direction,pindex)
    if players[pindex].walk == 2 then
       return
    end
-   first_player = game.get_player(pindex)
+   local first_player = game.get_player(pindex)
    local pos = players[pindex].position
    local new_pos = offset_position(pos,direction,1)
    if players[pindex].player_direction == direction then

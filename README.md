@@ -54,7 +54,6 @@ Note the 3 movement types are as follows:
 
    3- Smooth-Walking: In this mode the character will move similarly to in a sighted game. The player will be notified if they run into something, but otherwise will not be notified of entities they are passing. Very fast, and great for getting around!
 
-
 ## Interactions
 
 Mine: X
@@ -103,6 +102,33 @@ Repeat scanned entry: HOME
 
 Move cursor to scanned target: CONTROL + HOME
 
+note: If you are not in cursor mode, this will simply teleport the player to the nearest position to the target.
+
+##Fast Travel
+
+Open Fast Travel Menu: V
+
+Select a fast travel point:  W and S
+
+Select an option: A and D
+
+Confirm an option: LEFT BRACKET
+
+Note:  Options include Teleporting to a saved point, renaming a saved point, deleting a saved point, and creating a new point.
+
+##BStride
+
+Travel freely from building to building as if they were laid out in a grid pattern.
+
+Open the BStride menu with CONTROL + S, and explore your factory with the following controls:
+
+First, select a direction using WASD
+
+Next navigate the list of adjacent buildings with the two perpendicular directions.  For instance, if you are going North, then use the A and D keys to select a building from the list.
+
+Last, confirm your selection by pressing the direction you started with.  For instance, if I wanted to go to the 2nd item in the northern list I would hit W to go north, D to select option 2, and W again to confirm.
+
+Once you find your target, press LEFT BRACKET to teleport your character to the building.
 
 ## Warnings
 
@@ -112,7 +138,7 @@ Navigate woarnings menu:    WASD to navigate a single range
 
 Switch Range: TAB
 
-Teleport cursor to Ent with warning: LEFT BRACKET
+Teleport cursor to Building with warning: LEFT BRACKET
 
 Close Warnings menu: E
 

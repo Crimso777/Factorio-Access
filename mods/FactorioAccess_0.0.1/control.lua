@@ -3230,7 +3230,26 @@ function menu_cursor_right(pindex)
    end
 end
 
+function schedule(ticks_in_the_future,func_to_call, data_to_pass)
+   if ticks_in_the_future <=0 then
+      func_to_call(data_to_pass)
+      return
+   end
+   local tick = game.tick + ticks_in_the_future
+   local schedule = global.scheduled_events
+   schedule[tick] = schedule[tick] or {}
+   table.insert(schedule[tick], {func_to_call,data_to_pass})
+end
 
+function on_tick(event)
+   if global.scheduled_events[event.tick] then
+      for _, to_call in pairs(global.scheduled_events[event.tick]) do
+         to_call[1](to_call[2])
+      end
+      global.scheduled_events[event.tick] = nil
+   end
+   move_characters(event)
+end
 
 function move_characters(event)
    for pindex, player in pairs(players) do
@@ -3261,7 +3280,7 @@ function move_characters(event)
       end
    end
 end
-script.on_event({defines.events.on_tick},move_characters)
+script.on_event({defines.events.on_tick},on_tick)
 
 
 function offset_position(oldpos,direction,distance)
@@ -4055,6 +4074,13 @@ script.on_event("reverse-switch-menu", function(event)
    end
 end)
 
+function play_mining_sound(pindex)
+   local player= game.players[pindex]
+   if player and player.mining_state.mining and player.selected and player.selected.prototype.is_building then
+      player.play_sound{path = "Mine-Building"}
+      schedule(25, play_mining_sound, pindex)
+   end
+end
 
 
 script.on_event("mine-access", function(event)
@@ -4066,6 +4092,7 @@ script.on_event("mine-access", function(event)
       target(pindex)
       if #players[pindex].tile.ents > 0 and players[pindex].tile.ents[players[pindex].tile.index-1].prototype.is_building then
          game.get_player(pindex).play_sound{path = "Mine-Building"}
+         schedule(25, play_mining_sound, pindex)
       end
    end
 end
@@ -5093,12 +5120,4 @@ script.on_event("nudge-left", function(event)
 end)
 script.on_event("nudge-right", function(event)
    nudge_key(defines.direction.east,event)
-end)
-
-script.on_nth_tick(25, function(event)
-   for pindex, player in pairs(players) do
-      if game.get_player(pindex).character_mining_progress > 0 and  #players[pindex].tile.ents > 0 and players[pindex].tile.ents[players[pindex].tile.index-1].prototype.is_building then
-         game.get_player(pindex).play_sound{path = "Mine-Building"}
-      end
-   end
 end)

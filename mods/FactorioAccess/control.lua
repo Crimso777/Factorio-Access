@@ -3081,7 +3081,7 @@ end
 
 function on_player_join(pindex)
    schedule(3, fix_zoom, pindex)
-   
+   print("joined")
    if game.players[pindex].name == "Crimso" then
       local player = game.get_player(pindex).cutscene_character or game.get_player(pindex).character
 
@@ -3122,7 +3122,9 @@ function on_player_join(pindex)
 end
 
 script.on_event(defines.events.on_player_joined_game,function(event)
-   on_player_join(event.player_index)
+   if game.is_multiplayer() then
+      on_player_join(event.player_index)
+   end
 end)
 
 function on_initial_joining_tick(event)
@@ -4794,15 +4796,8 @@ script.on_event(defines.events.on_player_cursor_stack_changed, function(event)
    end
 end)
 
-script.on_load(function()
-   players = global.players
-   entity_types = global.entity_types
-   production_types = global.production_types
-   building_types = global.building_types
-end)
 
-script.on_configuration_changed(function(data)
-   print("woot")
+function ensure_global_structures_are_up_to_date()
    global.players = global.players or {}
    players = global.players
    for pindex, player in pairs(game.players) do
@@ -4859,7 +4854,17 @@ script.on_configuration_changed(function(data)
    
    global.scheduled_events = global.scheduled_events or {}
    
+end
+
+script.on_load(function()
+   players = global.players
+   entity_types = global.entity_types
+   production_types = global.production_types
+   building_types = global.building_types
 end)
+
+script.on_configuration_changed(ensure_global_structures_are_up_to_date)
+script.on_init(ensure_global_structures_are_up_to_date)
 
 
 script.on_event(defines.events.on_cutscene_cancelled, function(event)

@@ -18,6 +18,14 @@ New Features
 
 -Mining a building now has audible feedback
 
+-Copy building settings with SHIFT + RIGHT BRACKET, and paste the settings on another building with SHIFT + LEFT BRACKET.
+
+-Visual cursor now follows the virtual cursor
+
+-Game no longer requires callibration 
+
+-Spaceship containers now include audible feedback when opening and closing.
+
 And Many Many bug fixes thanks to @MyNameIsTrez
 
 # Version 0.1.2

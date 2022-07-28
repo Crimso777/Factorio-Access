@@ -131,10 +131,10 @@ function move_cursor_structure(pindex, dir)
       end
    elseif direction == adjusted[(2 + dir)%8] or direction == adjusted[(6 + dir) %8] then
       if (dir == 0 or dir == 6) and index > 1 then
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].structure_travel.index = index - 1
       elseif (dir == 2 or dir == 4) and index < #network[current][direction] then
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].structure_travel.index = index + 1
       end
       local index = players[pindex].structure_travel.index
@@ -2456,7 +2456,7 @@ function menu_cursor_up(pindex)
                end         
 
    elseif players[pindex].menu == "inventory" then
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].inventory.index = players[pindex].inventory.index -10
       if players[pindex].inventory.index < 1 then
          players[pindex].inventory.index = players[pindex].inventory.max + players[pindex].inventory.index
@@ -2466,7 +2466,7 @@ function menu_cursor_up(pindex)
       read_inventory_slot(pindex)
 
    elseif players[pindex].menu == "crafting" then
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].crafting.index = 1
       players[pindex].crafting.category = players[pindex].crafting.category - 1
 
@@ -2475,7 +2475,7 @@ function menu_cursor_up(pindex)
       end
       read_crafting_slot(pindex)
    elseif players[pindex].menu == "crafting_queue" then   
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       load_crafting_queue(pindex)
       players[pindex].crafting_queue.index = 1
       read_crafting_queue(pindex)
@@ -2486,18 +2486,18 @@ function menu_cursor_up(pindex)
             return
          end
          if #players[pindex].building.sectors[players[pindex].building.sector].inventory > 10 then
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].building.index = players[pindex].building.index - 8
             if players[pindex].building.index < 1 then
                players[pindex].building.index = players[pindex].building.index + #players[pindex].building.sectors[players[pindex].building.sector].inventory 
             end
          else
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].building.index = 1
          end
          read_building_slot(pindex)
       elseif players[pindex].building.recipe_list == nil then
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index -10
          if players[pindex].inventory.index < 1 then
             players[pindex].inventory.index = players[pindex].inventory.max + players[pindex].inventory.index
@@ -2506,7 +2506,7 @@ function menu_cursor_up(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
             if players[pindex].building.recipe_selection then
-               game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+               game.get_player(pindex).play_sound{path = "Inventory-Move"}
                players[pindex].building.category = players[pindex].building.category - 1
                players[pindex].building.index = 1
                if players[pindex].building.category < 1 then
@@ -2515,7 +2515,7 @@ function menu_cursor_up(pindex)
             end
             read_building_recipe(pindex)
          else
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].inventory.index = players[pindex].inventory.index -10
             if players[pindex].inventory.index < 1 then
                players[pindex].inventory.index = players[pindex].inventory.max + players[pindex].inventory.index
@@ -2539,7 +2539,7 @@ function menu_cursor_up(pindex)
    elseif players[pindex].menu == "belt" then
       if players[pindex].belt.sector == 1 then
          if (players[pindex].belt.side == 1 and players[pindex].belt.line1.valid and players[pindex].belt.index > 1) or (players[pindex].belt.side == 2 and players[pindex].belt.line2.valid and players[pindex].belt.index > 1) then
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].belt.index = players[pindex].belt.index - 1
          end
       elseif players[pindex].belt.sector == 2 then
@@ -2550,7 +2550,7 @@ function menu_cursor_up(pindex)
             max = #players[pindex].belt.network.combined.right
          end
          if players[pindex].belt.index > 1 then
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].belt.index = math.min(players[pindex].belt.index - 1, max)
          end
       elseif players[pindex].belt.sector == 3 then
@@ -2561,7 +2561,7 @@ function menu_cursor_up(pindex)
             max = #players[pindex].belt.network.downstream.right
          end
          if players[pindex].belt.index > 1 then
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].belt.index = math.min(players[pindex].belt.index - 1, max)
          end
       elseif players[pindex].belt.sector == 4 then
@@ -2572,7 +2572,7 @@ function menu_cursor_up(pindex)
             max = #players[pindex].belt.network.upstream.right
          end
          if players[pindex].belt.index > 1 then
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].belt.index = math.min(players[pindex].belt.index - 1, max)
          end
 
@@ -2581,12 +2581,12 @@ function menu_cursor_up(pindex)
    elseif players[pindex].menu == "warnings" then
       if players[pindex].warnings.category > 1 then
          players[pindex].warnings.category = players[pindex].warnings.category - 1
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].warnings.index = 1
       end
       read_warnings_slot(pindex)
    elseif players[pindex].menu == "pump" then
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].pump.index = math.max(1, players[pindex].pump.index - 1)      
       local dir = ""
       if players[pindex].pump.positions[players[pindex].pump.index].direction == 0 then
@@ -2602,7 +2602,7 @@ function menu_cursor_up(pindex)
       printout("Option " .. players[pindex].pump.index .. ": " .. math.floor(distance(game.get_player(pindex).position, players[pindex].pump.positions[players[pindex].pump.index].position)) .. " meters " .. direction(game.get_player(pindex).position, players[pindex].pump.positions[players[pindex].pump.index].position) .. " Facing " .. dir, pindex)
    elseif players[pindex].menu == "travel" then
       if players[pindex].travel.index.y > 1 then
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].travel.index.y = players[pindex].travel.index.y - 1
       else
          players[pindex].travel.index.y = 1
@@ -2634,7 +2634,7 @@ function menu_cursor_down(pindex)
                end         
 
    elseif players[pindex].menu == "inventory" then
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].inventory.index = players[pindex].inventory.index +10
       if players[pindex].inventory.index > players[pindex].inventory.max then
          players[pindex].inventory.index = players[pindex].inventory.index - players[pindex].inventory.max
@@ -2642,7 +2642,7 @@ function menu_cursor_down(pindex)
       read_inventory_slot(pindex)
 
    elseif players[pindex].menu == "crafting" then
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].crafting.index = 1
       players[pindex].crafting.category = players[pindex].crafting.category + 1
 
@@ -2651,7 +2651,7 @@ function menu_cursor_down(pindex)
       end
       read_crafting_slot(pindex)
    elseif players[pindex].menu == "crafting_queue" then   
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       load_crafting_queue(pindex)
       players[pindex].crafting_queue.index = players[pindex].crafting_queue.max
       read_crafting_queue(pindex)
@@ -2661,7 +2661,7 @@ function menu_cursor_down(pindex)
             printout("blank", pindex)
             return
          end
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          if #players[pindex].building.sectors[players[pindex].building.sector].inventory > 10 then
             players[pindex].building.index = players[pindex].building.index + 8
             if players[pindex].building.index > #players[pindex].building.sectors[players[pindex].building.sector].inventory then
@@ -2675,7 +2675,7 @@ function menu_cursor_down(pindex)
          end
          read_building_slot(pindex)
       elseif players[pindex].building.recipe_list == nil then
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index +10
          if players[pindex].inventory.index > players[pindex].inventory.max then
             players[pindex].inventory.index = players[pindex].inventory.index%10
@@ -2688,7 +2688,7 @@ function menu_cursor_down(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
             if players[pindex].building.recipe_selection then
-               game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+               game.get_player(pindex).play_sound{path = "Inventory-Move"}
                players[pindex].building.index = 1
                players[pindex].building.category = players[pindex].building.category + 1
                if players[pindex].building.category > #players[pindex].building.recipe_list then
@@ -2697,7 +2697,7 @@ function menu_cursor_down(pindex)
             end
             read_building_recipe(pindex)
          else
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].inventory.index = players[pindex].inventory.index +10
             if players[pindex].inventory.index > players[pindex].inventory.max then
                players[pindex].inventory.index = players[pindex].inventory.index%10
@@ -2724,7 +2724,7 @@ function menu_cursor_down(pindex)
    elseif players[pindex].menu == "belt" then
       if players[pindex].belt.sector == 1 then
          if (players[pindex].belt.side == 1 and players[pindex].belt.line1.valid and players[pindex].belt.index < 4) or (players[pindex].belt.side == 2 and players[pindex].belt.line2.valid and players[pindex].belt.index < 4) then
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].belt.index = players[pindex].belt.index + 1
          end
       elseif players[pindex].belt.sector == 2 then
@@ -2735,7 +2735,7 @@ function menu_cursor_down(pindex)
             max = #players[pindex].belt.network.combined.right
          end
          if players[pindex].belt.index < max then
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].belt.index = math.min(players[pindex].belt.index + 1, max)
          end
       elseif players[pindex].belt.sector == 3 then
@@ -2746,7 +2746,7 @@ function menu_cursor_down(pindex)
             max = #players[pindex].belt.network.downstream.right
          end
          if players[pindex].belt.index < max then
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].belt.index = math.min(players[pindex].belt.index + 1, max)
          end
       elseif players[pindex].belt.sector == 4 then
@@ -2757,7 +2757,7 @@ function menu_cursor_down(pindex)
             max = #players[pindex].belt.network.upstream.right
          end
          if players[pindex].belt.index < max then
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].belt.index = math.min(players[pindex].belt.index + 1, max)
          end
 
@@ -2774,12 +2774,12 @@ function menu_cursor_down(pindex)
       end
       if players[pindex].warnings.category < #warnings then
          players[pindex].warnings.category = players[pindex].warnings.category + 1
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].warnings.index = 1
       end
       read_warnings_slot(pindex)
    elseif players[pindex].menu == "pump" then
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].pump.index = math.min(#players[pindex].pump.positions, players[pindex].pump.index + 1)
       local dir = ""
       if players[pindex].pump.positions[players[pindex].pump.index].direction == 0 then
@@ -2795,7 +2795,7 @@ function menu_cursor_down(pindex)
       printout("Option " .. players[pindex].pump.index .. ": " .. math.floor(distance(game.get_player(pindex).position, players[pindex].pump.positions[players[pindex].pump.index].position)) .. " meters " .. direction(game.get_player(pindex).position, players[pindex].pump.positions[players[pindex].pump.index].position) .. " Facing " .. dir, pindex)
    elseif players[pindex].menu == "travel" then
       if players[pindex].travel.index.y < #global.players[pindex].travel then
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].travel.index.y = players[pindex].travel.index.y + 1
       else
          players[pindex].travel.index.y = #global.players[pindex].travel
@@ -2813,7 +2813,7 @@ function menu_cursor_left(pindex)
          read_item_selector_slot(pindex)
 
    elseif players[pindex].menu == "inventory" then
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].inventory.index = players[pindex].inventory.index -1
       if players[pindex].inventory.index%10 == 0 then
          players[pindex].inventory.index = players[pindex].inventory.index + 10
@@ -2821,7 +2821,7 @@ function menu_cursor_left(pindex)
       read_inventory_slot(pindex)
 
    elseif players[pindex].menu == "crafting" then
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].crafting.index = players[pindex].crafting.index -1
       if players[pindex].crafting.index < 1 then
          players[pindex].crafting.index = #players[pindex].crafting.lua_recipes[players[pindex].crafting.category]
@@ -2829,7 +2829,7 @@ function menu_cursor_left(pindex)
       read_crafting_slot(pindex)
 
    elseif players[pindex].menu == "crafting_queue" then
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       load_crafting_queue(pindex)
       if players[pindex].crafting_queue.index < 2 then
          players[pindex].crafting_queue.index = players[pindex].crafting_queue.max
@@ -2843,7 +2843,7 @@ function menu_cursor_left(pindex)
             printout("blank", pindex)
             return
          end
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          if #players[pindex].building.sectors[players[pindex].building.sector].inventory > 10 then
             players[pindex].building.index = players[pindex].building.index - 1
             if players[pindex].building.index%8 == 0 then
@@ -2857,7 +2857,7 @@ function menu_cursor_left(pindex)
          end
          read_building_slot(pindex)
       elseif players[pindex].building.recipe_list == nil then
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index -1
          if players[pindex].inventory.index%10 < 1 then
             players[pindex].inventory.index = players[pindex].inventory.index + 10
@@ -2866,7 +2866,7 @@ function menu_cursor_left(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
             if players[pindex].building.recipe_selection then
-               game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+               game.get_player(pindex).play_sound{path = "Inventory-Move"}
                players[pindex].building.index = players[pindex].building.index - 1
                if players[pindex].building.index < 1 then
                   players[pindex].building.index = #players[pindex].building.recipe_list[players[pindex].building.category]
@@ -2874,7 +2874,7 @@ function menu_cursor_left(pindex)
             end
             read_building_recipe(pindex)
          else
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].inventory.index = players[pindex].inventory.index -1
             if players[pindex].inventory.index%10 < 1 then
                players[pindex].inventory.index = players[pindex].inventory.index + 10
@@ -2886,13 +2886,13 @@ function menu_cursor_left(pindex)
    elseif players[pindex].menu == "technology" then
       if players[pindex].technology.index > 1 then
          players[pindex].technology.index = players[pindex].technology.index - 1
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
       end
       read_technology_slot(pindex)
    elseif players[pindex].menu == "belt" then
       if players[pindex].belt.side == 2 then
          players[pindex].belt.side = 1
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
             if not pcall(function()
             read_belt_slot(pindex)
          end) then
@@ -2902,12 +2902,12 @@ function menu_cursor_left(pindex)
    elseif players[pindex].menu == "warnings" then
       if players[pindex].warnings.index > 1 then
          players[pindex].warnings.index = players[pindex].warnings.index - 1
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
       end
       read_warnings_slot(pindex)
    elseif players[pindex].menu == "travel" then
       if players[pindex].travel.index.x > 1 then
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].travel.index.x = players[pindex].travel.index.x - 1
       end
       if players[pindex].travel.index.x == 1 then
@@ -2931,7 +2931,7 @@ function menu_cursor_right(pindex)
          read_item_selector_slot(pindex)
 
    elseif players[pindex].menu == "inventory" then
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
 
       players[pindex].inventory.index = players[pindex].inventory.index +1
       if players[pindex].inventory.index%10 == 1 then
@@ -2940,7 +2940,7 @@ function menu_cursor_right(pindex)
       read_inventory_slot(pindex)
 
    elseif players[pindex].menu == "crafting" then
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].crafting.index = players[pindex].crafting.index +1
       if players[pindex].crafting.index > #players[pindex].crafting.lua_recipes[players[pindex].crafting.category] then
          players[pindex].crafting.index = 1
@@ -2948,7 +2948,7 @@ function menu_cursor_right(pindex)
       read_crafting_slot(pindex)
 
    elseif players[pindex].menu == "crafting_queue" then
-      game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       load_crafting_queue(pindex)
       if players[pindex].crafting_queue.index >= players[pindex].crafting_queue.max then
          players[pindex].crafting_queue.index = 1
@@ -2962,7 +2962,7 @@ function menu_cursor_right(pindex)
             printout("blank", pindex)
             return
          end
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          if #players[pindex].building.sectors[players[pindex].building.sector].inventory > 10 then
             players[pindex].building.index = players[pindex].building.index + 1
             if players[pindex].building.index%8 == 1 then
@@ -2977,7 +2977,7 @@ function menu_cursor_right(pindex)
          print(players[pindex].building.index)
          read_building_slot(pindex)
       elseif players[pindex].building.recipe_list == nil then
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].inventory.index = players[pindex].inventory.index +1
          if players[pindex].inventory.index%10 == 1 then
             players[pindex].inventory.index = players[pindex].inventory.index - 10
@@ -2986,7 +2986,7 @@ function menu_cursor_right(pindex)
       else
          if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
             if players[pindex].building.recipe_selection then
-               game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+               game.get_player(pindex).play_sound{path = "Inventory-Move"}
 
                players[pindex].building.index = players[pindex].building.index + 1
                print(players[pindex].building.category .. " " .. #players[pindex].building.recipe_list)
@@ -2996,7 +2996,7 @@ function menu_cursor_right(pindex)
             end
             read_building_recipe(pindex)
          else
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
             players[pindex].inventory.index = players[pindex].inventory.index +1
             if players[pindex].inventory.index%10 == 1 then
                players[pindex].inventory.index = players[pindex].inventory.index - 10
@@ -3015,7 +3015,7 @@ function menu_cursor_right(pindex)
          techs = players[pindex].technology.lua_unlocked
       end
       if players[pindex].technology.index < #techs then
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].technology.index = players[pindex].technology.index + 1
       end
       read_technology_slot(pindex)
@@ -3024,7 +3024,7 @@ function menu_cursor_right(pindex)
    elseif players[pindex].menu == "belt" then
       if players[pindex].belt.side == 1 then
          players[pindex].belt.side = 2
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
             if not pcall(function()
             read_belt_slot(pindex)
          end) then
@@ -3044,13 +3044,13 @@ function menu_cursor_right(pindex)
          local ents = warnings[players[pindex].warnings.category].ents
          if players[pindex].warnings.index < #ents then
             players[pindex].warnings.index = players[pindex].warnings.index + 1
-            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
          end
       end
       read_warnings_slot(pindex)
    elseif players[pindex].menu == "travel" then
       if players[pindex].travel.index.x < 4 then
-         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
          players[pindex].travel.index.x = players[pindex].travel.index.x + 1
       end
       if players[pindex].travel.index.x == 1 then
@@ -4730,6 +4730,9 @@ script.on_event("item-info", function(event)
          if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
             local result = "Grants the following rewards:"
             local rewards = techs[players[pindex].technology.index].effects
+            if #rewards == 0 then
+               result = result .. " No immediate rewards, but leads to more advanced technologies.     "
+            end
             for i, reward in ipairs(rewards) do
                for i1, v in pairs(reward) do
                   result = result .. v .. " , "

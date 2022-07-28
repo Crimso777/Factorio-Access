@@ -31,6 +31,14 @@ data:extend({
 },
 {
    type = "sound",
+   name = "Inventory-Move",
+   filename = "__FactorioAccess__/Audio/inventory-move.ogg",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
    name = "Mine-Building",
    filename = "__FactorioAccess__/Audio/mine_02.ogg",
    volume = 1,

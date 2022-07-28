@@ -26,6 +26,8 @@ New Features
 
 -Spaceship containers now include audible feedback when opening and closing.
 
+-Default scan range is now 250 tiles in either direction of the player.
+
 And Many Many bug fixes thanks to @MyNameIsTrez
 
 # Version 0.1.2

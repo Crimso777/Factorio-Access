@@ -524,7 +524,7 @@ while not exit:
             print(coordstring)
             coords = [int(coordstring[0]), int(coordstring[1])]
             print(coords)
-            gui.moveTo(coords[0], coords[1])
+            gui.moveTo(coords[0], coords[1],_pause=False)
 #         tolk.output(line[10:].decode(), True)
         elif len(line) > 16 and line[-17:-2] == b"Saving finished":
           tolk.output("Saving Complete", True)

@@ -3,7 +3,7 @@
 # Git essentials
 !.gitignore
 !.gitattributes
-!LICENSE
+!/LICENSE
 
 #Documentation
 !/README.md
@@ -23,7 +23,7 @@
 #Mod Files
 !/mods/
 !/mods/mod-list.json
-!/mods/FactorioAccess_0.0.1/**
+!/mods/FactorioAccess/**
 
 #Launcher
 !/main.py

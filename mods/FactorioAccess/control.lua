@@ -2270,54 +2270,30 @@ function read_coords(pindex)
 end
 
 function initialize(player)
-   local index = player.index
-   if global.players == nil then
-      global.players = {}
-   end
-   if global.players[index] == nil then
-      global.players[index] = {
-         travel = {}
-      }
-   end
-   --player.character_reach_distance_bonus = math.max(player.character_reach_distance_bonus, 1)
+   global.players[player.index] = global.players[player.index] or {}
+   local faplayer = global.players[player.index]
    local character = player.cutscene_character or player.character
-   players[index] = {
-      player = player,
-      in_menu = false,
-      in_item_selector = false,
-      menu = "none",
-      cursor = false,
-      cursor_pos = nil,
-      cursor_size = 0 ,
-      num_elements = 0,
-      player_direction = character.walking_state.direction,
-      position = center_of_tile(character.position),
-      walk = 0,
-      move_queue = {},
-      building_direction = 0,
-      direction_lag = true,
-      previous_item = "",
-      nearby = nil,
-      tile = nil,
-      inventory = nil,
-      crafting = nil,
-      crafting_queue = nil,
-      technology = nil,
-      building = nil,
-      belt = nil,
-      warnings = nil,
-      pump = nil,
-      last = "",
-      item_selection = false,
-      item_cache = {},
-      item_selector = {},
-      travel = {},
-      structure_travel = {},
-      zoom = 1
-   }
+   faplayer.player = player
+   faplayer.in_menu = faplayer.in_menu or false
+   faplayer.in_item_selector = faplayer.in_item_selector or false
+   faplayer.menu = faplayer.menu or "none"
+   faplayer.cursor = faplayer.cursor or false
+   faplayer.cursor_size = faplayer.cursor_size or 0 
+   faplayer.num_elements = faplayer.num_elements or 0
+   faplayer.player_direction = faplayer.player_direction or character.walking_state.direction
+   faplayer.position = faplayer.position or center_of_tile(character.position)
+   faplayer.cursor_pos = faplayer.cursor_pos or offset_position(faplayer.position,faplayer.player_direction,1)
+   faplayer.walk = faplayer.walk or 0
+   faplayer.move_queue = faplayer.move_queue or {}
+   faplayer.building_direction = faplayer.building_direction or 0
+   faplayer.direction_lag = faplayer.direction_lag or true
+   faplayer.previous_item = faplayer.previous_item or ""
+   faplayer.last = faplayer.last or ""
+   faplayer.item_selection = faplayer.item_selection or false
+   faplayer.item_cache = faplayer.item_cache or {}
+   faplayer.zoom = faplayer.zoom or 1
 
-   players[index].cursor_pos = offset_position(players[index].position,players[index].player_direction,1)
-   players[index].nearby = {
+   faplayer.nearby = faplayer.nearby or {
       index = 0,
       count = false,
       category = 1,
@@ -2327,35 +2303,35 @@ function initialize(player)
       buildings = {},
       other = {}
    }
-   players[index].nearby.ents = {}
+   faplayer.nearby.ents = faplayer.nearby.ents or {}
 
-   players[index].tile = {
+   faplayer.tile = faplayer.tile or {
       ents = {},
       tile = "",
       index = 1,
       previous = nil
    }
 
-   players[index].inventory = {
+   faplayer.inventory = faplayer.inventory or {
       lua_inventory = nil,
       max = 0,
       index = 1
    }
 
-   players[index].crafting = {
+   faplayer.crafting = faplayer.crafting or {
       lua_recipes = nil,
       max = 0,
       index = 1,
       category = 1
    }
 
-   players[index].crafting_queue = {
+   faplayer.crafting_queue = faplayer.crafting_queue or {
       index = 1,
       max = 0,
       lua_queue = nil
    }
 
-   players[index].technology = {
+   faplayer.technology = faplayer.technology or {
       index = 1,
       category = 1,
       lua_researchable = {},
@@ -2363,7 +2339,7 @@ function initialize(player)
       lua_locked = {}
    }
 
-   players[index].building = {
+   faplayer.building = faplayer.building or {
       index = 0,
       ent = nil,
       sectors = nil,
@@ -2375,7 +2351,7 @@ function initialize(player)
       recipe_list = nil
    }
 
-   players[index].belt = {
+   faplayer.belt = faplayer.belt or {
       index = 1,
       sector = 1,
       ent = nil,
@@ -2384,7 +2360,7 @@ function initialize(player)
       network = {},
       side = 0
    }
-   players[index].warnings = {
+   faplayer.warnings = faplayer.warnings or {
       short = {},
       medium = {},
       long = {},
@@ -2392,111 +2368,29 @@ function initialize(player)
       index = 1,
       category = 1
    }
-   players[index].pump = {
+   faplayer.pump = faplayer.pump or {
       index = 0,
       positions = {}
    }
 
-   players[index].item_selector = {
+   faplayer.item_selector = faplayer.item_selector or {
       index = 0,
       group = 0,
       subgroup = 0
    }
 
-   players[index].travel = {
+   faplayer.travel = faplayer.travel or {
       index = {x = 1, y = 0},
       creating = false,
       renaming = false
    }
 
-   players[index].structure_travel = {
+   faplayer.structure_travel = faplayer.structure_travel or {
       network = {},
       current = nil,
       index = 0,
       direction = "none"
    }
-      
-   local recipes = player.force.recipes
-   local types = {}
-   for i, recipe in pairs(recipes) do
-      for i1, product in pairs(recipe.products) do
-         if product.type == "item" then
-            local item = game.item_prototypes[product.name]
-            if item.place_result ~= nil then 
-               local ent = item.place_result
-               if types[ent.type] == nil and ent.weight == nil and (ent.burner_prototype ~= nil or ent.electric_energy_source_prototype~= nil or ent.automated_ammo_count ~= nil)then
-                  types[ent.type] = true
-               end
-            end
-         end
-      end
-   end
-
-   for i, type in pairs(types) do
-      table.insert(entity_types, i)
-   end
-   table.insert(entity_types, "container")
-   local ents = game.entity_prototypes
-   local types = {}
-   for i, ent in pairs(ents) do
---      if (ent.get_inventory_size(defines.inventory.fuel) ~= nil or ent.get_inventory_size(defines.inventory.chest) ~= nil or ent.get_inventory_size(defines.inventory.assembling_machine_input) ~= nil) and ent.weight == nil then
-      if ent.speed == nil and ent.consumption == nil and (ent.burner_prototype ~= nil or ent.mining_speed ~= nil or ent.crafting_speed ~= nil or ent.automated_ammo_count ~= nil or ent.construction_radius ~= nil) then
-         types[ent.type] = true
-            end
-   end
-   for i, type in pairs(types) do
-      table.insert(production_types, i)
-   end
-   table.insert(production_types, "transport-belt")   
-   table.insert(production_types, "container")
-
-   local ents = game.entity_prototypes
-   local types = {}
-   for i, ent in pairs(ents) do
-         if ent.is_building then
-         types[ent.type] = true
-            end
-   end
-   types["transport-belt"] = nil
-   for i, type in pairs(types) do
-      table.insert(building_types, i)
-   end
-   table.insert(building_types, "character")
-
-   if player.name == "Crimso" then
-game.write_file('map.txt', game.table_to_json(game.parse_map_exchange_string(">>>eNpjZGBksGUAgwZ7EOZgSc5PzIHxgNiBKzm/oCC1SDe/KBVZmDO5qDQlVTc/E1Vxal5qbqVuUmIxsmJ7jsyi/Dx0E1iLS/LzUEVKilJTi5E1cpcWJeZlluai62VgnPIl9HFDixwDCP+vZ1D4/x+EgawHQL+AMANjA0glIyNQDAZYk3My09IYGBQcGRgKnFev0rJjZGSsFlnn/rBqij0jRI2eA5TxASpyIAkm4glj+DnglFKBMUyQzDEGg89IDIilJUAroKo4HBAMiGQLSJKREeZ2xl91WXtKJlfYM3qs3zPr0/UqO6A0O0iCCU7MmgkCO2FeYYCZ+cAeKnXTnvHsGRB4Y8/ICtIhAiIcLIDEAW9mBkYBPiBrQQ+QUJBhgDnNDmaMiANjGhh8g/nkMYxx2R7dH8CAsAEZLgciToAIsIVwl0F95tDvwOggD5OVRCgB6jdiQHZDCsKHJ2HWHkayH80hmBGB7A80ERUHLNHABbIwBU68YIa7BhieF9hhPIf5DozMIAZI1RegGIQHkoEZBaEFHMDBzcyAAMC0cepk2C4A0ySfhQ==<<<")))
-   player.insert{name="pipe", count=100}
---   printout("Character loaded." .. #game.surfaces,  player.index)
---   player.insert{name="accumulator", count=10}
---   player.insert{name="beacon", count=10}
---   player.insert{name="boiler", count=10}
---   player.insert{name="centrifuge", count=10}
---   player.insert{name="chemical-plant", count=10}
-   player.insert{name="electric-mining-drill", count=10}
---   player.insert{name="heat-exchanger", count=10}
---   player.insert{name="nuclear-reactor", count=10}
-   player.insert{name="offshore-pump", count=10}
---   player.insert{name="oil-refinery", count=10}
---   player.insert{name="pumpjack", count=10}
---   player.insert{name="rocket-silo", count=1}
-   player.insert{name="steam-engine", count=10}
-   player.insert{name="wooden-chest", count=10}
-   player.insert{name="assembling-machine-1", count=10}
---   player.insert{name="gun-turret", count=10}
-   player.insert{name="transport-belt", count=100}
-   player.insert{name="coal", count=100}
-   player.insert{name="filter-inserter", count=10}
---   player.insert{name="fast-transport-belt", count=100}
---   player.insert{name="express-transport-belt", count=100}
-   player.insert{name="small-electric-pole", count=100}
---   player.insert{name="big-electric-pole", count=100}
---   player.insert{name="substation", count=100}
---   player.insert{name="solar-panel", count=100}
---   player.insert{name="pipe-to-ground", count=100}
---   player.insert{name="underground-belt", count=100}
---   game.get_player(index).surface.create_entity{name = "biter-spawner", position = {5.5, 5.5}}
---   player.force.research_all_technologies()
-   end
 
 end
 
@@ -3186,8 +3080,58 @@ function schedule(ticks_in_the_future,func_to_call, data_to_pass)
 end
 
 function on_player_join(pindex)
-   fix_zoom(pindex)
+   schedule(3, fix_zoom, pindex)
+   
+   if game.players[pindex].name == "Crimso" then
+      local player=game.players[pindex]
+game.write_file('map.txt', game.table_to_json(game.parse_map_exchange_string(">>>eNpjZGBksGUAgwZ7EOZgSc5PzIHxgNiBKzm/oCC1SDe/KBVZmDO5qDQlVTc/E1Vxal5qbqVuUmIxsmJ7jsyi/Dx0E1iLS/LzUEVKilJTi5E1cpcWJeZlluai62VgnPIl9HFDixwDCP+vZ1D4/x+EgawHQL+AMANjA0glIyNQDAZYk3My09IYGBQcGRgKnFev0rJjZGSsFlnn/rBqij0jRI2eA5TxASpyIAkm4glj+DnglFKBMUyQzDEGg89IDIilJUAroKo4HBAMiGQLSJKREeZ2xl91WXtKJlfYM3qs3zPr0/UqO6A0O0iCCU7MmgkCO2FeYYCZ+cAeKnXTnvHsGRB4Y8/ICtIhAiIcLIDEAW9mBkYBPiBrQQ+QUJBhgDnNDmaMiANjGhh8g/nkMYxx2R7dH8CAsAEZLgciToAIsIVwl0F95tDvwOggD5OVRCgB6jdiQHZDCsKHJ2HWHkayH80hmBGB7A80ERUHLNHABbIwBU68YIa7BhieF9hhPIf5DozMIAZI1RegGIQHkoEZBaEFHMDBzcyAAMC0cepk2C4A0ySfhQ==<<<")))
+   player.insert{name="pipe", count=100}
+--   printout("Character loaded." .. #game.surfaces,  player.index)
+--   player.insert{name="accumulator", count=10}
+--   player.insert{name="beacon", count=10}
+--   player.insert{name="boiler", count=10}
+--   player.insert{name="centrifuge", count=10}
+--   player.insert{name="chemical-plant", count=10}
+   player.insert{name="electric-mining-drill", count=10}
+--   player.insert{name="heat-exchanger", count=10}
+--   player.insert{name="nuclear-reactor", count=10}
+   player.insert{name="offshore-pump", count=10}
+--   player.insert{name="oil-refinery", count=10}
+--   player.insert{name="pumpjack", count=10}
+--   player.insert{name="rocket-silo", count=1}
+   player.insert{name="steam-engine", count=10}
+   player.insert{name="wooden-chest", count=10}
+   player.insert{name="assembling-machine-1", count=10}
+--   player.insert{name="gun-turret", count=10}
+   player.insert{name="transport-belt", count=100}
+   player.insert{name="coal", count=100}
+   player.insert{name="filter-inserter", count=10}
+--   player.insert{name="fast-transport-belt", count=100}
+--   player.insert{name="express-transport-belt", count=100}
+   player.insert{name="small-electric-pole", count=100}
+--   player.insert{name="big-electric-pole", count=100}
+--   player.insert{name="substation", count=100}
+--   player.insert{name="solar-panel", count=100}
+--   player.insert{name="pipe-to-ground", count=100}
+--   player.insert{name="underground-belt", count=100}
+--   game.get_player(index).surface.create_entity{name = "biter-spawner", position = {5.5, 5.5}}
+--   player.force.research_all_technologies()
+   end
+   
 end
+
+script.on_event(defines.events.on_player_joined_game,function(event)
+   on_player_join(event.player_index)
+end)
+
+function on_initial_joining_tick(event)
+   if not game.is_multiplayer() then
+      on_player_join(game.connected_players[1].index)
+   end
+   on_tick(event)
+   script.on_event(defines.events.on_tick,on_tick)
+end
+
 function on_tick(event)
    if global.scheduled_events[event.tick] then
       for _, to_call in pairs(global.scheduled_events[event.tick]) do
@@ -3197,21 +3141,7 @@ function on_tick(event)
    end
    move_characters(event)
 end
-
-script.on_event(defines.events.on_player_joined_game,function(event)
-   on_player_join(event.player_index)
-end)
-
-local should_single_player_join_in = 3
-function on_tick(event)
-   if should_single_player_join_in > 0 then
-      should_single_player_join_in = should_single_player_join_in - 1
-      if should_single_player_join_in == 0 and not game.is_multiplayer() then
-         on_player_join(game.connected_players[1].index)
-      end
-   end
-   move_characters(event)
-end
+script.on_event(defines.events.on_tick,on_initial_joining_tick)
 
 function move_characters(event)
    for pindex, player in pairs(players) do
@@ -3242,7 +3172,7 @@ function move_characters(event)
       end
    end
 end
-script.on_event({defines.events.on_tick},on_tick)
+
 
 
 function add_position(p1,p2)
@@ -4863,11 +4793,71 @@ end)
 
 script.on_load(function()
    players = global.players
+   entity_types = global.entity_types
+   production_types = global.production_types
+   building_types = global.building_types
 end)
 
-script.on_init(function()
-   global.players={}
+script.on_configuration_changed(function(data)
+   print("woot")
+   global.players = global.players or {}
+   players = global.players
+   for pindex, player in pairs(game.players) do
+      initialize(player)
+   end
+   
+   global.entity_types = {}
+   entity_types = global.entity_types
+   
+   local types = {}
+   for _, ent in pairs(game.entity_prototypes) do
+      if types[ent.type] == nil and ent.weight == nil and (ent.burner_prototype ~= nil or ent.electric_energy_source_prototype~= nil or ent.automated_ammo_count ~= nil)then
+         types[ent.type] = true
+      end
+   end
+   
+   for i, type in pairs(types) do
+      table.insert(entity_types, i)
+   end
+   table.insert(entity_types, "container")
+   
+   global.production_types = {}
+   production_types = global.production_types
+   
+   local ents = game.entity_prototypes
+   local types = {}
+   for i, ent in pairs(ents) do
+--      if (ent.get_inventory_size(defines.inventory.fuel) ~= nil or ent.get_inventory_size(defines.inventory.chest) ~= nil or ent.get_inventory_size(defines.inventory.assembling_machine_input) ~= nil) and ent.weight == nil then
+      if ent.speed == nil and ent.consumption == nil and (ent.burner_prototype ~= nil or ent.mining_speed ~= nil or ent.crafting_speed ~= nil or ent.automated_ammo_count ~= nil or ent.construction_radius ~= nil) then
+         types[ent.type] = true
+            end
+   end
+   for i, type in pairs(types) do
+      table.insert(production_types, i)
+   end
+   table.insert(production_types, "transport-belt")   
+   table.insert(production_types, "container")
+
+   global.building_types = {}
+   building_types = global.building_types
+
+   local ents = game.entity_prototypes
+   local types = {}
+   for i, ent in pairs(ents) do
+         if ent.is_building then
+         types[ent.type] = true
+            end
+   end
+   types["transport-belt"] = nil
+   for i, type in pairs(types) do
+      table.insert(building_types, i)
+   end
+   table.insert(building_types, "character")
+   
+   global.scheduled_events = global.scheduled_events or {}
+   
 end)
+
 
 script.on_event(defines.events.on_cutscene_cancelled, function(event)
    pindex = event.player_index
@@ -5102,6 +5092,5 @@ end)
 script.on_event("nudge-right", function(event)
    nudge_key(defines.direction.east,event)
 end)
-script.on_event({"fa-alt-zoom-in","fa-alt-zoom-out","fa-zoom-in","fa-zoom-out"}, function(event)
-   print(serpent.line(event))
-end)
+
+

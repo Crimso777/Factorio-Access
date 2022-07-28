@@ -1,8 +1,12 @@
 import zipfile
 import os
-release=input("Please input the release version:") #should probably grab automatically in the future
+import json
 
+with open("./mods/FactorioAccess/info.json") as fp:
+    info = json.load(fp)
+release = info["version"].replace(".","_")
 
+filename = f"FactorioAccess_{release}.zip"
 
 def add_to_zip(zipfp,path,prefix=""):
     #print('attempting to add', path)
@@ -12,7 +16,7 @@ def add_to_zip(zipfp,path,prefix=""):
         for sub_path in os.listdir(path):
             add_to_zip(zipfp,os.path.join(path,sub_path),prefix)
 
-with zipfile.ZipFile("FactorioAccess"+release, mode='w') as zipfp:
+with zipfile.ZipFile(filename, mode='w') as zipfp:
     add_to_zip(zipfp,'mods')
     add_to_zip(zipfp,'config/config.ini')
     add_to_zip(zipfp,'Map Settings')
@@ -24,4 +28,4 @@ with zipfile.ZipFile("FactorioAccess"+release, mode='w') as zipfp:
     add_to_zip(zipfp,'nvdaControllerClient64.dll')    
     add_to_zip(zipfp,'SAAPI64.dll')    
 
-
+input("Release Genreated as "+filename)

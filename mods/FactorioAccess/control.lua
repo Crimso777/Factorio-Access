@@ -3083,8 +3083,9 @@ function on_player_join(pindex)
    schedule(3, fix_zoom, pindex)
    
    if game.players[pindex].name == "Crimso" then
-      local player=game.players[pindex]
-game.write_file('map.txt', game.table_to_json(game.parse_map_exchange_string(">>>eNpjZGBksGUAgwZ7EOZgSc5PzIHxgNiBKzm/oCC1SDe/KBVZmDO5qDQlVTc/E1Vxal5qbqVuUmIxsmJ7jsyi/Dx0E1iLS/LzUEVKilJTi5E1cpcWJeZlluai62VgnPIl9HFDixwDCP+vZ1D4/x+EgawHQL+AMANjA0glIyNQDAZYk3My09IYGBQcGRgKnFev0rJjZGSsFlnn/rBqij0jRI2eA5TxASpyIAkm4glj+DnglFKBMUyQzDEGg89IDIilJUAroKo4HBAMiGQLSJKREeZ2xl91WXtKJlfYM3qs3zPr0/UqO6A0O0iCCU7MmgkCO2FeYYCZ+cAeKnXTnvHsGRB4Y8/ICtIhAiIcLIDEAW9mBkYBPiBrQQ+QUJBhgDnNDmaMiANjGhh8g/nkMYxx2R7dH8CAsAEZLgciToAIsIVwl0F95tDvwOggD5OVRCgB6jdiQHZDCsKHJ2HWHkayH80hmBGB7A80ERUHLNHABbIwBU68YIa7BhieF9hhPIf5DozMIAZI1RegGIQHkoEZBaEFHMDBzcyAAMC0cepk2C4A0ySfhQ==<<<")))
+      local player = game.get_player(pindex).cutscene_character or game.get_player(pindex).character
+
+--game.write_file('map.txt', game.table_to_json(game.parse_map_exchange_string(">>>eNpjZGBksGUAgwZ7EOZgSc5PzIHxgNiBKzm/oCC1SDe/KBVZmDO5qDQlVTc/E1Vxal5qbqVuUmIxsmJ7jsyi/Dx0E1iLS/LzUEVKilJTi5E1cpcWJeZlluai62VgnPIl9HFDixwDCP+vZ1D4/x+EgawHQL+AMANjA0glIyNQDAZYk3My09IYGBQcGRgKnFev0rJjZGSsFlnn/rBqij0jRI2eA5TxASpyIAkm4glj+DnglFKBMUyQzDEGg89IDIilJUAroKo4HBAMiGQLSJKREeZ2xl91WXtKJlfYM3qs3zPr0/UqO6A0O0iCCU7MmgkCO2FeYYCZ+cAeKnXTnvHsGRB4Y8/ICtIhAiIcLIDEAW9mBkYBPiBrQQ+QUJBhgDnNDmaMiANjGhh8g/nkMYxx2R7dH8CAsAEZLgciToAIsIVwl0F95tDvwOggD5OVRCgB6jdiQHZDCsKHJ2HWHkayH80hmBGB7A80ERUHLNHABbIwBU68YIa7BhieF9hhPIf5DozMIAZI1RegGIQHkoEZBaEFHMDBzcyAAMC0cepk2C4A0ySfhQ==<<<")))
    player.insert{name="pipe", count=100}
 --   printout("Character loaded." .. #game.surfaces,  player.index)
 --   player.insert{name="accumulator", count=10}
@@ -3632,6 +3633,8 @@ script.on_event("open-inventory", function(event)
    elseif players[pindex].menu ~= "prompt" then
       printout("Menu closed.", pindex)
       players[pindex].in_menu = false
+      game.get_player(pindex).game_view_settings.update_entity_selection = true
+
       if players[pindex].menu == "inventory" or players[pindex].menu == "crafting" or players[pindex].menu == "technology" or players[pindex].menu == "crafting_queue" or players[pindex].menu == "warnings" then
          game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
       end
@@ -4882,6 +4885,7 @@ script.on_event(defines.events.on_gui_closed, function(event)
       if players[pindex].menu == "inventory" then
          game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
       elseif players[pindex].menu == "travel" or players[pindex].menu == "structure-travel"then
+      game.get_player(pindex).game_view_settings.update_entity_selection = true
          event.element.destroy()
       end
       players[pindex].in_menu = false
@@ -4992,6 +4996,9 @@ script.on_event("open-fast-travel", function(event)
       return
    end
    if players[pindex].in_menu == false then
+      game.get_player(pindex).game_view_settings.update_entity_selection = false
+      game.get_player(pindex).selected = nil
+
       players[pindex].menu = "travel"
       players[pindex].in_menu = true
       players[pindex].travel.index = {x = 1, y = 0}
@@ -5035,7 +5042,8 @@ script.on_event("open-structure-travel", function(event)
       return
    end
    if players[pindex].in_menu == false then
-      move_cursor(math.floor(players[pindex].resolution.width/2), math.floor(players[pindex].resolution.height/2), pindex)
+      game.get_player(pindex).game_view_settings.update_entity_selection = false
+      game.get_player(pindex).selected = nil
       players[pindex].menu = "structure-travel"
       players[pindex].in_menu = true
       players[pindex].structure_travel.direction = "none"

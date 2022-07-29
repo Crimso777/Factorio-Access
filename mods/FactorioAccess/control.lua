@@ -711,6 +711,7 @@ function generate_production_network(pindex)
                table.insert(hash[target.unit_number].inputs, source.unit_number)
                local new_line = math.min(hash[target.unit_number].production_line, table.maxn(lines) + 1)
                hash[source.unit_number].production_line = new_line
+               lines[new_line] = lines[new_line] or {}
                table.insert(lines[new_line], source.unit_number)
             elseif target.type == "transport-belt" then
                if hash[target.unit_number] == nil then
@@ -739,6 +740,7 @@ function generate_production_network(pindex)
                   table.insert(hash[source.unit_number].outputs, target.unit_number)
                   local new_line = hash[target.unit_number].production_line
                   hash[source.unit_number].production_line = new_line
+   
                   table.insert(lines[new_line], source.unit_number)
                end
             else
@@ -917,6 +919,7 @@ function generate_production_network(pindex)
                if old_line ~= math.huge then
                   for i1, ent in pairs(lines[old_line]) do
                      hash[ent].production_line = new_line
+                     lines[new_line] = lines[new_line] or {}
                      table.insert(lines[new_line], ent)
                   end
                   lines[old_line] = nil

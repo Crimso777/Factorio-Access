@@ -292,7 +292,7 @@ function ent_info(pindex, ent, description)
       local pos = ent.position
       local radius = ent.prototype.mining_drill_radius
       local area = {{pos.x - radius, pos.y - radius}, {pos.x + radius, pos.y + radius}}
-      local resources = surf.find_entities_filtered{area = area, type = "resource"}
+      local resources = ent.surface.find_entities_filtered{area = area, type = "resource"}
       local dict = {}
       for i, resource in pairs(resources) do
          if dict[resource.name] == nil then

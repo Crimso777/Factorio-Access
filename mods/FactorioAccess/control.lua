@@ -234,26 +234,22 @@ function ent_info(pindex, ent, description)
    if ent.type == "electric-pole" then
       result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, Network currently producing "
       local power = 0
+      local capacity = 0
       for i, v in pairs(ent.electric_network_statistics.output_counts) do
          power = power + (ent.electric_network_statistics.get_flow_count{name = i, input = false, precision_index = defines.flow_precision_index.five_seconds})
-   end
-      power = power * 60
-      if power > 1000000000000 then
-         power = power/1000000000000
-         result = result .. string.format(" %.3f Terawatts", power) 
-      elseif power > 1000000000 then
-         power = power / 1000000000
-         result = result .. string.format(" %.3f Gigawatts", power) 
-      elseif power > 1000000 then
-         power = power / 1000000
-         result = result .. string.format(" %.3f Megawatts", power) 
-      elseif power > 1000 then
-         power = power / 1000
-         result = result .. string.format(" %.3f Kilowatts", power) 
-      else
-         result = result .. string.format(" %.3f Watts", power) 
-   end
-                     
+         local cap_add = 0
+         for _, power_ent in pairs(ent.surface.find_entities_filtered{name=i,force = ent.force}) do
+            if power_ent.electric_network_id == ent.electric_network_id then
+               cap_add = cap_add + 1
+            end
+         end
+         cap_add = cap_add * game.entity_prototypes[i].max_energy_production
+         if game.entity_prototypes[i].type == "solar-panel" then
+            cap_add = cap_add * ent.surface.solar_power_multiplier * (1-ent.surface.darkness)
+         end
+         capacity = capacity + cap_add   
+      end
+      result = result .. get_power_string(power*60) .. " / " .. get_power_string(capacity*60) .. " "
    end
    if ent.drop_position ~= nil then
       local position = table.deepcopy(ent.drop_position)
@@ -1576,6 +1572,9 @@ end
 
 
 function get_recipes(pindex, building)
+   if not building then
+      return {}
+   end
    local category_filters={}
    for category_name, _ in pairs(building.prototype.crafting_categories) do
       table.insert(category_filters, {filter="category", category=category_name})
@@ -1690,7 +1689,7 @@ function read_hand(pindex)
          table.insert(out,"")
       end
       table.insert(out,cursor_stack.count)
-      local extra = game.get_player(pindex).character.get_main_inventory().get_item_count(cursor_stack.name)
+      local extra = game.get_player(pindex).get_main_inventory().get_item_count(cursor_stack.name)
       if extra > 0 then
          table.insert(out,cursor_stack.count+extra)
       else
@@ -3072,8 +3071,11 @@ function menu_cursor_right(pindex)
 end
 
 function schedule(ticks_in_the_future,func_to_call, data_to_pass)
+   if type(_G[func_to_call]) ~= "function" then
+      Crash()
+   end
    if ticks_in_the_future <=0 then
-      func_to_call(data_to_pass)
+      _G[func_to_call](data_to_pass)
       return
    end
    local tick = game.tick + ticks_in_the_future
@@ -3083,7 +3085,7 @@ function schedule(ticks_in_the_future,func_to_call, data_to_pass)
 end
 
 function on_player_join(pindex)
-   schedule(3, fix_zoom, pindex)
+   schedule(3, "fix_zoom", pindex)
    print("joined")
    if game.players[pindex].name == "Crimso" then
       local player = game.get_player(pindex).cutscene_character or game.get_player(pindex).character
@@ -3141,7 +3143,7 @@ end
 function on_tick(event)
    if global.scheduled_events[event.tick] then
       for _, to_call in pairs(global.scheduled_events[event.tick]) do
-         to_call[1](to_call[2])
+         _G[to_call[1]](to_call[2])
       end
       global.scheduled_events[event.tick] = nil
    end
@@ -3598,7 +3600,7 @@ script.on_event("open-inventory", function(event)
       game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
       players[pindex].in_menu = true
       players[pindex].menu="inventory"
-      players[pindex].inventory.lua_inventory = game.get_player(pindex).character.get_main_inventory()
+      players[pindex].inventory.lua_inventory = game.get_player(pindex).get_main_inventory()
       players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
       players[pindex].inventory.index = 1
       printout("Inventory", pindex)
@@ -3991,7 +3993,7 @@ function play_mining_sound(pindex)
    local player= game.players[pindex]
    if player and player.mining_state.mining and player.selected and player.selected.valid and player.selected.prototype.is_building then
       player.play_sound{path = "Mine-Building"}
-      schedule(25, play_mining_sound, pindex)
+      schedule(25, "play_mining_sound", pindex)
    end
 end
 
@@ -4007,7 +4009,7 @@ script.on_event("mine-access", function(event)
          local ent = players[pindex].tile.ents[players[pindex].tile.index - 1]
          if ent ~= nil and ent.valid and ent.prototype.is_building and (ent.prototype.mineable_properties.products == nil or ent.prototype.mineable_properties.products[1].name == ent.name) then
             game.get_player(pindex).play_sound{path = "Mine-Building"}
-            schedule(25, play_mining_sound, pindex)
+            schedule(25, "play_mining_sound", pindex)
          end
       end
    end

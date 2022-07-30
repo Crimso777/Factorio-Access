@@ -1,8 +1,5 @@
+#!/usr/bin/env python3
 import pyautogui as gui
-import cytolk.tolk as tolk
-import win32con
-import win32gui
-import win32api
 import time
 import math
 import os
@@ -11,8 +8,9 @@ import subprocess
 import threading
 import queue
 
-import pywinauto
-import ctypes
+import accessible_output2.outputs.auto
+ao_output = accessible_output2.outputs.auto.Auto()
+
 gui.FAILSAFE = False
 
 def show_exception_and_exit(exc_type, exc_value, tb):
@@ -31,13 +29,7 @@ if len(sys.argv) > 1 and os.path.exists(sys.argv[1]):
     FACTORIO_BIN_PATH=sys.argv[1]
 
 
-tolk.load()
-
-tolk.output("Hello Factorio!", False)
-
-user32 = ctypes.WinDLL('User32.dll')
-
-ON_POSIX = 'posix' in sys.builtin_module_names
+ao_output.output("Hello Factorio!", False)
 
 
 def enqueue_output(out, queue):
@@ -325,6 +317,7 @@ def customMapList():
 def launch(path):
     try:
         #      return 0
+        print("Launching")
         return subprocess.Popen([FACTORIO_BIN_PATH, "--load-game", path, "--fullscreen", "TRUE", "--config", "config/config.ini", "--mod-directory", "mods"], stdout=subprocess.PIPE)
     except:
         print("error launching game")
@@ -501,40 +494,37 @@ t = threading.Thread(target=enqueue_output, args=(proc.stdout, q))
 t.daemon = True  # thread dies with the program
 t.start()
 
-app = pywinauto.Application().connect(process=proc.pid, timeout=10)
-dlg = app.top_window()
 
 while not exit:
     # read line without blocking
     try:
         line = q.get_nowait()  # or q.get(timeout=.1)
+        print(line)
+        line = line.decode('utf-8').rstrip('\r\n')
     except queue.Empty:
         #      print('no output yet')
         pass
     else:
-        if len(line) > 5 and line[:3] == b'out':
-            tolk.output(line[4:].decode(), True)
-        elif len(line) > 5 and line[:4] == b'resx':
+        if len(line) > 5 and line[:3] == 'out':
+            ao_output.output(line[4:], True)
+        elif len(line) > 5 and line[:4] == 'resx':
             game_res["x"] = int(line[5:])
-        elif len(line) > 5 and line[:4] == b'resy':
+        elif len(line) > 5 and line[:4] == 'resy':
             game_res["y"] = int(line[5:])
-        elif len(line) > 10 and line[:9] == b'setCursor':
-            linestring = str(line)
-            coordstring = linestring[11:-5].split(",")
+        elif len(line) > 10 and line[:9] == 'setCursor':
+            coordstring = line[10:].split(",")
             print(coordstring)
             coords = [int(coordstring[0]), int(coordstring[1])]
             print(coords)
-            gui.moveTo(coords[0], coords[1],_pause=False)
-#         tolk.output(line[10:].decode(), True)
-        elif len(line) > 16 and line[-17:-2] == b"Saving finished":
-          tolk.output("Saving Complete", True)
-        elif len(line) >= 10 and line[:10] == b"time start":
+            gui.moveTo(coords[0], coords[1], _pause=False)
+        elif len(line) > 16 and line[-15:] == "Saving finished":
+          ao_output.output("Saving Complete", True)
+        elif len(line) >= 10 and line[:10] == "time start":
           debug_time = time.time
-        elif len(line) >= 9 and line[:9] == b"time start":
+        elif len(line) >= 9 and line[:9] == "time start":
           print(time.time - debug_time)
-        elif len(line) > 8 and line[-9:-2] == b"Goodbye":
+        elif len(line) > 8 and line[-7:] == "Goodbye":
             exit = True
-        print(line)
 try:
     l = os.listdir("saves")
 
@@ -572,5 +562,4 @@ else:
             os.remove(dst)
             os.rename(src, dst)
 
-tolk.output("Goodbye Factorio", False)
-tolk.unload()
+ao_output.output("Goodbye Factorio", False)

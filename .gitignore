@@ -34,3 +34,6 @@
 
 #build scripts
 !/gen_release.py
+
+
+.vscode/

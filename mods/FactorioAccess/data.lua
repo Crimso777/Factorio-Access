@@ -11,7 +11,7 @@ resource_map_node["selection_box"] = nil
 resource_map_node["order"] = "z"
 resource_map_node["max_health"] = 2147483648
 resource_map_node["picture"] = {
-	filename = "__FactorioAccess__/graphics/invisible.png",
+	filename = "__FactorioAccess__/Graphics/invisible.png",
 	width = 1,
 	height = 1,
 	direction_count = 1
@@ -26,6 +26,21 @@ data:extend({
    type = "sound",
    name = "Face-Dir",
    filename = "__FactorioAccess__/Audio/1face_dir.ogg",
+   volume = 1,
+   preload = true
+},
+{
+   type = "sound",
+   name = "Inventory-Move",
+   filename = "__FactorioAccess__/Audio/inventory-move.ogg",
+   volume = 1,
+   preload = true
+},
+
+{
+   type = "sound",
+   name = "Mine-Building",
+   filename = "__FactorioAccess__/Audio/mine_02.ogg",
    volume = 1,
    preload = true
 },
@@ -90,6 +105,31 @@ data:extend({
     linked_game_control = "move-right",
     consuming = "none"
 },
+  {
+    type = "custom-input",
+    name = "nudge-up",
+    key_sequence = "CONTROL + SHIFT + W",
+    consuming = "none"
+},
+{
+    type = "custom-input",
+    name = "nudge-down",
+    key_sequence = "CONTROL + SHIFT + S",
+    consuming = "none"
+},
+{
+    type = "custom-input",
+    name = "nudge-left",
+    key_sequence = "CONTROL + SHIFT + A",
+    consuming = "none"
+},
+{
+    type = "custom-input",
+    name = "nudge-right",
+    key_sequence = "CONTROL + SHIFT + D",
+    consuming = "none"
+},
+
 {
     type = "custom-input",
     name = "read-coords",
@@ -473,6 +513,68 @@ data:extend({
     type = "custom-input",
     name = "read-hand",
     key_sequence = "Q",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "open-fast-travel",
+    key_sequence = "V",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-alt-zoom-in",
+    key_sequence = "X",
+    linked_game_control = "alt-zoom-in",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-alt-zoom-out",
+    key_sequence = "X",
+    linked_game_control = "alt-zoom-out",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-zoom-out",
+    key_sequence = "X",
+    linked_game_control = "zoom-out",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-zoom-in",
+    key_sequence = "X",
+    linked_game_control = "zoom-in",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-debug-reset-zoom-2x",
+    key_sequence = "X",
+    linked_game_control = "debug-reset-zoom-2x",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "fa-debug-reset-zoom",
+    key_sequence = "X",
+    linked_game_control = "debug-reset-zoom",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "open-structure-travel",
+    key_sequence = "CONTROL + S",
     consuming = "none"
 }
 

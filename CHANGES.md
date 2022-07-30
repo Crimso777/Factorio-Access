@@ -1,3 +1,68 @@
+# Version 0.2.0
+
+Updated 07/27/22
+
+New Features
+
+-A new Freeplay map designed by @Sir Fendi, designed to introduce new players to Factorio Access.  Select Compass Valley from the list of difficulties to try it out.
+
+-A new Fast Travel system.  Press V to open the fast travel menu, and save your cursor's location for later.  You are free to name, rename, delete, and create new points whenever you like.
+
+-A new way to navigate your factory: BStride.  Travel from building to building as if they were laid out in a nice even grid.  Press CONTROL + S to open the BStride menu, then navigate with WASD.  Pick a direction, navigate the resulting list of options, and confirm a direction with your initial direction key.  For instance, if I wanted to go to the second building north of me, I'd press W to open the northern buildings list, D to select the second building from the list, then W again to confirm.  Press Left Bracket to teleport to your target building.
+
+-Throughput summaries are now provided when looking at a building.  Simply walk up to a belt or pipe, and the mod will tell you what's on/in it.
+
+-Trying to teleport to a building will no longer give an error.  Now you will teleport to the nearest free position, and the mod will tell you where you are in relation to your target.
+
+-Pressing CONTROL + HOME will now teleport the player to the closest available position near the target, or if in cursor mode the old behavior will still occur.
+
+-Mining a building now has audible feedback
+
+-Copy building settings with SHIFT + RIGHT BRACKET, and paste the settings on another building with SHIFT + LEFT BRACKET.
+
+-Visual cursor now follows the virtual cursor
+
+-Game no longer requires callibration 
+
+-Spaceship containers now include audible feedback when opening and closing.
+
+-Default scan range is now 250 tiles in either direction of the player.
+
+And Many Many bug fixes thanks to @MyNameIsTrez
+
+# Version 0.1.2
+
+Updated 07/15/22
+
+Bug Fixes:
+
+-Pumps should now say the correct output direction, even when they are facing north.
+
+-Fixed a crash involving pumps and left clicking before navigating the pump menu
+
+-Fixed bugs regarding filter inserters and their unique menu structure
+
+-Fixed game crashing if butttons were pressed before callibration
+
+Features:
+
+-Game will now announce to player when tab is necessary to start the game
+
+-Updated descriptions for certain entities
+
+-Objects that cannot be rotated will now appropriately say so
+
+-Added item information in crafting menu.  Press L to get a description of a recipe's product
+
+
+# Version 0.1.1
+
+Updated 07/09/22
+
+Bug Fixes:
+
+-Fixed errors when mining things such as trees.  Thanks @Eph
+
 # Version 0.1.0
 
 Updated 07/07/2022

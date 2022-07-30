@@ -2,9 +2,8 @@
 !*/
 # Git essentials
 !.gitignore
-!.git/**
 !.gitattributes
-!/license
+!/LICENSE
 
 #Documentation
 !/README.md
@@ -17,19 +16,24 @@
 #Map settings
 !/Map Settings/
 !/Map Settings/PeacefulSettings.json
+!/Map Settings/CompassValleySettings.json
 !/Map Settings/Custom Settings/
 !/Map Settings/gen/**
 
 #Mod Files
 !/mods/
 !/mods/mod-list.json
-!/mods/FactorioAccess_0.0.1/**
+!/mods/FactorioAccess/**
 
 #Launcher
 !/main.py
 !/main.spec
 
 #Jaws File
+!/Factorio.jkm
+
+#build scripts
+!/gen_release.py
 
 
 .vscode/

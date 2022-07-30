@@ -13,13 +13,6 @@ ao_output = accessible_output2.outputs.auto.Auto()
 
 gui.FAILSAFE = False
 
-def show_exception_and_exit(exc_type, exc_value, tb):
-    import traceback
-    traceback.print_exception(exc_type, exc_value, tb)
-    raw_input("Press key to exit.")
-    sys.exit(-1)
-
-sys.excepthook = show_exception_and_exit
 
 FACTORIO_INSTALL_PATH = "./"
 FACTORIO_BIN_PATH = FACTORIO_INSTALL_PATH+'bin/x64/factorio.exe'
@@ -31,11 +24,6 @@ if len(sys.argv) > 1 and os.path.exists(sys.argv[1]):
 
 ao_output.output("Hello Factorio!", False)
 
-
-def enqueue_output(out, queue):
-    for line in iter(out.readline, b''):
-        queue.put(line)
-    out.close()
 
 
 def get_elapsed_time(t1):
@@ -82,6 +70,56 @@ def getNum():
             return str(result)
         except:
             print("Invalid input, please enter a number.\n")
+
+def select_option(options,prompt='Select an option:',one_indexed=True):
+    while True:
+        print(prompt)
+        for i, val in enumerate(options):
+            print(i + one_indexed, ": ", val)    
+        i=input()
+        if not i.isdigit():
+            print("Invalid input, please enter a number.")
+            continue
+        i=int(i)-one_indexed
+        if i > len(options):
+            print("Option too high, please enter a smaller number.")
+            continue
+        if i<0:
+            print("Options start at 1. Please enter a larger number.")
+            continue
+        return i
+
+def time_sort(file):
+    return os.path.getmtime("saves/"+file)
+
+def get_sorted_saves():
+    try:
+        l = os.listdir("saves")
+        l.sort(reverse=True, key=time_sort)
+        return l
+    except:
+        return []
+
+
+def do_menu(branch, name, zero_item=("Back",0)):
+    if callable(branch):
+        return branch()
+    keys=list(branch)
+    if zero_item:
+        keys = [zero_item[0]] + keys
+        branch = branch.copy()
+        branch[zero_item[0]]=zero_item[1]
+    while True:
+        opt = select_option(keys, prompt=f"{name}:", one_indexed= not zero_item)
+        if zero_item and zero_item[1] == opt:
+            return opt
+        key = keys[opt]
+        do_menu(branch[key],key)
+
+
+def connect_to_address_menu():
+    raise Exception("TODO")
+
 
 
 def customMapSettings():
@@ -313,204 +351,12 @@ def customMapList():
                                       "Map Settings/Custom Settings/" + l[k] + "/mapSettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 command = k+1
 
-
-def launch(path):
-    try:
-        #      return 0
-        print("Launching")
-        return subprocess.Popen([FACTORIO_BIN_PATH, "--load-game", path, "--fullscreen", "TRUE", "--config", "config/config.ini", "--mod-directory", "mods"], stdout=subprocess.PIPE)
-    except:
-        print("error launching game")
-
-
-def newGame():
-    command = -1
-    while command == -1:
-        print("Select a map:\n")
-        print("0 : Create new map")
-        try:
-            l = os.listdir("Maps")
-        except:
-            l = []
-        for i in range(len(l)):
-            print(i+1, ": ", l[i][:-4])
-        i = input()
-
-        try:
-            int(i)
-        except:
-            print("Invalid Command\n")
-            continue
-        if int(i) == 0:
-            return chooseDifficulty()
-            command = 0
-        for k in range(len(l)):
-            if int(i) == k+1:
-                print("loading", l[k][:-4])
-                return launch("Maps/"+l[k])
-                command = k+1
-
-
-def chooseDifficulty():
-    command = 0
-    while command == 0:
-        print("Select type of map:\n1:Compass Valley\n2: Peaceful\n3: Easy\n4: Normal\n5: Hard\n6: Custom\n")
-        i = input()
-
-        try:
-            int(i)
-        except:
-            print("Invalid Command\n")
-            continue
-        if int(i) == 1:
-            print("Please enter a name for your new map:\n")
-            i1 = input()
-            try:
-                proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", "Map Settings/gen/CompassValleyMap.json", "--map-settings",
-                                      "Map Settings/CompassValleySettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            except:
-                print(
-                    "Error saving map, make sure the name is a valid filename for windows.")
-                continue
-            command = 1
-
-        elif int(i) == 2:
-            print("Please enter a name for your new map:\n")
-            i1 = input()
-            try:
-                proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", "Map Settings/gen/PeacefulMap.json", "--map-settings",
-                                      "Map Settings/PeacefulSettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            except:
-                print(
-                    "Error saving map, make sure the name is a valid filename for windows.")
-                continue
-            command = 2
-        elif int(i) == 3:
-            print("Please enter a name for your new map:\n")
-            i1 = input()
-            try:
-                proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", "Map Settings/gen/EasyMap.json", "--map-settings",
-                                      "Map Settings/PeacefulSettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            except:
-                print(
-                    "Error saving map, make sure the name is a valid filename for windows.")
-                continue
-            command = 3
-        elif int(i) == 4:
-            print("Please enter a name for your new map:\n")
-            i1 = input()
-            try:
-                proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", "Map Settings/gen/NormalMap.json", "--map-settings",
-                                      "Map Settings/PeacefulSettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            except:
-                print(
-                    "Error saving map, make sure the name is a valid filename for windows.")
-                continue
-
-            command = 3
-        elif int(i) == 4:
-            print("Please enter a name for your new map:\n")
-            i1 = input()
-            try:
-                proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", "Map Settings/gen/HardMap.json", "--map-settings",
-                                      "Map Settings/PeacefulSettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            except:
-                print(
-                    "Error saving map, make sure the name is a valid filename for windows.")
-                continue
-            command = 5
-        elif int(i) == 6:
-            i1 = customMapList()
-            command = 6
-
-            print("Creating Custom game...")
-    return launch("Maps/"+i1+".zip")
-#   return command
-
-
-def loadGame():
-    command = -1
-    while command == -1:
-        print("Select a map:\n")
-        print("0 : Back")
-        try:
-            l = os.listdir("saves")
-
-            def time_sort(file):
-                return os.path.getmtime("saves/"+file)
-            l.sort(reverse=True, key=time_sort)
-
-        except:
-            l = []
-
-        for i in range(len(l)):
-            print(i+1, ": ", l[i][:-4] + " " +
-                  get_elapsed_time(os.path.getmtime("saves/" + l[i])) + " ago")
-        i = input()
-
-        try:
-            int(i)
-        except:
-            print("Invalid Command\n")
-            continue
-        if int(i) == 0:
-            return 0
-        for k in range(len(l)):
-            if int(i) == k+1:
-                return launch(l[k])
-
-                command = k+1
-
-
-command = 0
-while command == 0:
-    print("Enter 1 to start a new game, or 2 to load an existing one.\n")
-    i = input()
-
-    try:
-        int(i)
-    except:
-        print("Invalid Command\n")
-        continue
-    if int(i) == 1:
-        command = 1
-        proc = newGame()
-    elif int(i) == 2:
-        proc = loadGame()
-        if proc != 0:
-          command = 2
-
-    else:
-        print("Invalid Command\n")
-game_res = {"x": 0, "y": 0}
-#time.sleep(20)
-exit = False
-debug_time = 0
-
-# autoit.win_activate("FactorioAccess")
-
-q = queue.Queue()
-t = threading.Thread(target=enqueue_output, args=(proc.stdout, q))
-t.daemon = True  # thread dies with the program
-t.start()
-
-
-while not exit:
-    # read line without blocking
-    try:
-        line = q.get_nowait()  # or q.get(timeout=.1)
+def process_game_stdout(stdout):
+    for line in iter(stdout.readline, b''):
         print(line)
         line = line.decode('utf-8').rstrip('\r\n')
-    except queue.Empty:
-        #      print('no output yet')
-        pass
-    else:
         if len(line) > 5 and line[:3] == 'out':
             ao_output.output(line[4:], True)
-        elif len(line) > 5 and line[:4] == 'resx':
-            game_res["x"] = int(line[5:])
-        elif len(line) > 5 and line[:4] == 'resy':
-            game_res["y"] = int(line[5:])
         elif len(line) > 10 and line[:9] == 'setCursor':
             coordstring = line[10:].split(",")
             print(coordstring)
@@ -524,42 +370,130 @@ while not exit:
         elif len(line) >= 9 and line[:9] == "time start":
           print(time.time - debug_time)
         elif len(line) > 8 and line[-7:] == "Goodbye":
-            exit = True
-try:
-    l = os.listdir("saves")
+            break
 
-    def time_sort(file):
-        return os.path.getmtime("saves/"+file)
-    l.sort(reverse=True, key=time_sort)
+def save_game_rename():
+    l = get_sorted_saves()
 
-except:
-    l = []
+    if len(l) == 0:
+        print("Make sure to save your game next time!")
+    else:
+        print("Would you like to name your last save?  You saved " +
+              get_elapsed_time(os.path.getmtime("saves/"+l[0])) + " ago")
+        if getAffirmation():
+            print("Enter a name for your save file:")
+            newName = input()
+            check = False
+            while check == False:
+                try:
+                    testFile = open(newName + ".test", "w")
+                    testFile.close()
+                    os.remove(newName + ".test")
+                    check = True
+                except:
+                    print("Invalid file name, please try again.")
+                    newName = input()
 
-if len(l) == 0:
-    print("Make sure to save your game next time!")
-else:
-    print("Would you like to name your last save?  You saved " +
-          get_elapsed_time(os.path.getmtime("saves/"+l[0])) + " ago")
-    if getAffirmation():
-        print("Enter a name for your save file:")
-        newName = input()
-        check = False
-        while check == False:
+            dst = "saves/" + newName + ".zip"
+            src = "saves/" + l[0]
             try:
-                testFile = open(newName + ".test", "w")
-                testFile.close()
-                os.remove(newName + ".test")
-                check = True
+                os.rename(src, dst)
             except:
-                print("Invalid file name, please try again.")
-                newName = input()
+                os.remove(dst)
+                os.rename(src, dst)
 
-        dst = "saves/" + newName + ".zip"
-        src = "saves/" + l[0]
-        try:
-            os.rename(src, dst)
-        except:
-            os.remove(dst)
-            os.rename(src, dst)
+def connect_to_address_menu():
+    address = input("Enter the address to connect to:\n")
+    connect_to_address(address)
+def connect_to_address(address):
+    launch_with_params(["--mp-connect",address])
 
-ao_output.output("Goodbye Factorio", False)
+def launch(path):
+    launch_with_params(["--load-game", path])
+    save_game_rename()
+def launch_with_params(params):
+    params = [
+        FACTORIO_BIN_PATH, 
+        "--config", "config/config.ini",
+        "--mod-directory", "mods",
+        "--fullscreen", "TRUE"] + params
+    try:
+        print("Launching")
+        proc = subprocess.Popen(params , stdout=subprocess.PIPE)
+        threading.Thread(target=process_game_stdout, args=(proc.stdout,), daemon=True).start()
+        proc.wait()
+    except Exception as e:
+        print("error running game")
+        raise e
+    
+
+
+def newGame():
+    opts = ["Back","Create new map"] + [game[:-4] for game in os.listdir("Maps")]
+    opt = select_option(opts,"Select a map:",False)
+    if opt == 0:
+        return
+    if opt == 1:
+        return chooseDifficulty()
+    load_map=opts[opt]
+    print("loading", load_map[:-4])
+    return launch("Maps/"+load_map)
+
+
+def chooseDifficulty():
+    command = 0
+    types={
+        "Compass Valley":"CompassValleySettings.json",
+        "Peaceful":"PeacefulSettings.json",
+        "Easy":"PeacefulSettings.json",
+        "Normal":"PeacefulSettings.json",
+        "Hard":"PeacefulSettings.json",
+        "Custom":False,
+    }
+    opts = ["Back"] + list(types)
+    opt = select_option(opts,"Select type of map:",False)
+    if opt == 0:
+        return 0
+    key = opts[opt]
+    if types[key]:
+        while True:
+            name = input("Please enter a name for your new map:\n")
+            try:
+                proc = subprocess.run([FACTORIO_BIN_PATH, "--map-gen-settings", f"Map Settings/gen/{key}Map.json", "--map-settings",
+                              "Map Settings/"+types[key], "--create", "Maps/"+name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except:
+                print("Error saving map, make sure the name is a valid filename for windows.")
+                continue
+            break
+    else:
+        name = customMapList()
+        print("Creating Custom game...")
+    return launch("Maps/"+name+".zip")
+    
+
+
+def loadGame():
+    l = get_sorted_saves()
+    opts = ["Back"] + [save[:-4] + " " + get_elapsed_time(os.path.getmtime("saves/" + save)) + " ago" for save in l]
+    opt = select_option(opts,"Select a map:",False)
+    if opt == 0:
+        return 0
+    return launch(l[opt-1])
+    
+def time_to_exit():
+    ao_output.output("Goodbye Factorio", False)
+    exit(0)
+    
+    
+menu = {
+    "Single Player":{
+        "New Game" : newGame,
+        "Load Game" : loadGame,
+        },
+    "Multiplayer":{
+        "Connect to Address": connect_to_address_menu,
+        },
+    "Quit": time_to_exit
+    }
+
+do_menu(menu,"Main Menu",False)

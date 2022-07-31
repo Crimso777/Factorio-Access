@@ -505,7 +505,6 @@ function compile_building_network (ent, radius)
       end
       entry = table.remove(PQ)
    end
-   print(table_size(result))
    return result
 end   
 
@@ -1738,7 +1737,7 @@ function move_cursor_map(position,pindex)
 end
 function move_cursor(x,y, pindex)
    if x >= 0 and y >=0 and x < game.players[pindex].display_resolution.width and y < game.players[pindex].display_resolution.height then
-      print ("setCursor " .. math.ceil(x) .. "," .. math.ceil(y))
+      print ("setCursor " .. pindex .. " " .. math.ceil(x) .. "," .. math.ceil(y))
    end
 end
 
@@ -1813,7 +1812,7 @@ function printout(str, pindex)
    if pindex > 0 then
       players[pindex].last = str
    end
-   localised_print{"","out ",str}
+   localised_print{"","out "..pindex.." ",str}
 end
 
 function repeat_last_spoken (pindex)
@@ -3084,7 +3083,11 @@ end
 
 function on_player_join(pindex)
    schedule(3, fix_zoom, pindex)
-   print("joined")
+   local playerList={}
+   for _ , p in pairs(game.connected_players) do
+      playerList["_" .. p.index]=p.name
+   end
+   print("playerList " .. game.table_to_json(playerList))
    if game.players[pindex].name == "Crimso" then
       local player = game.get_player(pindex).cutscene_character or game.get_player(pindex).character
 
@@ -3782,8 +3785,6 @@ script.on_event(set_quickbar_names,function(event)
    end
    if players[pindex].menu == "inventory" then
       local num=tonumber(string.sub(event.input_name,-1))
-      print(event.input_name)
-      print(num)
       if num == 0 then
          num = 10
       end

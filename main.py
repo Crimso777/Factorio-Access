@@ -90,13 +90,13 @@ def select_option(options,prompt='Select an option:',one_indexed=True):
             continue
         return i
 
-def time_sort(file):
-    return os.path.getmtime("saves/"+file)
+def save_time(file):
+    return os.path.getmtime(os.path.join(fa_paths.SAVES,file))
 
 def get_sorted_saves():
     try:
-        l = os.listdir("saves")
-        l.sort(reverse=True, key=time_sort)
+        l = os.listdir(fa_paths.SAVES)
+        l.sort(reverse=True, key=save_time)
         return l
     except:
         return []
@@ -360,8 +360,8 @@ def setCursor(coordstring):
 
 player_list={}
 def set_player_list(jsons):
+    global player_list
     player_list = {key[1:]:val for key,val in json.loads(jsons).items()}
-    print(player_list)
 
 player_specific_commands = {
     "out":speak_interuptible_text,
@@ -381,6 +381,9 @@ def process_game_stdout(stdout,player_name=False):
             if parts[0] in player_specific_commands:
                 more_parts = parts[1].split(" ",1)
                 print(more_parts)
+                print(player_list)
+                print(more_parts[0] in player_list)
+                print(more_parts[0] in player_list and player_list[more_parts[0]])
                 if not player_name or (more_parts[0] in player_list and player_name == player_list[more_parts[0]]):
                     player_specific_commands[parts[0]](more_parts[1])
                     print("did"+parts[0])
@@ -405,7 +408,7 @@ def save_game_rename():
         print("Make sure to save your game next time!")
     else:
         print("Would you like to name your last save?  You saved " +
-              get_elapsed_time(os.path.getmtime("saves/"+l[0])) + " ago")
+              get_elapsed_time(save_time(l[0])) + " ago")
         if getAffirmation():
             print("Enter a name for your save file:")
             newName = input()
@@ -431,9 +434,9 @@ def save_game_rename():
 def connect_to_address_menu():
     credentials = update_factorio.get_credentials()
     address = input("Enter the address to connect to:\n")
-    connect_to_address(address,credentials["service-username"])
+    connect_to_address(address,credentials["username"])
 def connect_to_address(address,player_name):
-    launch_with_params(["--mp-connect",address])
+    launch_with_params(["--mp-connect",address],player_name)
 
 def launch(path):
     launch_with_params(["--load-game", path])
@@ -441,8 +444,8 @@ def launch(path):
 def launch_with_params(params,player_name=False):
     params = [
         fa_paths.BIN, 
-        "--config", "config/config.ini",
-        "--mod-directory", "mods",
+        "--config", fa_paths.CONFIG,
+        "--mod-directory", fa_paths.MODS,
         "--fullscreen", "TRUE"] + params
     try:
         print("Launching")
@@ -486,7 +489,7 @@ def chooseDifficulty():
         while True:
             name = input("Please enter a name for your new map:\n")
             try:
-                proc = subprocess.run([fa_paths.BIN, "--map-gen-settings", f"Map Settings/gen/{key}Map.json", "--map-settings",
+                proc = subprocess.run([fa_paths.BIN, "--map-gen-settings", f"Map Settings/gen/{key.replace(' ','')}Map.json", "--map-settings",
                               "Map Settings/"+types[key], "--create", "Maps/"+name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except:
                 print("Error saving map, make sure the name is a valid filename for windows.")
@@ -501,7 +504,7 @@ def chooseDifficulty():
 
 def loadGame():
     l = get_sorted_saves()
-    opts = ["Back"] + [save[:-4] + " " + get_elapsed_time(os.path.getmtime("saves/" + save)) + " ago" for save in l]
+    opts = ["Back"] + [save[:-4] + " " + get_elapsed_time(save_time(save)) + " ago" for save in l]
     opt = select_option(opts,"Select a map:",False)
     if opt == 0:
         return 0

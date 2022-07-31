@@ -98,7 +98,7 @@ def service_token_promt():
             webbrowser.open('https://factorio.com/profile')
             continue
         print("The token entered did not match the expected format. Please try again, or enter no to skip")
-    return {"service-username":username,"service-token":token}
+    return {"username":username,"token":token}
         
     
 

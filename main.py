@@ -371,13 +371,12 @@ global_commands = {
     "playerList":set_player_list,
     }
 
-def process_game_stdout(stdout,player_name=False):
+def process_game_stdout(stdout,player_name,announce_press_e):
     for line in iter(stdout.readline, b''):
         print(line)
         line = line.decode('utf-8').rstrip('\r\n')
         parts = line.split(' ',1)
         if len(parts)==2:
-            print(parts)
             if parts[0] in player_specific_commands:
                 more_parts = parts[1].split(" ",1)
                 print(more_parts)
@@ -400,6 +399,9 @@ def process_game_stdout(stdout,player_name=False):
             print(time.time - debug_time)
         elif len(line) > 8 and line[-7:] == "Goodbye":
             break
+        elif announce_press_e and len(line) > 20 and line[-20:] == "Factorio initialised":
+            announce_press_e = False
+            ao_output.output("Press e to continue", True)
 
 def save_game_rename():
     l = get_sorted_saves()
@@ -431,6 +433,36 @@ def save_game_rename():
                 os.remove(dst)
                 os.rename(src, dst)
 
+def host_saved_game_menu():
+    l = get_sorted_saves()
+    opts = ["Back"] + [save[:-4] + " " + get_elapsed_time(save_time(save)) + " ago" for save in l]
+    opt = select_option(opts,"Select a map:",False)
+    if opt == 0:
+        return 0
+    credentials = update_factorio.get_credentials()
+    player = update_factorio.get_player_data()
+    player["last-played"] = {
+        "type": "hosted-multiplayer",
+        "host-settings": 
+        {
+          "server-game-data": 
+          {
+            "visibility": None,
+            "name": "hi",
+            "description": "",
+            "max_players": 0,
+            "game_time_elapsed": 0,
+            "has_password": False
+          },
+          "server-username": "",
+          "autosave-interval": 5,
+          "afk-autokick-interval": 0
+        },
+        "save-name": opts[opt]
+      }
+    update_factorio.set_player_data(player)
+    return launch_with_params([],credentials["username"],announce_press_e=True)
+
 def connect_to_address_menu():
     credentials = update_factorio.get_credentials()
     address = input("Enter the address to connect to:\n")
@@ -441,7 +473,7 @@ def connect_to_address(address,player_name):
 def launch(path):
     launch_with_params(["--load-game", path])
     save_game_rename()
-def launch_with_params(params,player_name=False):
+def launch_with_params(params,player_name=False,announce_press_e=False):
     params = [
         fa_paths.BIN, 
         "--config", fa_paths.CONFIG,
@@ -450,7 +482,7 @@ def launch_with_params(params,player_name=False):
     try:
         print("Launching")
         proc = subprocess.Popen(params , stdout=subprocess.PIPE)
-        threading.Thread(target=process_game_stdout, args=(proc.stdout,player_name), daemon=True).start()
+        threading.Thread(target=process_game_stdout, args=(proc.stdout,player_name,announce_press_e), daemon=True).start()
         proc.wait()
     except Exception as e:
         print("error running game")
@@ -521,6 +553,7 @@ menu = {
         "Load Game" : loadGame,
         },
     "Multiplayer":{
+        "Host Saved Game": host_saved_game_menu,
         "Connect to Address": connect_to_address_menu,
         },
     "Quit": time_to_exit

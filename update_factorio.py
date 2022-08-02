@@ -8,6 +8,7 @@ import os
 import getpass
 import zipfile
 import webbrowser  
+import fa_paths
 
 from shutil import rmtree
 from sys import platform
@@ -29,11 +30,9 @@ package_map = {
     }
 
 FACTORIO_INSTALL_PATH = "./"
-FACTORIO_BIN_PATH = FACTORIO_INSTALL_PATH+'bin/x64/factorio.exe'
-FACTORIO_WRITE_PATH = FACTORIO_INSTALL_PATH
 
-PLAYER_DATA_PATH = FACTORIO_WRITE_PATH + "player-data.json"
-TEMP_PATH = FACTORIO_WRITE_PATH + 'temp/'
+PLAYER_DATA_PATH = os.path.join(fa_paths.WRITE_DIR, "player-data.json")
+TEMP_PATH = os.path.join(fa_paths.WRITE_DIR,  'temp')
 
 
 
@@ -86,7 +85,7 @@ def service_token_promt():
         print("To get your service token, which is required for updates, and most multiplayer functions, please follow the instructions below:")
         print("1. Go to https://factorio.com/profile in your browser. An option to launch is at the end of the instructions.")
         print('2. Once logged in and on your profile page, Click the link with the text "reveal".')
-        print("3. Once clicked, your token string should be selected so you should be able to copy it. The token consists of a string of 30 numbers and lowercase letters.")
+        print("3. Once clicked, your token string will be just before the link that will have disapeared. The token consists of a string of 30 numbers and letters between a and f. The text after the token starts with an i.")
         token=input("4. Enter your token here, or l to to to open the page for you, or n to skip for now.")
         token=token.strip()
         if re.fullmatch(r'[nN][oO]?',token):
@@ -234,13 +233,20 @@ def install():
     download(f"https://www.factorio.com/get-download/{version}/alpha/{download_package}",filename)
     overwrite_factorio_intall_from_new_zip(filename)
 
+def set_player_data(player):
+    with open(PLAYER_DATA_PATH,'w') as player_file:
+        json.dump(player,player_file)
+
+def get_player_data():
+    with open(PLAYER_DATA_PATH) as player_file:
+        return json.load(player_file)
+
 def get_credentials(quiet=False):
     if not os.path.exists(PLAYER_DATA_PATH):
         if not quiet:
             print("Player data does not exist yet. Please start the game in single player first.")
         return None
-    with open(PLAYER_DATA_PATH) as player_file:
-        player = json.load(player_file)
+    player = get_player_data()
     if not player["service-username"] or not player["service-token"]:
         log_res = service_token_promt()#api_log_in()
         if not log_res:
@@ -248,8 +254,7 @@ def get_credentials(quiet=False):
             return None
         player["service-username"] = log_res['username']
         player["service-token"] = log_res['token']
-        with open(PLAYER_DATA_PATH,'w') as player_file:
-            json.dump(player,player_file)
+        set_player_data(player)
     return {
         "username":player["service-username"],
         "token":player["service-token"]
@@ -257,7 +262,7 @@ def get_credentials(quiet=False):
     
     
 def get_current_version():
-    version_str = subprocess.check_output(FACTORIO_BIN_PATH + " --version").decode('utf-8')
+    version_str = subprocess.check_output(fa_paths.BIN + " --version").decode('utf-8')
     version_re = r"Version:\s*([\d\.]+)\s*\(\s*([^,]+),\s*([^,]+),\s*([^)]+)\)"
     maybe_match = re.match(version_re , version_str)
     if not maybe_match:
@@ -324,7 +329,7 @@ def prep_update(credentials, connection, current_version, update_canidates):
     
 def execute_update(current_version, update_canidates):
     print(current_version,update_canidates)
-    params=[FACTORIO_BIN_PATH]
+    params=[fa_paths.BIN]
     for update in update_canidates:
         file = os.path.abspath(update_filename(current_version,update))
         params.append('--apply-update')

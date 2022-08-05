@@ -101,25 +101,34 @@ def get_sorted_saves():
     except:
         return []
 
+def get_menu_saved_games():
+    games = get_sorted_saves()
+    return {save[:-4] + " " + get_elapsed_time(save_time(save)) + " ago" : save for save in games}
 
 def do_menu(branch, name, zero_item=("Back",0)):
     if callable(branch):
         return branch()
-    keys=list(branch)
     if zero_item:
-        keys = [zero_item[0]] + keys
-        branch = branch.copy()
-        branch[zero_item[0]]=zero_item[1]
+        old_b = branch
+        branch = {zero_item[0]:zero_item[1]}
+        branch.update(old_b)
     while True:
+        expanded_branch={}
+        for option, result in branch.items():
+            if callable(option):
+                for opt, res in option().items():
+                    expanded_branch[opt]=lambda res=res:result(res)
+            else:
+                expanded_branch[option]=result
+        keys=list(expanded_branch)
         opt = select_option(keys, prompt=f"{name}:", one_indexed= not zero_item)
         if zero_item and zero_item[1] == opt:
             return opt
         key = keys[opt]
-        do_menu(branch[key],key)
+        ret = do_menu(expanded_branch[key],key)
+        if ret > 0 and zero_item and zero_item[1]==0:
+            return ret-1
 
-
-def connect_to_address_menu():
-    raise Exception("TODO")
 
 
 
@@ -379,25 +388,20 @@ def process_game_stdout(stdout,player_name,announce_press_e):
         if len(parts)==2:
             if parts[0] in player_specific_commands:
                 more_parts = parts[1].split(" ",1)
-                print(more_parts)
-                print(player_list)
-                print(more_parts[0] in player_list)
-                print(more_parts[0] in player_list and player_list[more_parts[0]])
                 if not player_name or (more_parts[0] in player_list and player_name == player_list[more_parts[0]]):
                     player_specific_commands[parts[0]](more_parts[1])
-                    print("did"+parts[0])
                     continue
             elif parts[0] in global_commands:
                 global_commands[parts[0]](parts[1])
                 continue
                
-        if len(line) > 16 and line[-15:] == "Saving finished":
+        if line.endswith("Saving finished"):
             ao_output.output("Saving Complete", True)
-        elif len(line) >= 10 and line[:10] == "time start":
+        elif line[:10] == "time start":
             debug_time = time.time
-        elif len(line) >= 9 and line[:9] == "time start":
+        elif line[:9] == "time start":
             print(time.time - debug_time)
-        elif len(line) > 8 and line[-7:] == "Goodbye":
+        elif line[-7:] == "Goodbye":
             break
         elif announce_press_e and len(line) > 20 and line[-20:] == "Factorio initialised":
             announce_press_e = False
@@ -433,12 +437,9 @@ def save_game_rename():
                 os.remove(dst)
                 os.rename(src, dst)
 
-def host_saved_game_menu():
-    l = get_sorted_saves()
-    opts = ["Back"] + [save[:-4] + " " + get_elapsed_time(save_time(save)) + " ago" for save in l]
-    opt = select_option(opts,"Select a map:",False)
-    if opt == 0:
-        return 0
+
+
+def host_saved_game_menu(game):
     credentials = update_factorio.get_credentials()
     player = update_factorio.get_player_data()
     player["last-played"] = {
@@ -458,7 +459,7 @@ def host_saved_game_menu():
           "autosave-interval": 5,
           "afk-autokick-interval": 0
         },
-        "save-name": opts[opt]
+        "save-name": game[:-4]
       }
     update_factorio.set_player_data(player)
     return launch_with_params([],credentials["username"],announce_press_e=True)
@@ -467,12 +468,15 @@ def connect_to_address_menu():
     credentials = update_factorio.get_credentials()
     address = input("Enter the address to connect to:\n")
     connect_to_address(address,credentials["username"])
+    return 5
 def connect_to_address(address,player_name):
     launch_with_params(["--mp-connect",address],player_name)
+    return 5
 
 def launch(path):
     launch_with_params(["--load-game", path])
     save_game_rename()
+    return 5
 def launch_with_params(params,player_name=False,announce_press_e=False):
     params = [
         fa_paths.BIN, 
@@ -532,16 +536,6 @@ def chooseDifficulty():
         print("Creating Custom game...")
     return launch("Maps/"+name+".zip")
     
-
-
-def loadGame():
-    l = get_sorted_saves()
-    opts = ["Back"] + [save[:-4] + " " + get_elapsed_time(save_time(save)) + " ago" for save in l]
-    opt = select_option(opts,"Select a map:",False)
-    if opt == 0:
-        return 0
-    return launch(l[opt-1])
-    
 def time_to_exit():
     ao_output.output("Goodbye Factorio", False)
     exit(0)
@@ -550,10 +544,14 @@ def time_to_exit():
 menu = {
     "Single Player":{
         "New Game" : newGame,
-        "Load Game" : loadGame,
+        "Load Game" : {
+            get_menu_saved_games:launch,
+            },
         },
     "Multiplayer":{
-        "Host Saved Game": host_saved_game_menu,
+        "Host Saved Game": {
+            get_menu_saved_games:host_saved_game_menu,
+            },
         "Connect to Address": connect_to_address_menu,
         },
     "Quit": time_to_exit

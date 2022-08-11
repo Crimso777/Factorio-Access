@@ -1451,7 +1451,7 @@ function populate_categories(pindex)
          print("Empty ent")
       elseif ent.name == "water" then
          table.insert(players[pindex].nearby.resources, ent)      
-      elseif ent.ents[1].type == "resource" or ent.ents[1].type == "tree" then
+      elseif ent.ents[1].type == "resource" or ent.ents[1].type == "tree" or ent.ents[1].type == "rock-big" or ent.ents[1].type == "rock-huge" then
          table.insert(players[pindex].nearby.resources, ent)
       elseif ent.ents[1].type == "container" then
          table.insert(players[pindex].nearby.containers, ent)

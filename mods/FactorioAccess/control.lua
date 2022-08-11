@@ -5115,4 +5115,44 @@ script.on_event("nudge-right", function(event)
    nudge_key(defines.direction.east,event)
 end)
 
+--Function to increase/decrease the bar of a chest by a given amount, while protecting its bounds. Returns the verbal explanation. The assumption is that you press page_up or pgae_down while the chest inventory is open to call this function.
+function increment_chest_bar(ent, increase, amount)
+   amount = amount or 1
+   local max_bar = 0
+   local current_bar = 0
+   
+   --Check if ent is a chest
+   if string.match(ent.type, "chest") == nil then
+      return "Not a chest."
+   end
+   
+   --Check maximum bar allowed
+   if ent.type == "wooden-chest" then
+      max_bar = 16
+   elseif ent.type == "iron-chest" then
+      max_bar = 32
+   else --Steel and logistic chests all have 48 slots
+      max_bar = 48
+   end
+   
+   --Increase/decrease the bar based on the bool called "increase"
+   current_bar = ent.get_inventory(defines.inventory.chest).get_bar()
+   if increase then
+      current bar = current_bar + amount
+   else
+      current_bar = current_bar - amount
+   end
+   
+   --Protect bounds
+   if current_bar < 0 then
+      current_bar = 0
+   elseif current_bar > max_bar then
+      current_bar = max_bar
+   end
+   
+   --Set bar
+   ent.get_inventory(defines.inventory.chest).set_bar(current_bar)
+   
+   return " " .. current_bar .. " slots unlocked. "
+end
 

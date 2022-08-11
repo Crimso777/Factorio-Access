@@ -4573,6 +4573,112 @@ script.on_event("shift-click", function(event)
 end
 )
 
+
+--[[ New shortcut: Smart insert all stacks
+--Main Idea: When you press control-click when a building inventory is open, the game tries to fast-transfer every stack from one inventory to the other, one by one. It announces every successfully moved stack up until a predetermined limit, after which it says "and other items".
+--The code is mostly copied from the shift-click script in control.lua, and it puts the functional side of that into for loops.
+--todo: properly define the for loop headers to make the code go through the entire inventory
+--todo for improvement: if a moved stack name repeats, like when you move multiple stacks of the same item, state the total counts instead of repeating such as "Moved 50 coal and 50 coal and 50 coal"
+--Not tested!
+]]
+script.on_event("control-click", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+
+   if players[pindex].in_menu then
+      if players[pindex].menu == "building" then
+         if players[pindex].building.sector <= #players[pindex].building.sectors and #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0 and players[pindex].building.sectors[players[pindex].building.sector].name ~= "Fluid" then
+            --This is the section where we move from the building to the player.
+            local result = "Moved "
+            local moved_count = 0
+            local inv_full = false
+            local announce_limit = 4 --List at most this number of moved stacks
+            local stack_name = " "
+            "for every stack in the selected building inventory do" --todo correctly phrase this line
+               local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
+               if stack.valid and stack.valid_for_read then
+                  if game.get_player(pindex).can_insert(stack) then
+                     game.get_player(pindex).play_sound{path = "utility/inventory_click"}
+                     stack_name = stack.name
+                     local inserted = game.get_player(pindex).insert(stack)
+                     players[pindex].building.sectors[players[pindex].building.sector].inventory.remove{name = stack.name, count = inserted}
+                     --Now explain what was moved
+                     local next_phrase = " "
+                     if moved_count == 0 then
+                        next_phrase = " " .. inserted .. " " .. stack_name .. " "
+                     else if moved_count < announce_limit then
+                        next_phrase = " and " .. inserted .. " " .. stack_name .. " "
+                     else if moved_count == announce_limit then
+                        next_phrase = " and other items "
+                     end
+                     moved_count = moved_count + 1
+                     result = result .. next_phrase
+                  else
+                     inv_full = true
+                  end
+               end
+            end --end of for loop
+            if moved_count == 0 then
+               result = result .. " nothing "
+            end
+            result = result .. " to player's inventory. "
+            if inv_full == true then
+               result = result .. " Inventory full. "
+            end
+            printout(result, pindex)
+         else
+            local offset = 1
+            if players[pindex].building.recipe_list ~= nil then
+               offset = offset + 1
+            end
+            if players[pindex].building.sector == #players[pindex].building.sectors + offset then
+               --This is the section where we move from the player to the building.
+               local result = "Moved "
+               local moved_count = 0
+               local inv_full = false
+               local announce_limit = 4 --List at most this number of moved stacks
+               local stack_name = " "
+               "for every stack in the player inventory do" --todo correctly phrase this line
+                  local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
+                  if stack.valid and stack.valid_for_read then
+                     if players[pindex].building.ent.can_insert(stack) then
+                        stack_name = stack.name
+                        local inserted = players[pindex].building.ent.insert(stack)
+                        players[pindex].inventory.lua_inventory.remove{name = stack.name, count = inserted}
+                        
+                        --Now explain what was moved
+                        local next_phrase = " "
+                        if moved_count == 0 then
+                           next_phrase = " " .. inserted .. " " .. stack_name .. " "
+                        else if moved_count < announce_limit then
+                           next_phrase = " and " .. inserted .. " " .. stack_name .. " "
+                        else if moved_count == announce_limit then
+                           next_phrase = " and other items "
+                        end
+                        moved_count = moved_count + 1
+                        result = result .. next_phrase
+                     else
+                        inv_full = true
+                     end
+                  end
+               end --end of for loop
+               if moved_count == 0 then
+                  result = result .. " nothing "
+               end
+               result = result .. " to building inventory. "
+               if inv_full == true then
+                  result = result .. " Inventory full. "
+               end
+               printout(result, pindex)
+            end
+         end
+      end
+   end
+end
+)
+
 script.on_event("right-click", function(event)
    pindex = event.player_index
       if not check_for_player(pindex) then

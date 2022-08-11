@@ -4596,7 +4596,7 @@ script.on_event("control-click", function(event)
             local inv_full = false
             local announce_limit = 4 --List at most this number of moved stacks
             local stack_name = " "
-            "for every stack in the selected building inventory do" --todo correctly phrase this line
+            for i = 1,2,1 do --todo correctly phrase this line as: "for every stack in the selected building inventory do"
                local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
                if stack.valid and stack.valid_for_read then
                   if game.get_player(pindex).can_insert(stack) then
@@ -4640,7 +4640,7 @@ script.on_event("control-click", function(event)
                local inv_full = false
                local announce_limit = 4 --List at most this number of moved stacks
                local stack_name = " "
-               "for every stack in the player inventory do" --todo correctly phrase this line
+               for i = 1,2,1 do --todo correctly phrase this line as: "for every stack in the player inventory do"
                   local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
                   if stack.valid and stack.valid_for_read then
                      if players[pindex].building.ent.can_insert(stack) then

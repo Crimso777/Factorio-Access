@@ -231,7 +231,7 @@ function ent_info(pindex, ent, description)
       end
    end
 
-   if string.match(ent.type, "chest") then --Report the most common item in the chest and say "and more" if there are other types.
+   if ent.type == "container" then --Report the most common item and say "and more" if there are other types.
       local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
       local itemtable = {}
       for name, count in pairs(itemset) do
@@ -245,7 +245,7 @@ function ent_info(pindex, ent, description)
       else
          result = result .. ", Contains " .. itemtable[1].count .. " " .. itemtable[1].name .. " "
          if #itemtable > 1 then
-            result = result .. " and more "
+            result = result .. "and more "
          end
       end
       

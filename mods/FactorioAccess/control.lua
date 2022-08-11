@@ -231,6 +231,26 @@ function ent_info(pindex, ent, description)
       end
    end
 
+   if string.match(ent.type, "chest") then --Report the most common item in the chest and say "and more" if there are other types.
+      local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
+      local itemtable = {}
+      for name, count in pairs(itemset) do
+         table.insert(itemtable, {name = name, count = count})
+      end
+      table.sort(itemtable, function(k1, k2)
+         return k1.count > k2.count
+      end)
+      if #itemtable == 0 then
+         result = result .. ", Contains nothing "
+      else
+         result = result .. ", Contains " .. itemtable[1].count .. " " .. itemtable[1].name .. " "
+         if #itemtable > 1 then
+            result = result .. " and more "
+         end
+      end
+      
+   end  
+	
    if ent.type == "electric-pole" then
       result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, Network currently producing "
       local power = 0

@@ -231,7 +231,7 @@ function ent_info(pindex, ent, description)
       end
    end
 
-   if ent.type == "container" then --Report the most common item and say "and more" if there are other types.
+   if ent.type == "container" or ent.type == "logistic-container" then --Report the most common item and say "and more" if there are other types.
       local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
       local itemtable = {}
       for name, count in pairs(itemset) do

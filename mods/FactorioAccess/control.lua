@@ -2021,9 +2021,9 @@ function scan_area (x,y,w,h, pindex)
       table.insert(result, {name = waters[1].name, count = #waters, ents=waters})
    end
 
-   while next(result) ~= nil and #result[1].ents > 100 do
-      table.remove(result[1].ents, math.random(#result[1].ents))
-   end
+   -- while next(result) ~= nil and #result[1].ents > 100 do
+      -- table.remove(result[1].ents, math.random(#result[1].ents))
+   -- end
 
    for i=1, #ents, 1 do
       local index = index_of_entity(result, ents[i].name)
@@ -2044,27 +2044,20 @@ function scan_area (x,y,w,h, pindex)
       end
    end
    if players[pindex].nearby.count == false then
+      local pos = players[pindex].cursor_pos
+      for index, single_type_res in pairs(result) do
+         temp_table_to_sort={}
+         for _,ent in pairs(single_type_res.ents) do
+            table.insert(temp_table_to_sort,{dist=distance(pos, ent.position),ent=ent})
+         end
+         table.sort(temp_table_to_sort,function(k1,k2) return k1.dist < k2.dist end)
+         for index,_ in pairs(single_type_res.ents) do
+            single_type_res.ents[index] = temp_table_to_sort[index].ent
+         end
+         single_type_res.min_dist = temp_table_to_sort[1].dist
+      end
       table.sort(result, function(k1, k2) 
-         local pos = players[pindex].cursor_pos
-         local ent1 = nil
-         local ent2 = nil
-         if k1.name == "water" then
-            table.sort( k1.ents , function(k3, k4) 
-               return distance(pos, k3.position) < distance(pos, k4.position)
-            end)
-            ent1 = k1.ents[1]
-         else
-            ent1 = surf.get_closest(pos, k1.ents)
-         end
-         if k2.name == "water" then
-            table.sort( k2.ents , function(k3, k4) 
-               return distance(pos, k3.position) < distance(pos, k4.position)
-            end)
-            ent2 = k2.ents[1]
-         else
-         ent2 = surf.get_closest(pos, k2.ents)
-         end
-         return distance(pos, ent1.position) < distance(pos, ent2.position)
+         return k1.min_dist < k2.min_dist
       end)
    else
       table.sort(result, function(k1, k2)

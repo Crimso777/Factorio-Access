@@ -3408,7 +3408,7 @@ script.on_event("scan-up", function(event)
    elseif players[pindex].menu == "building" then 
       --Chest bar setting: Increase by 1
 	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_chest_bar(ent, true, 1)
+	  local result = increment_chest_bar(ent, 1)
 	  printout(result, pindex)
    end
 end
@@ -3424,7 +3424,7 @@ script.on_event("scan-down", function(event)
    elseif players[pindex].menu == "building" then
       --Chest bar setting: Decrease by 1
 	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_chest_bar(ent, false, 1)
+	  local result = increment_chest_bar(ent, -1)
 	  printout(result, pindex)
    end
 end
@@ -3523,7 +3523,7 @@ script.on_event("scan-category-up", function(event)
    elseif players[pindex].menu == "building" then
       --Chest bar setting: Set to max
 	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_chest_bar(ent, true, 50)
+	  local result = increment_chest_bar(ent, 50)
 	  printout(result, pindex)
    end
 end
@@ -3558,7 +3558,7 @@ script.on_event("scan-category-down", function(event)
    elseif players[pindex].menu == "building" then
       --Chest bar setting: Set to 0
 	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_chest_bar(ent, true, -1)
+	  local result = increment_chest_bar(ent, -1)
 	  printout(result, pindex)
    end
 end
@@ -3577,7 +3577,7 @@ script.on_event("scan-mode-up", function(event)
    elseif players[pindex].menu == "building" then
       --Chest bar setting: Increase by 5
 	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_chest_bar(ent, true, 5)
+	  local result = increment_chest_bar(ent, 5)
 	  printout(result, pindex)
    end
 end)
@@ -3595,7 +3595,7 @@ script.on_event("scan-mode-down", function(event)
    elseif players[pindex].menu == "building" then
       --Chest bar setting: Decrease by 5
 	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_chest_bar(ent, false, 5)
+	  local result = increment_chest_bar(ent, -5)
 	  printout(result, pindex)
    end
 end)
@@ -5146,58 +5146,37 @@ script.on_event("nudge-right", function(event)
 end)
 
 --Function to increase/decrease the bar of a chest by a given amount, while protecting its bounds. Returns the verbal explanation. The assumption is that you press page_up or pgae_down while the chest inventory is open to call this function.
-function increment_chest_bar(ent, increase, amount)
-   amount = amount or 1
-   local max_bar = 0
-   local current_bar = 0
-   
-   --Check if ent is a chest
-   if not (ent.type == "container" or ent.type == "logistic-container") then
+function increment_chest_bar(ent, amount)
+   local inventory = ent.get_inventory(defines.inventory.chest)
+   if not inventory then
       return "Not a chest."
    end
-   
-   --Check maximum bar allowed
-   if ent.name == "wooden-chest" then
-      max_bar = 17
-   elseif ent.name == "iron-chest" then
-      max_bar = 33
-   else --Steel and logistic chests all have 48 slots
-      max_bar = 49
+   if not inventory.supports_bar() then
+      return "Does not support limiting."
    end
    
-   --Increase/decrease the bar based on the bool called "increase" and amount
-   current_bar = ent.get_inventory(defines.inventory.chest).get_bar()
+   local max_bar = #inventory + 1
+   local current_bar = inventory.get_bar()
    
-   if increase then
-      current_bar = current_bar + amount
-   else
-      current_bar = current_bar - amount
-   end
+   amount = amount or 1
+   current_bar = current_bar + amount
    
-   --Set to min if amount == -1
-   if amount == -1 then
-      current_bar = 1
-   end
-   
-   --Protect bounds
    if current_bar < 1 then
       current_bar = 1
    elseif current_bar > max_bar then
       current_bar = max_bar
    end
    
-   --Set bar
-   ent.get_inventory(defines.inventory.chest).set_bar(current_bar)
+   inventory.set_bar(current_bar)
    
    --Return result
    current_bar = current_bar - 1 --Mismatch correction
-   result = " "
    if current_bar == 1 then
       return "One slot unlocked."
    elseif current_bar >= (max_bar - 1) then
       return "All slots unlocked."
    else
-      return " " .. current_bar .. " slots unlocked."
+      return current_bar .. " slots unlocked."
    end
 end
 

@@ -1251,8 +1251,9 @@ function prune_item_groups(array)
 end
          
 
-                  function read_item_selector_slot(pindex)
-   printout(players[pindex].item_cache[players[pindex].item_selector.index].name, pindex)
+function read_item_selector_slot(pindex, start_phrase)
+   start_phrase = start_phrase or ""
+   printout(start_phrase .. players[pindex].item_cache[players[pindex].item_selector.index].name, pindex)
 end
 
 function get_iterable_array(dict)
@@ -1416,7 +1417,8 @@ function get_adjacent_source(box, pos, dir)
    end
    return result
 end
-function read_technology_slot(pindex)
+function read_technology_slot(pindex, start_phrase)
+   start_phrase = start_phrase or ""
    local techs = {}
    if players[pindex].technology.category == 1 then
       techs = players[pindex].technology.lua_researchable
@@ -1429,7 +1431,7 @@ function read_technology_slot(pindex)
    if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
       local tech = techs[players[pindex].technology.index]
       if tech.valid then
-         printout(tech.name, pindex)
+         printout(start_phrase .. tech.name, pindex)
       else
          printout("Error loading technology", pindex)
       end
@@ -1463,10 +1465,11 @@ function populate_categories(pindex)
    end
 end
 
-function read_belt_slot(pindex)
+function read_belt_slot(pindex, start_phrase)
+   start_phrase = start_phrase or ""
    local stack = nil
    local array = {}
-   local result = ""
+   local result = start_phrase
    if players[pindex].belt.sector == 1 and players[pindex].belt.side == 1 then
       array = players[pindex].belt.line1
    elseif players[pindex].belt.sector == 1 and players[pindex].belt.side == 2 then
@@ -1511,18 +1514,19 @@ function reset_rotation(pindex)
    players[pindex].building_direction = -1
 end
 
-function read_building_recipe(pindex)
+function read_building_recipe(pindex, start_phrase)
+   start_phrase = start_phrase or ""
    if players[pindex].building.recipe_selection then
       recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
       if recipe.valid == true then
-         printout(recipe.name .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. recipe.subgroup.name, pindex)
+         printout(start_phrase .. recipe.name .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. recipe.subgroup.name, pindex)
       else
-         printout("Blank",pindex)
+         printout(start_phrase .. "Blank",pindex)
       end
    else
       local recipe = players[pindex].building.recipe
       if recipe ~= nil then
-         printout(recipe.name, pindex)
+         printout(start_phrase .. recipe.name, pindex)
       else
          printout("Select a recipe", pindex)
       end
@@ -1531,7 +1535,8 @@ end
    
    
 
-function read_building_slot(pindex)
+function read_building_slot(pindex, start_phrase)
+   start_phrase = start_phrase or ""
    if players[pindex].building.sectors[players[pindex].building.sector].name == "Filters" then 
       printout(players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index], pindex)
    elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Fluid" then 
@@ -1547,13 +1552,13 @@ function read_building_slot(pindex)
          name = fluid.name
       end
 
-      printout(name .. " " .. type .. " " .. amount .. "/" .. capacity, pindex)
+      printout(start_phrase .. name .. " " .. type .. " " .. amount .. "/" .. capacity, pindex)
    else
       stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
       if stack.valid_for_read and stack.valid then
-         printout(stack.name .. " x " .. stack.count, pindex)
+         printout(start_phrase .. stack.name .. " x " .. stack.count, pindex)
       else
-         printout("Empty slot", pindex)
+         printout(start_phrase .. "Empty slot", pindex)
       end
    end
 end
@@ -1606,12 +1611,13 @@ function get_tile_dimensions(item)
    return ""
 end
 
-function read_crafting_queue(pindex)
+function read_crafting_queue(pindex, start_phrase)
+   start_phrase = start_phrase or ""
    if players[pindex].crafting_queue.max ~= 0 then
       item = players[pindex].crafting_queue.lua_queue[players[pindex].crafting_queue.index]
-      printout(item.recipe .. " x " .. item.count, pindex)
+      printout(start_phrase .. item.recipe .. " x " .. item.count, pindex)
    else
-      printout("Blank", pindex)
+      printout(start_phrase .. "Blank", pindex)
    end
 end
    
@@ -1637,13 +1643,14 @@ function load_crafting_queue(pindex)
    end
 end
 
-function read_crafting_slot(pindex)
+function read_crafting_slot(pindex, start_phrase)
+   start_phrase = start_phrase or ""
    recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
    if recipe.valid == true then
       if recipe.category == "smelting" then
-         printout(recipe.name .. " can only be crafted by a furnace.", pindex)
+         printout(start_phrase .. recipe.name .. " can only be crafted by a furnace.", pindex)
       else
-         printout(recipe.name .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. game.get_player(pindex).get_craftable_count(recipe.name), pindex)
+         printout(start_phrase .. recipe.name .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. game.get_player(pindex).get_craftable_count(recipe.name), pindex)
       end
       else
       printout("Blank",pindex)
@@ -1652,12 +1659,13 @@ end
 
 
 
-function read_inventory_slot(pindex)
+function read_inventory_slot(pindex, start_phrase)
+   start_phrase = start_phrase or ""
    local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
    if stack.valid_for_read and stack.valid == true then
-      printout(stack.name .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
-      else
-      printout("Empty Slot",pindex)
+	  printout(start_phrase .. stack.name .. " x " .. stack.count .. " " .. stack.prototype.subgroup.name , pindex)
+   else
+      printout(start_phrase .. "Empty Slot",pindex)
    end
 end
 
@@ -3603,8 +3611,7 @@ script.on_event("open-inventory", function(event)
       players[pindex].inventory.lua_inventory = game.get_player(pindex).get_main_inventory()
       players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
       players[pindex].inventory.index = 1
-      printout("Inventory", pindex)
---      read_inventory_slot(pindex)
+      read_inventory_slot(pindex, "Inventory, ")
       players[pindex].crafting.lua_recipes = get_recipes(pindex, game.get_player(pindex).character)
       players[pindex].crafting.max = #players[pindex].crafting.lua_recipes
       players[pindex].crafting.category = 1
@@ -3826,7 +3833,7 @@ script.on_event("switch-menu", function(event)
   --          end
          elseif players[pindex].building.recipe_list == nil then
             if players[pindex].building.sector == (#players[pindex].building.sectors + 1) then
-               printout("Player Inventory", pindex)
+			   read_inventory_slot(pindex, "Player Inventory, ")
             else
                players[pindex].building.sector = 1
                local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
@@ -3841,7 +3848,7 @@ script.on_event("switch-menu", function(event)
             if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
                printout("Recipe", pindex)
             elseif players[pindex].building.sector == #players[pindex].building.sectors + 2 then
-               printout("Player Inventory", pindex)
+               read_inventory_slot(pindex, "Player Inventory, ")
             else
                players[pindex].building.sector = 1
                printout(players[pindex].building.sectors[players[pindex].building.sector].name, pindex)
@@ -3931,13 +3938,13 @@ script.on_event("reverse-switch-menu", function(event)
             printout(len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name , pindex)
          elseif players[pindex].building.recipe_list == nil then
             if players[pindex].building.sector == (#players[pindex].building.sectors + 1) then
-               printout("Player Inventory", pindex)
+               read_inventory_slot(pindex, "Player Inventory, ")
             end
          else
             if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
                printout("Recipe", pindex)
             elseif players[pindex].building.sector == #players[pindex].building.sectors + 2 then
-               printout("Player Inventory", pindex)
+               read_inventory_slot(pindex, "Player Inventory, ")
             end
          end
 
@@ -4027,7 +4034,7 @@ script.on_event("left-click", function(event)
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
          game.get_player(pindex).cursor_stack.swap_stack(stack)
             players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
---         read_inventory_slot(pindex)
+         --read_inventory_slot(pindex)
       elseif players[pindex].menu == "crafting" then
          local T = {
             count = 1,

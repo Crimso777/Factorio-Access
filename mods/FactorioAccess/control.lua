@@ -4577,8 +4577,8 @@ end
 --[[ New shortcut: Smart insert all stacks
 --Main Idea: When you press control-click when a building inventory is open, the game tries to fast-transfer every stack from one inventory to the other, one by one. It announces every successfully moved stack up until a predetermined limit, after which it says "and other items".
 --The code is mostly copied from the shift-click script in control.lua, and it puts the functional side of that into for loops.
---todo: properly define the for loop headers to make the code go through the entire inventory
---todo for improvement: if a moved stack name repeats, like when you move multiple stacks of the same item, state the total counts instead of repeating such as "Moved 50 coal and 50 coal and 50 coal"
+--todo: properly define the for loop headers to make the code go through the entire entity inventory stack by stack
+--Added feature: If multiple stacks of the same item are moved, the total count is announced instead.
 --Not tested!
 ]]
 script.on_event("control-click", function(event)
@@ -4596,6 +4596,9 @@ script.on_event("control-click", function(event)
             local inv_full = false
             local announce_limit = 4 --List at most this number of moved stacks
             local stack_name = " "
+			local next_stack_name = "   "
+			local inserted_total = 0
+			
             for i = 1,2,1 do --todo correctly phrase this line as: "for every stack in the selected building inventory do"
                local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
                if stack.valid and stack.valid_for_read then
@@ -4604,15 +4607,24 @@ script.on_event("control-click", function(event)
                      stack_name = stack.name
                      local inserted = game.get_player(pindex).insert(stack)
                      players[pindex].building.sectors[players[pindex].building.sector].inventory.remove{name = stack.name, count = inserted}
-                     --Now explain what was moved
-                     local next_phrase = " "
-                     if moved_count == 0 then
-                        next_phrase = " " .. inserted .. " " .. stack_name .. " "
-                     else if moved_count < announce_limit then
-                        next_phrase = " and " .. inserted .. " " .. stack_name .. " "
-                     else if moved_count == announce_limit then
-                        next_phrase = " and other items "
-                     end
+                     inserted_total = inserted_total + inserted
+					 --Now explain what was moved
+					 next_stack_name = "     " --todo fetch this
+					 if stack_name ~= next_stack_name then
+					    --Moving the final stack of an item type
+					    local next_phrase = " "
+					    if moved_count == 0 then
+					       next_phrase = " " .. inserted_total .. " " .. stack_name .. " "
+					    else if moved_count < announce_limit then
+					       next_phrase = " and " .. inserted_total .. " " .. stack_name .. " "
+                        else if moved_count == announce_limit then
+                           next_phrase = " and other items "
+                        end
+						inserted_total = 0
+					 else 
+					    --Moving first/middle stacks of the same item type: Say nothing
+					    next_phrase = " "
+					 end
                      moved_count = moved_count + 1
                      result = result .. next_phrase
                   else
@@ -4647,16 +4659,24 @@ script.on_event("control-click", function(event)
                         stack_name = stack.name
                         local inserted = players[pindex].building.ent.insert(stack)
                         players[pindex].inventory.lua_inventory.remove{name = stack.name, count = inserted}
-                        
+                        inserted_total = inserted_total + inserted
                         --Now explain what was moved
-                        local next_phrase = " "
-                        if moved_count == 0 then
-                           next_phrase = " " .. inserted .. " " .. stack_name .. " "
-                        else if moved_count < announce_limit then
-                           next_phrase = " and " .. inserted .. " " .. stack_name .. " "
-                        else if moved_count == announce_limit then
-                           next_phrase = " and other items "
-                        end
+						next_stack_name = "     " --todo fetch this
+					    if stack_name ~= next_stack_name then
+   					       --Moving the final stack of an item type
+					       local next_phrase = " "
+					       if moved_count == 0 then
+  					          next_phrase = " " .. inserted_total .. " " .. stack_name .. " "
+					       else if moved_count < announce_limit then
+					          next_phrase = " and " .. inserted_total .. " " .. stack_name .. " "
+                           else if moved_count == announce_limit then
+                              next_phrase = " and other items "
+                           end
+						   inserted_total = 0
+					    else 
+					       --Moving first/middle stacks of the same item type: Say nothing
+					       next_phrase = " "
+					    end
                         moved_count = moved_count + 1
                         result = result .. next_phrase
                      else

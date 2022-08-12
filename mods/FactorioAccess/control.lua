@@ -3408,7 +3408,7 @@ script.on_event("scan-up", function(event)
    elseif players[pindex].menu == "building" then 
       --Chest bar setting: Increase by 1
 	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_chest_bar(ent, 1)
+	  local result = increment_inventory_bar(ent, 1)
 	  printout(result, pindex)
    end
 end
@@ -3424,7 +3424,7 @@ script.on_event("scan-down", function(event)
    elseif players[pindex].menu == "building" then
       --Chest bar setting: Decrease by 1
 	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_chest_bar(ent, -1)
+	  local result = increment_inventory_bar(ent, -1)
 	  printout(result, pindex)
    end
 end
@@ -3521,9 +3521,9 @@ script.on_event("scan-category-up", function(event)
 
       end
    elseif players[pindex].menu == "building" then
-      --Chest bar setting: Set to max
+      --Chest bar setting: Set to max by increasing by 100
 	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_chest_bar(ent, 50)
+	  local result = increment_inventory_bar(ent, 100)
 	  printout(result, pindex)
    end
 end
@@ -3556,9 +3556,9 @@ script.on_event("scan-category-down", function(event)
 
       end
    elseif players[pindex].menu == "building" then
-      --Chest bar setting: Set to 0
+      --Chest bar setting: Set to 0 by decreasing by 100
 	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_chest_bar(ent, -1)
+	  local result = increment_inventory_bar(ent, -100)
 	  printout(result, pindex)
    end
 end
@@ -3577,7 +3577,7 @@ script.on_event("scan-mode-up", function(event)
    elseif players[pindex].menu == "building" then
       --Chest bar setting: Increase by 5
 	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_chest_bar(ent, 5)
+	  local result = increment_inventory_bar(ent, 5)
 	  printout(result, pindex)
    end
 end)
@@ -3595,7 +3595,7 @@ script.on_event("scan-mode-down", function(event)
    elseif players[pindex].menu == "building" then
       --Chest bar setting: Decrease by 5
 	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_chest_bar(ent, -5)
+	  local result = increment_inventory_bar(ent, -5)
 	  printout(result, pindex)
    end
 end)
@@ -5146,18 +5146,21 @@ script.on_event("nudge-right", function(event)
 end)
 
 --Function to increase/decrease the bar of a chest by a given amount, while protecting its bounds. Returns the verbal explanation. The assumption is that you press page_up or pgae_down while the chest inventory is open to call this function.
-function increment_chest_bar(ent, amount)
+function increment_inventory_bar(ent, amount)
    local inventory = ent.get_inventory(defines.inventory.chest)
+   
+   --Checks
    if not inventory then
       return "Not a chest."
    end
    if not inventory.supports_bar() then
-      return "Does not support limiting."
+      return "This inventory does not support limiting."
    end
    
    local max_bar = #inventory + 1
    local current_bar = inventory.get_bar()
    
+   --Change bar
    amount = amount or 1
    current_bar = current_bar + amount
    

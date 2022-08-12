@@ -3397,25 +3397,35 @@ script.on_event("rescan", function(event)
    end
 end
 )
+
 script.on_event("scan-up", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
    if not (players[pindex].in_menu) then
-
-   scan_up(pindex)
+      scan_up(pindex)
+   elseif players[pindex].menu == "building" then 
+      --Chest bar setting: Increase by 1
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_chest_bar(ent, true, 1)
+	  printout(result, pindex)
    end
 end
 )
 
 script.on_event("scan-down", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
    if not (players[pindex].in_menu) then
       scan_down(pindex)
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Decrease by 1
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_chest_bar(ent, false, 1)
+	  printout(result, pindex)
    end
 end
 )
@@ -3510,6 +3520,11 @@ script.on_event("scan-category-up", function(event)
          printout("Other", pindex)
 
       end
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Set to max
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_chest_bar(ent, true, 50)
+	  printout(result, pindex)
    end
 end
 )
@@ -3540,6 +3555,11 @@ script.on_event("scan-category-down", function(event)
          printout("Other", pindex)
 
       end
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Set to 0
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_chest_bar(ent, true, -1)
+	  printout(result, pindex)
    end
 end
 )
@@ -3554,6 +3574,11 @@ script.on_event("scan-mode-up", function(event)
       players[pindex].nearby.count = false
       printout("Sorting by distance", pindex)
       scan_sort(pindex)
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Increase by 5
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_chest_bar(ent, true, 5)
+	  printout(result, pindex)
    end
 end)
 
@@ -3567,6 +3592,11 @@ script.on_event("scan-mode-down", function(event)
       players[pindex].nearby.count = true
       printout("Sorting by count", pindex)
       scan_sort(pindex)
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Decrease by 5
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_chest_bar(ent, false, 5)
+	  printout(result, pindex)
    end
 end)
 
@@ -5122,30 +5152,36 @@ function increment_chest_bar(ent, increase, amount)
    local current_bar = 0
    
    --Check if ent is a chest
-   if string.match(ent.type, "chest") == nil then
+   if not (ent.type == "container" or ent.type == "logistic-container") then
       return "Not a chest."
    end
    
    --Check maximum bar allowed
-   if ent.type == "wooden-chest" then
-      max_bar = 16
-   elseif ent.type == "iron-chest" then
-      max_bar = 32
+   if ent.name == "wooden-chest" then
+      max_bar = 17
+   elseif ent.name == "iron-chest" then
+      max_bar = 33
    else --Steel and logistic chests all have 48 slots
-      max_bar = 48
+      max_bar = 49
    end
    
-   --Increase/decrease the bar based on the bool called "increase"
+   --Increase/decrease the bar based on the bool called "increase" and amount
    current_bar = ent.get_inventory(defines.inventory.chest).get_bar()
+   
    if increase then
-      current bar = current_bar + amount
+      current_bar = current_bar + amount
    else
       current_bar = current_bar - amount
    end
    
+   --Set to min if amount == -1
+   if amount == -1 then
+      current_bar = 1
+   end
+   
    --Protect bounds
-   if current_bar < 0 then
-      current_bar = 0
+   if current_bar < 1 then
+      current_bar = 1
    elseif current_bar > max_bar then
       current_bar = max_bar
    end
@@ -5153,6 +5189,15 @@ function increment_chest_bar(ent, increase, amount)
    --Set bar
    ent.get_inventory(defines.inventory.chest).set_bar(current_bar)
    
-   return " " .. current_bar .. " slots unlocked. "
+   --Return result
+   current_bar = current_bar - 1 --Mismatch correction
+   result = " "
+   if current_bar == 1 then
+      return "One slot unlocked."
+   elseif current_bar >= (max_bar - 1) then
+      return "All slots unlocked."
+   else
+      return " " .. current_bar .. " slots unlocked."
+   end
 end
 

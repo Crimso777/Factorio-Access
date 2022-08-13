@@ -3854,19 +3854,19 @@ script.on_event("switch-menu", function(event)
                printout(players[pindex].building.sectors[players[pindex].building.sector].name, pindex)
             end
          end
-      elseif players[pindex].menu == "inventory" then
+      elseif players[pindex].menu == "inventory" then 
          players[pindex].menu = "crafting"
-         printout("Crafting", pindex)
+		 read_crafting_slot(pindex, "Crafting, ")
       elseif players[pindex].menu == "crafting" then 
          players[pindex].menu = "crafting_queue"
-         printout("Queue", pindex)
          load_crafting_queue(pindex)
+		 read_crafting_queue(pindex, "Crafting queue, ")
       elseif players[pindex].menu == "crafting_queue" then
          players[pindex].menu = "technology"
-         printout("Technology, Researchable Technologies", pindex)
+		 read_technology_slot(pindex, "Technology, Researchable Technologies, ")
       elseif players[pindex].menu == "technology" then
          players[pindex].menu = "inventory"
-         printout("Inventory", pindex)
+         read_inventory_slot(pindex, "Inventory, ")
       elseif players[pindex].menu == "belt" then
          players[pindex].belt.index = 1
          players[pindex].belt.sector = players[pindex].belt.sector + 1
@@ -3951,18 +3951,17 @@ script.on_event("reverse-switch-menu", function(event)
 
       elseif players[pindex].menu == "inventory" then
          players[pindex].menu = "technology"
-         printout("Technology, Researchable Technologies", pindex)
+         read_technology_slot(pindex, "Technology, Researchable Technologies, ")
       elseif players[pindex].menu == "crafting_queue" then
          players[pindex].menu = "crafting"
-         printout("Crafting", pindex)
+         read_crafting_slot(pindex, "Crafting, ") 
       elseif players[pindex].menu == "technology" then 
          players[pindex].menu = "crafting_queue"
-         printout("Queue", pindex)
          load_crafting_queue(pindex)
+		 read_crafting_queue(pindex, "Crafting queue, ")
       elseif players[pindex].menu == "crafting" then
          players[pindex].menu = "inventory"
---         read_inventory_slot(pindex)
-         printout("Inventory", pindex)
+         read_inventory_slot(pindex, "Inventory, ")
       elseif players[pindex].menu == "belt" then
          players[pindex].belt.index = 1
          players[pindex].belt.sector = players[pindex].belt.sector - 1
@@ -4494,7 +4493,8 @@ input.select(1, 0)
                if inventory ~= nil then
                  len = #inventory
                end
-               printout(len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name , pindex)
+               local start_phrase = len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
+			   read_building_slot(pindex, start_phrase)
             else
                printout("This building has no inventory", pindex)
             end

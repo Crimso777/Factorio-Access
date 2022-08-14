@@ -461,6 +461,34 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "cursor-drag-up",
+    key_sequence = "W + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "cursor-drag-right",
+    key_sequence = "D + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "cursor-drag-down",
+    key_sequence = "S + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "cursor-drag-left",
+    key_sequence = "A + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "item-info",
     key_sequence = "L",
     consuming = "none"

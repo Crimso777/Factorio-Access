@@ -5115,4 +5115,147 @@ script.on_event("nudge-right", function(event)
    nudge_key(defines.direction.east,event)
 end)
 
+script.on_event("cursor-drag-up", function(event)
+   drag_place(defines.direction.north,event)
+end)
+
+script.on_event("cursor-drag-right", function(event)
+   move_drag_place(defines.direction.east,event)
+end)
+
+script.on_event("cursor-drag-down", function(event)
+   move_drag_place(defines.direction.south,event)
+end)
+
+script.on_event("cursor-drag-leftt", function(event)
+   move_drag_place(defines.direction.west,event)
+end)
+
+function move_drag_place(direction, event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) or players[pindex].menu == "prompt" then
+      return 
+   end
+
+   if players[pindex].in_menu then
+      return
+   end
+
+   --Move player as normal in that direction / Move the cursor in cursor mode (both use same fn?)
+   move_key(direction, event)
+   
+   --Build the item in hand
+   local stack = game.get_player(pindex).cursor_stack
+   if stack.valid_for_read and stack.valid then
+      if stack.name ~= "offshore-pump" then
+         build_item_in_hand(pindex, stack)
+      else
+         build_offshore_pump_in_hand(pindex, stack)
+      end
+   end
+end
+
+
+function build_item_in_hand(pindex, stack)
+   --Copy lines from script.on_event("left-click", function(event)
+   --(copy starts at "if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.name ~= "offshore-pump" then", include this line)
+   if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.name ~= "offshore-pump" then
+	 local ent = stack.prototype.place_result
+	 local position = {x,y}
+
+	 if not(players[pindex].cursor) then
+		position = game.get_player(pindex).position
+	 if players[pindex].building_direction < 0 then
+		players[pindex].building_direction = 0
+	 end
+	 if players[pindex].player_direction == defines.direction.north then
+		if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
+		   position.y = position.y + math.ceil(2* ent.selection_box.left_top.y)/2 - 1
+		elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
+		   position.y = position.y + math.ceil(2* ent.selection_box.left_top.x)/2 - 1
+		end
+	 elseif players[pindex].player_direction == defines.direction.south then
+		if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
+		   position.y = position.y + math.ceil(2* ent.selection_box.right_bottom.y)/2 + .5
+		elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
+		   position.y = position.y + math.ceil(2* ent.selection_box.right_bottom.x)/2 + .5
+		end
+	 elseif players[pindex].player_direction == defines.direction.west then
+		if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
+		   position.x = position.x + math.ceil(2* ent.selection_box.left_top.x)/2 - 1
+		elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
+		   position.x = position.x + math.ceil(2* ent.selection_box.left_top.y)/2 - 1
+		end
+
+	 elseif players[pindex].player_direction == defines.direction.east then
+		if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
+		   position.x = position.x + math.ceil(2* ent.selection_box.right_bottom.x)/2 + .5
+		elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
+		   position.x = position.x + math.ceil(2* ent.selection_box.right_bottom.y)/2 + .5
+		end
+	 end     
+	 else
+		position = {x = math.floor(players[pindex].cursor_pos.x), y = math.floor(players[pindex].cursor_pos.y)}
+		local box = ent.selection_box
+		   box.right_bottom = {x = (math.ceil(box.right_bottom.x * 2))/2, y = (math.ceil(box.right_bottom.y * 2))/2}
+		if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
+		   position.x = position.x + box.right_bottom.x
+		   position.y = position.y + box.right_bottom.y
+		else
+		   position.x = position.x + box.right_bottom.y
+		   position.y = position.y + box.right_bottom.x
+		end
+	 end
+	 local building = {
+		position = position,
+		direction = players[pindex].building_direction * 2,
+		alt = false
+	 }
+	 building.position = game.get_player(pindex).surface.find_non_colliding_position(ent.name, position, .5, .05)
+	 if building.position ~= nil and game.get_player(pindex).can_build_from_cursor(building) then 
+		game.get_player(pindex).build_from_cursor(building)  
+		read_tile(pindex)
+	 else
+		printout("Cannot place that there.", pindex)
+		print(players[pindex].player_direction .. " " .. game.get_player(pindex).character.position.x .. " " .. game.get_player(pindex).character.position.y .. " " .. players[pindex].cursor_pos.x .. " " .. players[pindex].cursor_pos.y .. " " .. position.x .. " " .. position.y)
+	 end
+   end
+   --(copy ends at "elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then", exclude this line)
+end
+
+function build_offshore_pump_in_hand(pindex, stack)
+   --Copy lines from script.on_event("left-click", function(event)
+   --(copy starts with "elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then", include this line)
+   if stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
+	  local ent = stack.prototype.place_result
+	  players[pindex].pump.positions = {}
+	  local initial_position = game.get_player(pindex).position
+	  initial_position.x = math.floor(initial_position.x) 
+	  initial_position.y = math.floor(initial_position.y)
+	  for i1 = -10, 10 do
+ 		 for i2 = -10, 10 do
+		    for i3 = 0, 3 do
+		    local position = {x = initial_position.x + i1, y = initial_position.y + i2}
+			   if game.get_player(pindex).can_build_from_cursor{name = "offshore-pump", position = position, direction = i3 * 2} then
+			 	  table.insert(players[pindex].pump.positions, {position = position, direction = i3*2})
+			   end
+		    end
+		 end
+	  end
+	  if #players[pindex].pump.positions == 0 then
+		 printout("No available positions.  Try moving closer to water.", pindex)
+	  else
+		 players[pindex].in_menu = true
+		 players[pindex].menu = "pump"
+		 printout("There are " .. #players[pindex].pump.positions .. " possibilities, scroll up and down, then select one to build, or press e to cancel.", pindex)
+		 table.sort(players[pindex].pump.positions, function(k1, k2) 
+		    return distance(initial_position, k1.position) < distance(initial_position, k2.position)
+		 end)
+
+		 players[pindex].pump.index = 0
+	  end
+   end
+   --(copy ends at "elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then", exclude this line)
+end
+
 

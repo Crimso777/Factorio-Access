@@ -5131,6 +5131,10 @@ script.on_event("cursor-drag-leftt", function(event)
    move_drag_place(defines.direction.west,event)
 end)
 
+--[[Assuming the player is holding the build key while moving, this function attempts to move the cursor and/or player and then build the item held in the cursor hand 
+* Needed mainly for efficiently placing pipes and transport belts.
+* todo needs testing. Maybe limit it to only 1 by 1 entities? 
+]]
 function move_drag_place(direction, event)
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
@@ -5145,19 +5149,16 @@ function move_drag_place(direction, event)
    move_key(direction, event)
    
    --Build the item in hand
-   local stack = game.get_player(pindex).cursor_stack
-   if stack.valid_for_read and stack.valid then
-      if stack.name ~= "offshore-pump" then
-         build_item_in_hand(pindex, stack)
-      else
-         build_offshore_pump_in_hand(pindex, stack)
-      end
-   end
+   build_item_in_hand(pindex)
 end
 
-
-function build_item_in_hand(pindex, stack)
-   --Copy lines from script.on_event("left-click", function(event)
+--[[Attempts to build the item in hand.
+* Does nothing if the hand is empty or the item is not a place-able entity.
+* If the item is an offshore pump, calls a different, special function for it.
+]]
+function build_item_in_hand(pindex)
+   local stack = game.get_player(pindex).cursor_stack
+   --Copying lines from script.on_event("left-click", function(event) ; todo: it would be best to remove the lines from there and just call this function instead
    --(copy starts at "if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.name ~= "offshore-pump" then", include this line)
    if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.name ~= "offshore-pump" then
 	 local ent = stack.prototype.place_result
@@ -5219,12 +5220,18 @@ function build_item_in_hand(pindex, stack)
 		printout("Cannot place that there.", pindex)
 		print(players[pindex].player_direction .. " " .. game.get_player(pindex).character.position.x .. " " .. game.get_player(pindex).character.position.y .. " " .. players[pindex].cursor_pos.x .. " " .. players[pindex].cursor_pos.y .. " " .. position.x .. " " .. position.y)
 	 end
+   --(copy ends at "elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then", including this line)
+   elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
+      build_offshore_pump_in_hand(pindex)
    end
-   --(copy ends at "elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then", exclude this line)
 end
 
-function build_offshore_pump_in_hand(pindex, stack)
-   --Copy lines from script.on_event("left-click", function(event)
+--[[Assisted building function for offshore pumps.
+* Called as a special case by build_item_in_hand
+]]
+function build_offshore_pump_in_hand(pindex)
+   local stack = game.get_player(pindex).cursor_stack
+   --Copying lines from script.on_event("left-click", function(event) ; todo: it would be best to remove the lines from there and just call this function instead
    --(copy starts with "elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then", include this line)
    if stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
 	  local ent = stack.prototype.place_result

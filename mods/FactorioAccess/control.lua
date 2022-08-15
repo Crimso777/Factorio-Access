@@ -5145,7 +5145,10 @@ script.on_event("nudge-right", function(event)
    nudge_key(defines.direction.east,event)
 end)
 
---Function to increase/decrease the bar of a chest by a given amount, while protecting its bounds. Returns the verbal explanation. The assumption is that you press page_up or pgae_down while the chest inventory is open to call this function.
+--[[Function to increase/decrease the bar (restricted slots) of a given chest/container by a given amount, while protecting its lower and upper bounds. 
+* Returns the verbal explanation to print out. 
+* amount = number of slots to change, set negative value for a decrease.
+]]
 function increment_inventory_bar(ent, amount)
    local inventory = ent.get_inventory(defines.inventory.chest)
    

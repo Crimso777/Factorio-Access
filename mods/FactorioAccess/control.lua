@@ -164,6 +164,7 @@ function move_cursor_structure(pindex, dir)
    end
 end
 
+--Usually called when the cursor find an entity, gives its name and key information.
 function ent_info(pindex, ent, description)
    local result = ent.name
    result = result .. " " .. ent.type .. " "
@@ -231,7 +232,7 @@ function ent_info(pindex, ent, description)
       end
    end
 
-   if ent.type == "container" or ent.type == "logistic-container" then --Report the most common item and say "and more" if there are other types.
+   if ent.type == "container" or ent.type == "logistic-container" then --Chests etc: Report the most common item and say "and other items" if there are other types.
       local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
       local itemtable = {}
       for name, count in pairs(itemset) do
@@ -245,7 +246,7 @@ function ent_info(pindex, ent, description)
       else
          result = result .. ", Contains " .. itemtable[1].count .. " " .. itemtable[1].name .. " "
          if #itemtable > 1 then
-            result = result .. "and more "
+            result = result .. "and other items "
          end
       end
       

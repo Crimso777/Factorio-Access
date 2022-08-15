@@ -1,11 +1,16 @@
 
 for name, proto in pairs(data.raw.item) do
-   if not proto.localised_description and proto.place_result then
-      local pr = proto.place_result
+   local pr = proto.place_result
+   if pr then
       if pr.name then
          pr = pr.name
       end
-      proto.localised_description = { "entity-description." .. pr }
+      if not proto.localised_description then
+         proto.localised_description = { "entity-description." .. pr }
+      end
+      if not proto.localised_name then
+         proto.localised_name = { "entity-name." .. pr }
+      end
    end
 end
 

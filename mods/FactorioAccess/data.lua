@@ -468,6 +468,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "control-right-click",
+    key_sequence = "CONTROL + RIGHTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "item-info",
     key_sequence = "L",
     consuming = "none"

@@ -4575,12 +4575,9 @@ end
 )
 
 
---[[ New shortcut: Smart insert all stacks
---Main Idea: When you press control-click when a building inventory is open, the game tries to fast-transfer every stack from one inventory to the other, one by one. It announces every successfully moved stack up until a predetermined limit, after which it says "and other items".
---The code is mostly copied from the shift-click script in control.lua, and it puts the functional side of that into for loops.
---todo: properly define the for loop headers to make the code go through the entire entity inventory stack by stack
---Added feature: If multiple stacks of the same item are moved, the total count is announced instead.
---Not tested!
+--[[Imitates vanilla behavior: 
+* Control click an item in an inventory to try smart transfer ALL of it. 
+* Control click an empty slot to try to smart transfer ALL items from that inventory.
 ]]
 script.on_event("control-click", function(event)
    pindex = event.player_index
@@ -4596,6 +4593,10 @@ script.on_event("control-click", function(event)
 end
 )
 
+--[[Imitates vanilla behavior: 
+* Control click an item in an inventory to try smart transfer HALF of it. 
+* Control click an empty slot to try to smart transfer HALF of all items from that inventory.
+]]
 script.on_event("control-right-click", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -4610,6 +4611,9 @@ script.on_event("control-right-click", function(event)
 end
 )
 
+--[[Manages inventory transfers that are bigger than one stack. 
+* Has checks and printouts!
+]]
 function do_multi_stack_transfer(ratio,pindex)
    local result = {""}
    local sector = players[pindex].building.sectors[players[pindex].building.sector]
@@ -4676,7 +4680,11 @@ function do_multi_stack_transfer(ratio,pindex)
    printout(result, pindex)
 end
 
-
+--[[Transfers multiple stacks of a specific item (or all items) to/from the player inventory from/to a building inventory.
+* item name / empty string to indicate transfering everything
+* ratio (between 0 and 1), the ratio of the total count to transder for each item.
+* Has no checks or printouts!
+]]
 function transfer_inventory(args)
    args.name = args.name or ""
    args.ratio = args.ratio or 1

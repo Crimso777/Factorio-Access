@@ -5157,25 +5157,24 @@ script.on_event("nudge-right", function(event)
    nudge_key(defines.direction.east,event)
 end)
 
---Drag and place in your direction
+--Drag and place while stepping forward
 script.on_event("alt-click", function(event)
-   local direction = players[event.player_index].player_direction
-   move_drag_place(direction,event)
+   move_drag_place(event, 1)
 end)
 
 --Drag and place while stepping backward
 script.on_event("alt-right-click", function(event)
-   local direction = players[event.player_index].player_direction
-   move_drag_place(direction,event, 1)
+   move_drag_place(event, 0)
 end)
 
 
---[[Assuming the player is holding the build key while moving, this function attempts to move the cursor and/or player and then build the item held in the cursor hand 
+--[[Moves the player forward and places the item in hand. 
 * Needed mainly for efficiently placing pipes and transport belts.
-* If you set "forward" to false the engineer takes a step back and then tries to place the item. Great for laying down rows of machines.
+* If you set the parameter "forward" to 0, the engineer takes a step back and then tries to place the item. Great for laying down rows of machines.
 ]]
-function move_drag_place(direction, event, forward)
-   forward =  forward or 0
+function move_drag_place(event, forward)
+   local direction = players[event.player_index].player_direction
+   forward =  forward or 1
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
@@ -5185,8 +5184,8 @@ function move_drag_place(direction, event, forward)
       return
    end
    
-   --Move player as normal in that direction / Move the cursor in cursor mode (both use same fn?)
-   if forward == 0 then
+   --Move the player
+   if forward == 1 then
       move_key(direction, event)
    else
       step_backward(direction, event.player_index)

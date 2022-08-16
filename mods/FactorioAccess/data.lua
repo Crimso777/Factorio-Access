@@ -461,15 +461,15 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "alt-click",
-    key_sequence = "ALT + LEFTBRACKET",
+    name = "CAPSLOCK",
+    key_sequence = "CAPSLOCK",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "alt-right-click",
-    key_sequence = "ALT + RIGHTBRACKET",
+    name = "BACKSPACE",
+    key_sequence = "BACKSPACE",
     consuming = "none"
 },
 

@@ -2294,6 +2294,7 @@ function initialize(player)
    faplayer.item_selection = faplayer.item_selection or false
    faplayer.item_cache = faplayer.item_cache or {}
    faplayer.zoom = faplayer.zoom or 1
+   faplayer.walk_and_build = faplayer.walk_and_build or false
 
    faplayer.nearby = faplayer.nearby or {
       index = 0,
@@ -3265,10 +3266,15 @@ function move(direction,pindex)
       read_tile(pindex)
       target(pindex)
    end
+   
+   if players[pindex].walk_and_build then
+      build_item_in_hand(pindex)
+   end
 end
 
---Copy of move function, but directly take a step backward without turning.
-function step_backward(direction,pindex)
+--Copy of part of move function, but directly take a step backward without turning.
+function step_backward(pindex)
+   local direction = players[pindex].player_direction
    if players[pindex].walk == 2 then
       return
    end
@@ -3306,6 +3312,10 @@ function step_backward(direction,pindex)
          printout("Tile Occupied", pindex)
          target(pindex)
       end
+   end
+   
+   if players[pindex].walk_and_build then
+      build_item_in_hand(pindex)
    end
 end
 
@@ -5157,14 +5167,23 @@ script.on_event("nudge-right", function(event)
    nudge_key(defines.direction.east,event)
 end)
 
---Drag and place while stepping forward
-script.on_event("alt-click", function(event)
-   move_drag_place(event, 1)
+--Toggle building while walking
+script.on_event("CAPSLOCK", function(event)
+   pindex = event.player_index
+   if not (players[pindex].in_menu == true or players[pindex].cursor) then
+      if players[pindex].walk_and_build == true then
+         players[pindex].walk_and_build = false
+         printout("Disabled walk and build", pindex)
+      else
+         players[pindex].walk_and_build = true
+         printout("Enabled walk and build", pindex)
+      end
+   end
 end)
 
---Drag and place while stepping backward
-script.on_event("alt-right-click", function(event)
-   move_drag_place(event, 0)
+--Take a step back
+script.on_event("BACKSPACE", function(event)
+   step_backward(event.player_index)
 end)
 
 
@@ -5188,7 +5207,7 @@ function move_drag_place(event, forward)
    if forward == 1 then
       move_key(direction, event)
    else
-      step_backward(direction, event.player_index)
+      step_backward(event.player_index)
    end
    
    --Build the item in hand

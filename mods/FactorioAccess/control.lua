@@ -1467,6 +1467,36 @@ function read_belt_slot(pindex)
    local stack = nil
    local array = {}
    local result = ""
+   local direction = players[pindex].belt.direction
+   
+   --Read lane direction
+   if players[pindex].belt.side == 1 then
+      if direction == 0 then 
+         result = result .. "West lane "
+      elseif direction == 4 then
+         result = result .. "East lane "
+      elseif direction == 6 then
+         result = result .. "South lane "
+      elseif direction == 2 then
+         result = result .. "North lane " 
+      else
+         result = result .. "Unspecified lane, "
+      end
+   elseif players[pindex].belt.side == 2 then
+      if direction == 0 then 
+         result = result .. "East lane "
+      elseif direction == 4 then
+         result = result .. "West lane "
+      elseif direction == 6 then
+         result = result .. "North lane "
+      elseif direction == 2 then
+         result = result .. "South lane " 
+      else
+         result = result .. "Unspecified lane, "
+      end
+
+   end
+   --Read lane contents
    if players[pindex].belt.sector == 1 and players[pindex].belt.side == 1 then
       array = players[pindex].belt.line1
    elseif players[pindex].belt.sector == 1 and players[pindex].belt.side == 2 then
@@ -1498,15 +1528,17 @@ function read_belt_slot(pindex)
    end)
 
    if stack ~= nil and stack.valid_for_read and stack.valid then
-      result = stack.name .. " x " .. stack.count
+      result = result .. stack.name .. " x " .. stack.count
       if players[pindex].belt.sector > 1 then
          result = result .. ", " .. stack.percent .. "%"
       end
    else
-      result = "Empty slot"
+      result = result .. "Empty slot"
    end
    printout(result, pindex)
 end
+
+
 function reset_rotation(pindex)
    players[pindex].building_direction = -1
 end
@@ -4395,6 +4427,7 @@ input.select(1, 0)
                players[pindex].belt.network = get_line_items(network)
                players[pindex].belt.index = 1
                players[pindex].belt.side = 1
+               players[pindex].belt.direction = ent.direction 
                printout(#players[pindex].belt.line1 .. " " .. #players[pindex].belt.line2 .. " " .. players[pindex].belt.ent.get_max_transport_line_index(), pindex)
 
                return

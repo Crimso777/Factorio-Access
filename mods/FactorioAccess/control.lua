@@ -3267,6 +3267,48 @@ function move(direction,pindex)
    end
 end
 
+--Copy of move function, but directly take a step backward without turning.
+function step_backward(direction,pindex)
+   if players[pindex].walk == 2 then
+      return
+   end
+   local first_player = game.get_player(pindex)
+   local pos = players[pindex].position
+   local new_pos = offset_position(pos,direction,-1)
+   if players[pindex].player_direction == direction then
+      can_port = first_player.surface.can_place_entity{name = "character", position = new_pos}
+      if can_port then
+         if players[pindex].walk == 1 then
+            table.insert(players[pindex].move_queue,{direction=direction,dest=new_pos})
+         else
+            teleported = first_player.teleport(new_pos)
+            if not teleported then
+               printout("Teleport Failed", pindex)
+            end
+         end
+         players[pindex].position = new_pos
+         players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction,-1)
+         if players[pindex].tile.previous ~= nil
+            and players[pindex].tile.previous.valid
+            and players[pindex].tile.previous.type == "transport-belt"
+         then
+            game.get_player(pindex).play_sound{path = "utility/metal_walking_sound"}
+         else
+            local tile = game.get_player(pindex).surface	.get_tile(new_pos.x, new_pos.y)
+            local sound_path = "tile-walking/" .. tile.name
+            if game.is_valid_sound_path(sound_path) then
+               game.get_player(pindex).play_sound{path = "tile-walking/" .. tile.name}
+            end
+         end
+         read_tile(pindex)
+         target(pindex)
+      else
+         printout("Tile Occupied", pindex)
+         target(pindex)
+      end
+   end
+end
+
 
 function move_key(direction,event)
    local pindex = event.player_index
@@ -5115,38 +5157,40 @@ script.on_event("nudge-right", function(event)
    nudge_key(defines.direction.east,event)
 end)
 
-script.on_event("cursor-drag-up", function(event)
-   drag_place(defines.direction.north,event)
+--Drag and place in your direction
+script.on_event("alt-click", function(event)
+   local direction = players[event.player_index].player_direction
+   move_drag_place(direction,event)
 end)
 
-script.on_event("cursor-drag-right", function(event)
-   move_drag_place(defines.direction.east,event)
+--Drag and place while stepping backward
+script.on_event("alt-right-click", function(event)
+   local direction = players[event.player_index].player_direction
+   move_drag_place(direction,event, 1)
 end)
 
-script.on_event("cursor-drag-down", function(event)
-   move_drag_place(defines.direction.south,event)
-end)
-
-script.on_event("cursor-drag-leftt", function(event)
-   move_drag_place(defines.direction.west,event)
-end)
 
 --[[Assuming the player is holding the build key while moving, this function attempts to move the cursor and/or player and then build the item held in the cursor hand 
 * Needed mainly for efficiently placing pipes and transport belts.
-* todo needs testing. Maybe limit it to only 1 by 1 entities? 
+* If you set "forward" to false the engineer takes a step back and then tries to place the item. Great for laying down rows of machines.
 ]]
-function move_drag_place(direction, event)
+function move_drag_place(direction, event, forward)
+   forward =  forward or 0
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
    end
 
-   if players[pindex].in_menu then
+   if players[pindex].in_menu or players[pindex].cursor then
       return
    end
-
+   
    --Move player as normal in that direction / Move the cursor in cursor mode (both use same fn?)
-   move_key(direction, event)
+   if forward == 0 then
+      move_key(direction, event)
+   else
+      step_backward(direction, event.player_index)
+   end
    
    --Build the item in hand
    build_item_in_hand(pindex)
@@ -5161,7 +5205,8 @@ function build_item_in_hand(pindex)
    --Copying lines from script.on_event("left-click", function(event) ; todo: it would be best to remove the lines from there and just call this function instead
    --(copy starts at "if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.name ~= "offshore-pump" then", include this line)
    if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.name ~= "offshore-pump" then
-	 local ent = stack.prototype.place_result
+	 printout("place in hand",pindex)
+    local ent = stack.prototype.place_result
 	 local position = {x,y}
 
 	 if not(players[pindex].cursor) then

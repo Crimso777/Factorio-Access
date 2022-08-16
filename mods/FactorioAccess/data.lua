@@ -461,29 +461,15 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "cursor-drag-up",
-    key_sequence = "W + LEFTBRACKET",
+    name = "alt-click",
+    key_sequence = "ALT + LEFTBRACKET",
     consuming = "none"
 },
 
 {
     type = "custom-input",
-    name = "cursor-drag-right",
-    key_sequence = "D + LEFTBRACKET",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "cursor-drag-down",
-    key_sequence = "S + LEFTBRACKET",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
-    name = "cursor-drag-left",
-    key_sequence = "A + LEFTBRACKET",
+    name = "alt-right-click",
+    key_sequence = "ALT + RIGHTBRACKET",
     consuming = "none"
 },
 

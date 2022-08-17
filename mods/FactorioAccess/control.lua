@@ -4638,6 +4638,14 @@ script.on_event("right-click", function(event)
          end
 
       end
+   elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
+      local ent = players[pindex].tile.ents[1]
+      local ent_status = ent.status
+      if ent_status ~= nil then
+         printout(" " .. ent_status ,pindex)--todo map the integers to words
+      else
+         printout("No status." ,pindex)
+      end
    end
 end
 )

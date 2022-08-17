@@ -232,6 +232,8 @@ function ent_info(pindex, ent, description)
    end
 
    if ent.type == "electric-pole" then
+      local satis = get_electricity_satisfaction(ent)
+      result = result .. ", satis " .. satis .. ", "--banana
       result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, Network currently producing "
       local power = 0
       local capacity = 0
@@ -368,6 +370,7 @@ function ent_info(pindex, ent, description)
          result = result .. ", Carrying Nothing"
       end
    end
+
    return result
 end
 function compile_building_network (ent, radius)
@@ -5115,4 +5118,113 @@ script.on_event("nudge-right", function(event)
    nudge_key(defines.direction.east,event)
 end)
 
+
+--Use this event (SHIFT + CAPSLOCK) to call any function you are working on for debug purposes
+script.on_event("fa-debug-input", function(event)
+   --
+end)
+
+--[[Scans around an electric pole to find accumulators of the same electric network and reports the charge level.
+* All accums in a network charge and discharge equally so finding any one is enough, except for a few seconds when the accums are newly placed.
+* Call this function after having already checked that the network has any accumulators.
+]]
+function get_accum_levels(electric_pole) 
+   local levels = -1
+   local network_id = electric_pole.electric_network_id
+   local found_accum = false
+   local pole_pos_x = electric_pole.position.x
+   local pole_pos_y = electric_pole.position.y
+   local tries = 0
+   local checks = 3
+   
+   local scanned = ""
+
+   --Scan within 200 tiles of the pole for accums and pick highest charge level, assuming lower levels are a minority of recently placed accums. 
+   --Check for matching network id
+   for _, power_ent in pairs(electric_pole.surface.find_entities_filtered{area = {{pole_pos_x - 100, pole_pos_y - 100},{pole_pos_x + 100, pole_pos_y + 100}}, type = "accumulator", limit = checks}) do
+      if power_ent.electric_network_id == network_id then
+         scanned = power_ent
+         found_accum = true
+         if levels < scanned.energy then
+            levels = scanned.energy
+         end
+      end
+   end
+   
+   --Scan again with entire surface, for all accums
+   if found_accum == false then
+      for _, power_ent in pairs(electric_pole.surface.find_entities_filtered{type = "accumulator"}) do
+         if power_ent.electric_network_id == network_id then
+            scanned = power_ent
+            found_accum = true
+            if levels < scanned.energy then
+               levels = scanned.energy
+            end
+            tries = tries + 1
+            if tries > checks then
+               break
+            end
+         end
+      end
+   end
+   
+   if found_accum == false then 
+      return -2 --No accums on the whole surface!
+   else
+     --Convert to percentage
+     levels = math.ceil(levels / 50000)
+   end
+   return levels
+end
+
+function get_electricity_satisfaction(electric_pole)--banana
+   local satisfaction = -1
+   local network_id = electric_pole.electric_network_id
+   local found_machines = ""
+   local found_status = ""
+   local found_low_power = false --reported when the machine is working but has low power
+   local found_working = false
+   
+   --Spawn a lamp under the player when the interface is opened and destoy it when closed?
+   
+   --spawn and check a lamp instantly
+   test_lamp = electric_pole.surface.create_entity{name = "small-lamp", position = {electric_pole.position.x, electric_pole.position.y}, raise_built = false}
+   satisfaction = math.ceil(test_lamp.energy / 89 * 100)
+   test_lamp.destroy{}
+   return satisfaction
+end
+   
+   --[[
+   --Scan nearby for assembling machine types or mining drills
+   for _, power_ent in pairs(electric_pole.surface.find_entities_filtered{area = {{pole_pos_x - 100, pole_pos_y - 100},{pole_pos_x + 100, pole_pos_y + 100}}, type = "assembling-machine", "mining-drill"}) do
+      if power_ent.electric_network_id == network_id then
+         found_status = power_ent.status
+         if found_status == "working" then
+            return 100 --Working = no power issues
+         elseif found_status = "no_power" then
+            return 0 --No power = power out
+         elseif found_status = "low_power" then
+            return 50--todo calculate
+         end
+      end
+   end
+   
+   --Scan everywhere for assembling machine types or mining drills
+   for _, power_ent in pairs(electric_pole.surface.find_entities_filtered{type = "assembling-machine", "mining-drill", "radar"}) do
+      if power_ent.electric_network_id == network_id then
+         found_status = power_ent.status
+         if found_status == "working" then
+            return 100 --Working = no power issues
+         elseif found_status = "no_power" then
+            return 0 --No power = power out
+         elseif found_status = "low_power" then
+            return 50--todo calculate
+         end
+      end
+   end
+   
+   
+   --No applicable machines found
+   return -2 
+   ]]
 

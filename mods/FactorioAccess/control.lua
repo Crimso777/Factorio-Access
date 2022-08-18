@@ -6,6 +6,8 @@ production_types = {}
 building_types = {}
 local util = require('util')
 
+local elec_line_id = 0 --temp
+
 function nudge_key(direction, event)
    local adjusted = {}
    adjusted[0] = "north"
@@ -166,7 +168,7 @@ end
 
 function ent_info(pindex, ent, description)
    local result = ent.name
-   result = result .. " " .. ent.type .. " "
+   --result = result .. " " .. ent.type .. " "
    if ent.type == "resource" then
       result = result .. ", x " .. ent.amount
    end
@@ -232,8 +234,9 @@ function ent_info(pindex, ent, description)
    end
 
    if ent.type == "electric-pole" then
-      local satis = get_electricity_satisfaction(ent)
-      result = result .. ", satis " .. satis .. ", "--banana
+      result = result .. ", " .. get_electric_network_overview(pindex, ent, 2, false) --banana temp for testing
+      elec_line_id = elec_line_id + 1
+      result = result .. ", " .. get_electric_network_overview(pindex, ent, 1, false)  
       result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, Network currently producing "
       local power = 0
       local capacity = 0
@@ -5139,8 +5142,8 @@ function get_accum_levels(electric_pole)
    
    local scanned = ""
 
-   --Scan within 200 tiles of the pole for accums and pick highest charge level, assuming lower levels are a minority of recently placed accums. 
-   --Check for matching network id
+   --Scan within 200 tiles of the pole for accums of the same network. 
+   --In case the scanner finds a newly placed (non-representative) accumulator, check for multiple and get max
    for _, power_ent in pairs(electric_pole.surface.find_entities_filtered{area = {{pole_pos_x - 100, pole_pos_y - 100},{pole_pos_x + 100, pole_pos_y + 100}}, type = "accumulator", limit = checks}) do
       if power_ent.electric_network_id == network_id then
          scanned = power_ent
@@ -5151,7 +5154,8 @@ function get_accum_levels(electric_pole)
       end
    end
    
-   --Scan again with entire surface, for all accums
+   --Scan again for entire surface, for all accums of the same network.
+   --Check a small subset
    if found_accum == false then
       for _, power_ent in pairs(electric_pole.surface.find_entities_filtered{type = "accumulator"}) do
          if power_ent.electric_network_id == network_id then
@@ -5169,7 +5173,7 @@ function get_accum_levels(electric_pole)
    end
    
    if found_accum == false then 
-      return -2 --No accums on the whole surface!
+      return -2 --No matching accums on the whole surface!
    else
      --Convert to percentage
      levels = math.ceil(levels / 50000)
@@ -5177,54 +5181,217 @@ function get_accum_levels(electric_pole)
    return levels
 end
 
-function get_electricity_satisfaction(electric_pole)--banana
+--Returns the electricity satisfaction level of an electric pole's network by temporarily spawning and analyzing a lamp underneath the pole
+function get_electricity_satisfaction(electric_pole)
    local satisfaction = -1
-   local network_id = electric_pole.electric_network_id
-   local found_machines = ""
-   local found_status = ""
-   local found_low_power = false --reported when the machine is working but has low power
-   local found_working = false
    
-   --Spawn a lamp under the player when the interface is opened and destoy it when closed?
-   
-   --spawn and check a lamp instantly
+   --Spawn a lamp under the pole, it will be in the same network.
    test_lamp = electric_pole.surface.create_entity{name = "small-lamp", position = {electric_pole.position.x, electric_pole.position.y}, raise_built = false}
-   satisfaction = math.ceil(test_lamp.energy / 89 * 100)
+   --The lamp energy reading almost perfectly shows the satisfaction level
+   satisfaction = math.ceil(test_lamp.energy / 89 * 100) --For some reason full power is 89kw
+   --Remove the lamp
    test_lamp.destroy{}
    return satisfaction
 end
+
+--[[Returns the selected line from the electric network overview:
+0: "Electric network Overview"
+1: Network status: Full power / Draining accums / low power & steam shortage / no power / no connections
+2: Stored power: #% for # accumulators
+3: Solar panel yield: #% , daytime (or night time, etc)
+4: Solar panel utilization: #% for # panels / “Calculated only at full yield”
+5: Steam engine utilization: #% for # engines / “Unknown due to shortage"
+6: Steam turbine utilization: #% for # turbines. / “Unknown due to shortage"
+7: Steam supply status: OK / shortage by ##%
+8: Total power flow: ###.## megawatts
+9: Top power consumer: name, ###.## megawatts
+]]
+function get_electric_network_overview(pindex, electric_pole, line_id, status_hint)
+   line_id = line_id or -1
+   status_hint = status_hint or false
+   local result = "result."
    
-   --[[
-   --Scan nearby for assembling machine types or mining drills
-   for _, power_ent in pairs(electric_pole.surface.find_entities_filtered{area = {{pole_pos_x - 100, pole_pos_y - 100},{pole_pos_x + 100, pole_pos_y + 100}}, type = "assembling-machine", "mining-drill"}) do
-      if power_ent.electric_network_id == network_id then
-         found_status = power_ent.status
-         if found_status == "working" then
-            return 100 --Working = no power issues
-         elseif found_status = "no_power" then
-            return 0 --No power = power out
-         elseif found_status = "low_power" then
-            return 50--todo calculate
-         end
-      end
+   --Skip calculations for some lines
+   if line_id == -1 then
+      return "Error: Line not specified for electric network overview."
+   elseif line_id == 0 then --Announce overview
+      return "Electric network overview."
+   end
+
+   --Prepare basic data
+   local stats = electric_pole.electric_network_statistics --input means power consumer
+   local satisfaction = get_electricity_satisfaction(electric_pole)
+   local no_connections = (#electric_pole.neighbours.copper == 0)
+   
+   --Prepare accumulator data
+   local accum_levels = get_accum_levels(electric_pole)
+   local accum_count = stats.get_input_count("accumulator") + stats.get_output_count("accumulator")
+   local accums_charging = (stats.get_input_count("accumulator") > 0)
+   local accums_discharging = (stats.get_output_count("accumulator") > 0)
+
+   --Prepare steam engine and turbine data
+   local s_engine_count = stats.get_output_count("steam-engine")
+   local s_engine_flow = stats.get_flow_count{name = "steam-engine", input = false, precision_index = defines.flow_precision_index.five_seconds}
+   
+   local s_engine_util = 0 
+   if s_engine_count > 0 then 
+      s_engine_util = math.ceil(s_engine_flow / s_engine_count / 900 * 60 * 100) --todo check
    end
    
-   --Scan everywhere for assembling machine types or mining drills
-   for _, power_ent in pairs(electric_pole.surface.find_entities_filtered{type = "assembling-machine", "mining-drill", "radar"}) do
-      if power_ent.electric_network_id == network_id then
-         found_status = power_ent.status
-         if found_status == "working" then
-            return 100 --Working = no power issues
-         elseif found_status = "no_power" then
-            return 0 --No power = power out
-         elseif found_status = "low_power" then
-            return 50--todo calculate
-         end
-      end
+   local s_turbine_count = stats.get_output_count("steam-turbine")
+   local s_turbine_flow = stats.get_flow_count{name = "steam-turbine", input = false, precision_index = defines.flow_precision_index.five_seconds}
+   
+   local s_turbine_util = 0
+   if s_turbine_count > 0 then
+      s_turbine_util = math.ceil(s_turbine_flow / s_turbine_count / 5820 * 60 * 100)--todo check
    end
    
+   --Prepare demand data
+   local total_power = 0
+   local top_power_use = -1
+   local top_power_user = " "
+   local top_power_user_count = -1
    
-   --No applicable machines found
-   return -2 
-   ]]
+   for i, v in pairs(electric_pole.electric_network_statistics.output_counts) do 
+         flow_i = (stats.get_flow_count{name = i, input = true, precision_index = defines.flow_precision_index.five_seconds})
+         total_power = total_power + flow_i
+         if top_power_use < flow_i then
+            top_power_use = flow_i
+            top_power_user = i
+            top_power_user_count = stats.get_input_count(i)
+         end
+   end
+
+   --Report line info
+   if line_id == 1 then --Network status
+      result = "Network status, "
+      local status = "unknown."
+      if no_connections then
+         status = "No network connections."
+         if status_hint then
+            status = status .. " Try relocating this electric pole."
+         end
+      elseif satisfaction == 0 then
+         status = "No power."
+         if status_hint then
+            status = status .. " Power generators are either not connected or all out of fuel."
+         end
+      elseif satisfaction < 100 then
+         status = "Low power."
+         if s_engine_count > 0 and s_engine_util < 100 then 
+            status = "Low power, and steam shortage in steam engines."
+            if status_hint then
+               status = status .. " Check for boilers out of fuel and make sure there is one boiler supplying every two steam engines."
+            end
+         elseif s_turbine_count > 0 and s_turbine_util < 100 then
+            status = "Steam turbines normally use superheated steam created in heat exchanges."
+            if status_hint then
+               status = status ..  "Steam turbines normally use superheated steam created in heat exchangers in nuclear plants."
+            end
+         elseif accums_discharging then
+            status = "Low power, and draining accumulators."
+            if status_hint then
+               status = status ..  " More power generators needed."
+            end
+         end
+         status = status .. " " .. satisfaction .. " percent demand satisfaction."
+      elseif accums_discharging then
+         status = "Full power, but draining accumulators."
+      elseif accums_charging then
+         status = "Full power, while recharging accumulators."
+      else
+         status = "Full power. "
+         if accum_count > 0 and accum_levels > 99 then
+            status = "Full power, full accumulators."
+         end
+      end
+      result = result .. status
+
+   elseif line_id == 2 then --Stored energy
+      result = stats.help()--todo figure out what the flow statistics really mean!
+      --result = "input count " .. string.format("%.2f",stats.get_input_count("accumulator")) .. " , output count " .. string.format("%.2f",stats.get_output_count("accumulator"))
+      -- if accum_count == 0 then
+         -- result = "Stored energy, no accumulators."
+      -- else
+         -- result = "Stored energy, " .. accum_levels .. " percent, for " .. accum_count .. " accumulators"
+      -- end
+      -- if accums_charging then
+         -- result = result .. ", charging." --idea: perhaps add charging and discharging rates.
+      -- elseif accums_discharging then
+         -- result = result .. ", discharging."
+      -- else
+         -- result = result .. "."
+      -- end
+
+   elseif line_id == 3 then --Solar panel status todo tune
+      result = "Solar power status, "
+      local solar_status = "unknown."
+      local s_time = surf.daytime
+      if s_time > 0 and s_time <= 0.25 then
+         solar_status = "increasing yield, morning hours."
+      elseif s_time > 0.25 and s_time <= 0.5 then
+         solar_status = "full yield, day time."
+      elseif s_time > 0.5 and s_time <= 0.75 then
+         solar_status = "decreasing yield, evening hours."
+      elseif s_time > 0.75 and s_time <= 1 then
+         solar_status = "zero yield, night time."
+      end
+      result = result .. solar_status
+
+   elseif line_id == 4 then --Solar panel utilization
+      result = "Solar panel utilization, "
+      local solar_count = stats.get_output_count("solar-panel")
+      local solar_flow = stats.get_flow_count{name = "solar-panel", input = false, precision_index = defines.flow_precision_index.five_seconds}
+      
+      if solar_count == 0 then 
+         result = result .. "no solar panels."
+      else
+         local s_time = surf.daytime
+         if s_time > 0.25 and s_time <= 0.75 then --todo tune
+            local solar_util = math.ceil(solar_flow / solar_count * 100)--todo check
+            result = result .. solar_util .. " percent, for " .. solar_count .. " panels, producing " .. string.format("%.2f", solar_flow) " megawatts in total."
+         else
+            result = result .. " Calculated only during full yield. "
+         end
+      end
+
+   elseif line_id == 5 then --Steam engine utilization
+      result = "Steam engine utilization, "
+      if s_engine_count == 0 then 
+         result = result .. "No steam engines."
+      else
+         result = result .. s_engine_util .. " percent, for " .. s_engine_count .. " engines, producing " .. string.format("%.2f", s_engine_flow) " megawatts in total."
+      end
+      
+   elseif line_id == 6 then --Steam turbine utilization
+      result = "Steam turbine utilization, "
+      if s_turbine_count == 0 then 
+         result = result .. "No steam turbines."
+      else
+         result = result .. s_turbine_util .. " percent, for " .. s_turbine_count .. " turbines, producing " .. string.format("%.2f", s_turbine_flow) " megawatts in total."
+      end
+
+   elseif line_id == 7 then --Steam supply status
+      result = "Steam supply analysis"
+      if satisfaction < 100 or accums_draining then
+         if s_engine_count > 0 and s_engine_util < 100 then 
+            result = result .. ", steam shortage in steam engines, missing " .. (100 - s_engine_util) " percent capacity."
+         end
+         if s_turbine_count > 0 and s_turbine_util < 100 then
+            result = result .. ", steam shortage in steam turbines, missing " .. (100 - s_turbine_util) " percent capacity."
+         end
+      else
+         result = result .. ", no shortages detected." 
+      end
+
+   elseif line_id == 8 then --Total power usage
+      result = "Total power usage, " .. total_power " megawatts."
+
+   elseif line_id == 9 then --Largest power usage
+      result = "Top power usage, " .. top_power_use " megawatts by " .. top_power_user_count .. " " .. top_power_user .. "s."
+   else --Unknown line.
+      result = "Error: Unknown line number for electric network overview."
+   end
+   return result
+end
 

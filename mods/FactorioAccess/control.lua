@@ -4639,16 +4639,28 @@ script.on_event("right-click", function(event)
 
       end
    elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
+      --Print out the status of a machine, if it exists.
       local ent = players[pindex].tile.ents[1]
-      local ent_status = ent.status
-      if ent_status ~= nil then
-         printout(" " .. ent_status ,pindex)--todo map the integers to words
+      local ent_status_id = ent.status
+      local ent_status_text = ""
+      local status_lookup = into_lookup(defines.entity_status)
+      if ent_status_id ~= nil then
+         ent_status_text = status_lookup[ent_status_id]
+         printout(" " .. ent_status_text ,pindex)
       else
          printout("No status." ,pindex)
       end
    end
 end
 )
+
+function into_lookup(array)
+    local lookup = {}
+    for key, value in pairs(array) do
+        lookup[value] = key
+    end
+    return lookup
+end
 
 script.on_event("rotate-building", function(event)
    pindex = event.player_index

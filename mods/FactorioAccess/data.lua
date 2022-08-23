@@ -573,13 +573,6 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "fa-debug-input",
-    key_sequence = "SHIFT + CAPSLOCK",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
     name = "open-structure-travel",
     key_sequence = "CONTROL + S",
     consuming = "none"

@@ -166,7 +166,7 @@ end
 
 function ent_info(pindex, ent, description)
    local result = ent.name
-   --result = result .. " " .. ent.type .. " "
+   --result = result .. " " .. ent.type .. " " --temp commenting
    if ent.type == "resource" then
       result = result .. ", x " .. ent.amount
    end
@@ -232,7 +232,7 @@ function ent_info(pindex, ent, description)
    end
 
    if ent.type == "electric-pole" then
-      result = result .. ", " .. get_electric_network_overview(pindex, ent, 3, false) --banana temp for testing
+      result = result .. ", " .. get_electric_network_overview(pindex, ent, 3, false) --temp reporting for testing**
       result = result .. ", " .. get_electric_network_overview(pindex, ent, 1, false)  --Report status
       result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, Network currently producing "
       local power = 0

@@ -232,7 +232,7 @@ function ent_info(pindex, ent, description)
    end
 
    if ent.type == "electric-pole" then
-      result = result .. ", " .. get_electric_network_overview(pindex, ent, 5, false) --banana temp for testing
+      result = result .. ", " .. get_electric_network_overview(pindex, ent, 3, false) --banana temp for testing
       result = result .. ", " .. get_electric_network_overview(pindex, ent, 1, false)  --Report status
       result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, Network currently producing "
       local power = 0
@@ -4774,6 +4774,7 @@ script.on_event("item-info", function(event)
 end
 )
 
+--Gives in-game time. The night is from 11 to 13, and peak daylight hours are 18 to 6.
 script.on_event("time", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
@@ -5315,22 +5316,22 @@ function get_electric_network_overview(pindex, electric_pole, line_id, status_hi
        elseif accums_discharging then
           result = result .. ", discharging. "
        else
-          result = result .. "."
+          result = result .. ". "
        end
        --result = "supplying " .. string.format("%.1f", stats.get_flow_count{name="accumulator", input = false, precision_index = defines.flow_precision_index.five_seconds}) .. " , consuming " .. string.format("%.1f",stats.get_flow_count{name="accumulator", input = true, precision_index = defines.flow_precision_index.five_seconds})
 
-   elseif line_id == 3 then --Solar panel status todo tune correct times
+   elseif line_id == 3 then --Solar panel status todo 
       result = "Solar power status, "
-      local solar_status = "unknown."
-      local s_time = surf.daytime
-      if s_time > 0 and s_time <= 0.25 then
-         solar_status = "increasing yield, morning hours."
-      elseif s_time > 0.25 and s_time <= 0.5 then
-         solar_status = "full yield, day time."
-      elseif s_time > 0.5 and s_time <= 0.75 then
-         solar_status = "decreasing yield, evening hours."
-      elseif s_time > 0.75 and s_time <= 1 then
-         solar_status = "zero yield, night time."
+      local solar_status = "unknown. "
+      local s_time = electric_pole.surface.daytime*24 --We observed 13 = night end, 18 = peak solar start, 6 = peak solar end, 11 = night start, 13 = night end
+      if s_time > 13 and s_time <= 18 then
+         solar_status = "increasing yield, morning hours. "
+      elseif s_time > 18 or s_time < 6 then
+         solar_status = "full yield, day time. "
+      elseif s_time > 6 and s_time <= 11 then
+         solar_status = "decreasing yield, evening hours. "
+      elseif s_time > 11 and s_time <= 13 then
+         solar_status = "zero yield, night time. "
       end
       result = result .. solar_status
 
@@ -5340,10 +5341,10 @@ function get_electric_network_overview(pindex, electric_pole, line_id, status_hi
       local solar_flow = stats.get_flow_count{name = "solar-panel", input = false, precision_index = defines.flow_precision_index.five_seconds}*60
       
       if solar_count == 0 then 
-         result = result .. "no solar panels."
+         result = result .. "no solar panels. "
       else
-         local s_time = surf.daytime
-         if s_time > 0.25 and s_time <= 0.75 then --todo tune times
+         local s_time = electric_pole.surface.daytime*24
+         if s_time > 18 or s_time < 6 then 
             local solar_util = math.ceil(solar_flow / solar_count / 60000 * 100)--todo check
             result = result .. solar_util .. " percent, for " .. solar_count .. " panels, producing " .. string.format("%.2f", solar_flow/ 1000000) .. " megawatts in total."
          else

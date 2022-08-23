@@ -6,8 +6,6 @@ production_types = {}
 building_types = {}
 local util = require('util')
 
-local elec_line_id = 0 --temp
-
 function nudge_key(direction, event)
    local adjusted = {}
    adjusted[0] = "north"
@@ -234,9 +232,8 @@ function ent_info(pindex, ent, description)
    end
 
    if ent.type == "electric-pole" then
-      result = result .. ", " .. get_electric_network_overview(pindex, ent, 2, false) --banana temp for testing
-      elec_line_id = elec_line_id + 1
-      result = result .. ", " .. get_electric_network_overview(pindex, ent, 1, false)  
+      result = result .. ", " .. get_electric_network_overview(pindex, ent, 5, false) --banana temp for testing
+      result = result .. ", " .. get_electric_network_overview(pindex, ent, 1, false)  --Report status
       result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, Network currently producing "
       local power = 0
       local capacity = 0
@@ -5225,25 +5222,25 @@ function get_electric_network_overview(pindex, electric_pole, line_id, status_hi
    
    --Prepare accumulator data
    local accum_levels = get_accum_levels(electric_pole)
-   local accum_count = stats.get_input_count("accumulator") + stats.get_output_count("accumulator")
-   local accums_charging = (stats.get_input_count("accumulator") > 0)
-   local accums_discharging = (stats.get_output_count("accumulator") > 0)
+   local accum_count = stats.get_flow_count{name="accumulator", input = false, precision_index = defines.flow_precision_index.five_seconds, count=true}
+   local accums_charging = (stats.get_flow_count{name="accumulator", input = true, precision_index = defines.flow_precision_index.five_seconds} > 0) 
+   local accums_discharging = (stats.get_flow_count{name="accumulator", input = false, precision_index = defines.flow_precision_index.five_seconds} > 0) 
 
    --Prepare steam engine and turbine data
-   local s_engine_count = stats.get_output_count("steam-engine")
-   local s_engine_flow = stats.get_flow_count{name = "steam-engine", input = false, precision_index = defines.flow_precision_index.five_seconds}
+   local s_engine_count = stats.get_flow_count{name = "steam-engine", input = false, precision_index = defines.flow_precision_index.five_seconds, count=true}
+   local s_engine_flow = stats.get_flow_count{name = "steam-engine", input = false, precision_index = defines.flow_precision_index.five_seconds}*60--This is in watts
    
    local s_engine_util = 0 
    if s_engine_count > 0 then 
-      s_engine_util = math.ceil(s_engine_flow / s_engine_count / 900 * 60 * 100) --todo check
+      s_engine_util = math.ceil(s_engine_flow / s_engine_count / 900000 * 100) 
    end
    
-   local s_turbine_count = stats.get_output_count("steam-turbine")
-   local s_turbine_flow = stats.get_flow_count{name = "steam-turbine", input = false, precision_index = defines.flow_precision_index.five_seconds}
+   local s_turbine_count = stats.get_flow_count{name = "steam-turbine", input = false, precision_index = defines.flow_precision_index.five_seconds, count=true}
+   local s_turbine_flow = stats.get_flow_count{name = "steam-turbine", input = false, precision_index = defines.flow_precision_index.five_seconds}*60
    
    local s_turbine_util = 0
    if s_turbine_count > 0 then
-      s_turbine_util = math.ceil(s_turbine_flow / s_turbine_count / 5820 * 60 * 100)--todo check
+      s_turbine_util = math.ceil(s_turbine_flow / s_turbine_count / 5820000 * 100)
    end
    
    --Prepare demand data
@@ -5253,12 +5250,12 @@ function get_electric_network_overview(pindex, electric_pole, line_id, status_hi
    local top_power_user_count = -1
    
    for i, v in pairs(electric_pole.electric_network_statistics.output_counts) do 
-         flow_i = (stats.get_flow_count{name = i, input = true, precision_index = defines.flow_precision_index.five_seconds})
+         flow_i = (stats.get_flow_count{name = i, input = true, precision_index = defines.flow_precision_index.five_seconds})*60--in watts
          total_power = total_power + flow_i
          if top_power_use < flow_i then
             top_power_use = flow_i
             top_power_user = i
-            top_power_user_count = stats.get_input_count(i)
+            top_power_user_count = stats.get_flow_count{name = i, input = true, precision_index = defines.flow_precision_index.five_seconds, count=true}
          end
    end
 
@@ -5296,34 +5293,33 @@ function get_electric_network_overview(pindex, electric_pole, line_id, status_hi
          end
          status = status .. " " .. satisfaction .. " percent demand satisfaction."
       elseif accums_discharging then
-         status = "Full power, but draining accumulators."
+         status = "Full power, but draining accumulators. "
       elseif accums_charging then
-         status = "Full power, while recharging accumulators."
+         status = "Full power, while recharging accumulators. "
       else
          status = "Full power. "
          if accum_count > 0 and accum_levels > 99 then
-            status = "Full power, full accumulators."
+            status = "Full power, full accumulators. "
          end
       end
       result = result .. status
 
    elseif line_id == 2 then --Stored energy
-      result = stats.help()--todo figure out what the flow statistics really mean!
-      --result = "input count " .. string.format("%.2f",stats.get_input_count("accumulator")) .. " , output count " .. string.format("%.2f",stats.get_output_count("accumulator"))
-      -- if accum_count == 0 then
-         -- result = "Stored energy, no accumulators."
-      -- else
-         -- result = "Stored energy, " .. accum_levels .. " percent, for " .. accum_count .. " accumulators"
-      -- end
-      -- if accums_charging then
-         -- result = result .. ", charging." --idea: perhaps add charging and discharging rates.
-      -- elseif accums_discharging then
-         -- result = result .. ", discharging."
-      -- else
-         -- result = result .. "."
-      -- end
+       if accum_count == 0 then
+          result = "Stored energy, no accumulators."
+       else
+          result = "Stored energy, " .. accum_levels .. " percent, for " .. accum_count .. " accumulators"
+       end
+       if accums_charging then
+          result = result .. ", charging. " --idea: perhaps add charging and discharging rates.
+       elseif accums_discharging then
+          result = result .. ", discharging. "
+       else
+          result = result .. "."
+       end
+       --result = "supplying " .. string.format("%.1f", stats.get_flow_count{name="accumulator", input = false, precision_index = defines.flow_precision_index.five_seconds}) .. " , consuming " .. string.format("%.1f",stats.get_flow_count{name="accumulator", input = true, precision_index = defines.flow_precision_index.five_seconds})
 
-   elseif line_id == 3 then --Solar panel status todo tune
+   elseif line_id == 3 then --Solar panel status todo tune correct times
       result = "Solar power status, "
       local solar_status = "unknown."
       local s_time = surf.daytime
@@ -5340,16 +5336,16 @@ function get_electric_network_overview(pindex, electric_pole, line_id, status_hi
 
    elseif line_id == 4 then --Solar panel utilization
       result = "Solar panel utilization, "
-      local solar_count = stats.get_output_count("solar-panel")
-      local solar_flow = stats.get_flow_count{name = "solar-panel", input = false, precision_index = defines.flow_precision_index.five_seconds}
+      local solar_count = stats.get_flow_count{name = "solar-panel", input = false, precision_index = defines.flow_precision_index.five_seconds, count=true}
+      local solar_flow = stats.get_flow_count{name = "solar-panel", input = false, precision_index = defines.flow_precision_index.five_seconds}*60
       
       if solar_count == 0 then 
          result = result .. "no solar panels."
       else
          local s_time = surf.daytime
-         if s_time > 0.25 and s_time <= 0.75 then --todo tune
-            local solar_util = math.ceil(solar_flow / solar_count * 100)--todo check
-            result = result .. solar_util .. " percent, for " .. solar_count .. " panels, producing " .. string.format("%.2f", solar_flow) " megawatts in total."
+         if s_time > 0.25 and s_time <= 0.75 then --todo tune times
+            local solar_util = math.ceil(solar_flow / solar_count / 60000 * 100)--todo check
+            result = result .. solar_util .. " percent, for " .. solar_count .. " panels, producing " .. string.format("%.2f", solar_flow/ 1000000) .. " megawatts in total."
          else
             result = result .. " Calculated only during full yield. "
          end
@@ -5360,7 +5356,7 @@ function get_electric_network_overview(pindex, electric_pole, line_id, status_hi
       if s_engine_count == 0 then 
          result = result .. "No steam engines."
       else
-         result = result .. s_engine_util .. " percent, for " .. s_engine_count .. " engines, producing " .. string.format("%.2f", s_engine_flow) " megawatts in total."
+         result = result .. s_engine_util .. " percent, for " .. s_engine_count .. " engines, producing " .. string.format("%.2f", s_engine_flow / 1000000) .. " megawatts in total."
       end
       
    elseif line_id == 6 then --Steam turbine utilization
@@ -5368,27 +5364,27 @@ function get_electric_network_overview(pindex, electric_pole, line_id, status_hi
       if s_turbine_count == 0 then 
          result = result .. "No steam turbines."
       else
-         result = result .. s_turbine_util .. " percent, for " .. s_turbine_count .. " turbines, producing " .. string.format("%.2f", s_turbine_flow) " megawatts in total."
+         result = result .. s_turbine_util .. " percent, for " .. s_turbine_count .. " turbines, producing " .. string.format("%.2f", s_turbine_flow / 1000000) .. " megawatts in total."
       end
 
    elseif line_id == 7 then --Steam supply status
       result = "Steam supply analysis"
       if satisfaction < 100 or accums_draining then
          if s_engine_count > 0 and s_engine_util < 100 then 
-            result = result .. ", steam shortage in steam engines, missing " .. (100 - s_engine_util) " percent capacity."
+            result = result .. ", steam shortage in steam engines, missing " .. (100 - s_engine_util) .. " percent capacity."
          end
          if s_turbine_count > 0 and s_turbine_util < 100 then
-            result = result .. ", steam shortage in steam turbines, missing " .. (100 - s_turbine_util) " percent capacity."
+            result = result .. ", steam shortage in steam turbines, missing " .. (100 - s_turbine_util) .. " percent capacity." --todo test this
          end
       else
          result = result .. ", no shortages detected." 
       end
 
    elseif line_id == 8 then --Total power usage
-      result = "Total power usage, " .. total_power " megawatts."
+      result = "Total power usage, " .. string.format("%.2f", total_power / 1000000) .. " megawatts."
 
    elseif line_id == 9 then --Largest power usage
-      result = "Top power usage, " .. top_power_use " megawatts by " .. top_power_user_count .. " " .. top_power_user .. "s."
+      result = "Top power usage, " .. string.format("%.2f", top_power_use / 1000000) .. " megawatts by " .. top_power_user_count .. " " .. top_power_user .. "s."
    else --Unknown line.
       result = "Error: Unknown line number for electric network overview."
    end

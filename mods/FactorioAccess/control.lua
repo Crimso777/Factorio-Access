@@ -1546,14 +1546,53 @@ function read_building_slot(pindex)
          amount = fluid.amount
          name = fluid.name
       end
-
+      --Read the fluid ingredients & products
+      --Note: We could have separated by input/output but right now the "type" is "input" for all fluids it seeems?
+      local recipe = players[pindex].building.recipe
+      if recipe ~= nil and name == "Any" then
+         name = "Empty slot reserved for "
+         for i, v in pairs(recipe.ingredients) do
+            if v.type == "fluid" then
+               name = name .. v.name .. " or "
+            end
+         end                    
+         for i, v in pairs(recipe.products) do
+            if v.type == "fluid" then
+               name = name .. v.name .. " or "
+            end
+         end
+         name = name .. "nothing, "
+      end
+      --Read the fluid found
       printout(name .. " " .. type .. " " .. amount .. "/" .. capacity, pindex)
    else
       stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
       if stack.valid_for_read and stack.valid then
          printout(stack.name .. " x " .. stack.count, pindex)
       else
-         printout("Empty slot", pindex)
+         --Read the "empty slot"
+         local result = "Empty slot" 
+         local recipe = players[pindex].building.recipe
+         if recipe ~= nil then 
+            if players[pindex].building.sectors[players[pindex].building.sector].name == "Input" then 
+               --For input slots read the recipe ingredients
+               result = result .. " reserved for "
+               for i, v in pairs(recipe.ingredients) do
+                  if v.type == "item" then
+                     result = result .. v.name .. ", "
+                  end
+               end
+            elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Output" then 
+               --For output slots read the recipe products
+               result = result .. " reserved for "
+               for i, v in pairs(recipe.products) do
+                  if v.type == "item" then
+                     result = result .. v.name .. ", "
+                  end
+               end
+            end
+         end
+         printout(result, pindex)
       end
    end
 end

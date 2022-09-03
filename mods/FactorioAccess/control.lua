@@ -1579,17 +1579,19 @@ function read_building_slot(pindex)
                result = result .. " reserved for "
                for i, v in pairs(recipe.ingredients) do
                   if v.type == "item" then
-                     result = result .. v.name .. ", "
+                     result = result .. v.name .. " or "
                   end
                end
+               result = result .. "nothing"
             elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Output" then 
                --For output slots read the recipe products
                result = result .. " reserved for "
                for i, v in pairs(recipe.products) do
                   if v.type == "item" then
-                     result = result .. v.name .. ", "
+                     result = result .. v.name .. " or "
                   end
                end
+               result = result .. "nothing"
             end
          end
          printout(result, pindex)

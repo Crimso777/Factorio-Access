@@ -4746,7 +4746,7 @@ script.on_event("shift-click", function(event)
             local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
             if stack.valid and stack.valid_for_read then
                if game.get_player(pindex).can_insert(stack) then
-                  game.get_player(pindex).play_sound{path = "utility/inventory_click"}
+                  game.get_player(pindex).play_sound{path = "utility/inventory_move"}
                   local result = stack.name
                   local inserted = game.get_player(pindex).insert(stack)
                   players[pindex].building.sectors[players[pindex].building.sector].inventory.remove{name = stack.name, count = inserted}
@@ -4765,6 +4765,7 @@ script.on_event("shift-click", function(event)
                local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
                if stack.valid and stack.valid_for_read then
                   if players[pindex].building.ent.can_insert(stack) then
+                     game.get_player(pindex).play_sound{path = "utility/inventory_move"}
                      local result = stack.name
                      local inserted = players[pindex].building.ent.insert(stack)
                      players[pindex].inventory.lua_inventory.remove{name = stack.name, count = inserted}
@@ -4782,6 +4783,144 @@ script.on_event("shift-click", function(event)
    end
 end
 )
+
+
+--[[Imitates vanilla behavior: 
+* Control click an item in an inventory to try smart transfer ALL of it. 
+* Control click an empty slot to try to smart transfer ALL items from that inventory.
+]]
+script.on_event("control-click", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+
+   if players[pindex].in_menu then
+      if players[pindex].menu == "building" then
+         do_multi_stack_transfer(1,pindex)
+      end
+   end
+end
+)
+
+--[[Imitates vanilla behavior: 
+* Control click an item in an inventory to try smart transfer HALF of it. 
+* Control click an empty slot to try to smart transfer HALF of all items from that inventory.
+]]
+script.on_event("control-right-click", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+
+   if players[pindex].in_menu then
+      if players[pindex].menu == "building" then
+         do_multi_stack_transfer(0.5,pindex)
+      end
+   end
+end
+)
+
+--[[Manages inventory transfers that are bigger than one stack. 
+* Has checks and printouts!
+]]
+function do_multi_stack_transfer(ratio,pindex)
+   local result = {""}
+   local sector = players[pindex].building.sectors[players[pindex].building.sector]
+   if sector and #sector.inventory > 0 and sector.name ~= "Fluid" then
+      --This is the section where we move from the building to the player.
+      local item_name=""
+      local stack = sector.inventory[players[pindex].building.index]
+      if stack and stack.valid and stack.valid_for_read then
+         item_name = stack.name
+      end
+      
+      local moved, full = transfer_inventory{from=sector.inventory,to=game.players[pindex],name=item_name,ratio=ratio}
+      if full then
+         table.insert(result,{"inventory-full-message.main"})
+         table.insert(result,", ")
+      end
+      if table_size(moved) == 0 then
+         table.insert(result,{"access.grabbed-nothing"})
+      else
+         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         local item_list={""}
+         for name, amount in pairs(moved) do
+            table.insert(item_list,{"access.item-quantity",game.item_prototypes[name].localised_name,amount})
+            table.insert(item_list,", ")
+         end
+         --trim traling comma off
+         item_list[#item_list]=nil
+         table.insert(result,{"access.grabbed-stuff",item_list})
+      end
+      
+   else
+      local offset = 1
+      if players[pindex].building.recipe_list ~= nil then
+         offset = offset + 1
+      end
+      if players[pindex].building.sector == #players[pindex].building.sectors + offset then
+         --This is the section where we move from the player to the building.
+         local item_name=""
+         local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
+         if stack and stack.valid and stack.valid_for_read then
+            item_name = stack.name
+         end
+         
+         local moved, full = transfer_inventory{from=game.players[pindex].get_main_inventory(),to=players[pindex].building.ent,name=item_name,ratio=ratio}
+         
+         if full then
+            table.insert(result,"Inventory full. ")
+         end
+         if table_size(moved) == 0 then
+            table.insert(result,{"access.placed-nothing"})
+         else
+            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            local item_list={""}
+            for name, amount in pairs(moved) do
+               table.insert(item_list,{"access.item-quantity",game.item_prototypes[name].localised_name,amount})
+               table.insert(item_list,", ")
+            end
+            --trim traling comma off
+            item_list[#item_list]=nil
+            table.insert(result,{"access.placed-stuff",item_list})
+         end
+      end
+   end
+   printout(result, pindex)
+end
+
+--[[Transfers multiple stacks of a specific item (or all items) to/from the player inventory from/to a building inventory.
+* item name / empty string to indicate transfering everything
+* ratio (between 0 and 1), the ratio of the total count to transder for each item.
+* Has no checks or printouts!
+]]
+function transfer_inventory(args)
+   args.name = args.name or ""
+   args.ratio = args.ratio or 1
+   local transfer_list={}
+   if args.name ~= "" then
+      transfer_list[args.name] = args.from.get_item_count(args.name)
+   else
+      transfer_list = args.from.get_contents()
+   end
+   local full=false
+   res = {}
+   for name, amount in pairs(transfer_list) do
+      amount = math.ceil(amount * args.ratio)
+      local actual_amount = args.to.insert({name=name, count=amount})
+      if actual_amount ~= amount then
+         print(name,amount,actual_amount)
+         amount = actual_amount
+         full = true
+      end
+      if amount > 0 then
+         res[name] = amount
+         args.from.remove({name=name, count=amount})
+      end
+   end
+   return res, full
+end
 
 script.on_event("right-click", function(event)
    pindex = event.player_index

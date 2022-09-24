@@ -28,6 +28,8 @@ New Features
 
 -Default scan range is now 250 tiles in either direction of the player.
 
+-Added building nudging. Nudge building by one tile by pressing CONTROL + SHIFT + DIRECTION, where the direction is one of W A S D.
+
 And Many Many bug fixes thanks to @MyNameIsTrez
 
 # Version 0.1.2

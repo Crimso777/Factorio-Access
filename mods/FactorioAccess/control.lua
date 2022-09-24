@@ -6,6 +6,48 @@ production_types = {}
 building_types = {}
 local util = require('util')
 
+--[[Function to increase/decrease the bar (restricted slots) of a given chest/container by a given amount, while protecting its lower and upper bounds. 
+* Returns the verbal explanation to print out. 
+* amount = number of slots to change, set negative value for a decrease.
+]]
+function increment_inventory_bar(ent, amount)
+   local inventory = ent.get_inventory(defines.inventory.chest)
+   
+   --Checks
+   if not inventory then
+      return "Not a chest."
+   end
+   if not inventory.supports_bar() then
+      return "This inventory does not support limiting."
+   end
+   
+   local max_bar = #inventory + 1
+   local current_bar = inventory.get_bar()
+   
+   --Change bar
+   amount = amount or 1
+   current_bar = current_bar + amount
+   
+   if current_bar < 1 then
+      current_bar = 1
+   elseif current_bar > max_bar then
+      current_bar = max_bar
+   end
+   
+   inventory.set_bar(current_bar)
+   
+   --Return result
+   current_bar = current_bar - 1 --Mismatch correction
+   if current_bar == 1 then
+      return "One slot unlocked."
+   elseif current_bar >= (max_bar - 1) then
+      return "All slots unlocked."
+   else
+      return current_bar .. " slots unlocked."
+   end
+end
+
+
 function ent_production(ent)
    local result = ""
    if ent.name ~= "water" and ent.type == "mining-drill"  then
@@ -3514,25 +3556,35 @@ script.on_event("rescan", function(event)
    end
 end
 )
+
 script.on_event("scan-up", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
    if not (players[pindex].in_menu) then
-
-   scan_up(pindex)
+      scan_up(pindex)
+   elseif players[pindex].menu == "building" then 
+      --Chest bar setting: Increase by 1
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, 1)
+	  printout(result, pindex)
    end
 end
 )
 
 script.on_event("scan-down", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
    if not (players[pindex].in_menu) then
       scan_down(pindex)
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Decrease by 1
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, -1)
+	  printout(result, pindex)
    end
 end
 )
@@ -3627,6 +3679,11 @@ script.on_event("scan-category-up", function(event)
          printout("Other", pindex)
 
       end
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Set to max by increasing by 100
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, 100)
+	  printout(result, pindex)
    end
 end
 )
@@ -3657,6 +3714,11 @@ script.on_event("scan-category-down", function(event)
          printout("Other", pindex)
 
       end
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Set to 0 by decreasing by 100
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, -100)
+	  printout(result, pindex)
    end
 end
 )
@@ -3671,6 +3733,11 @@ script.on_event("scan-mode-up", function(event)
       players[pindex].nearby.count = false
       printout("Sorting by distance", pindex)
       scan_sort(pindex)
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Increase by 5
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, 5)
+	  printout(result, pindex)
    end
 end)
 
@@ -3684,6 +3751,11 @@ script.on_event("scan-mode-down", function(event)
       players[pindex].nearby.count = true
       printout("Sorting by count", pindex)
       scan_sort(pindex)
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Decrease by 5
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, -5)
+	  printout(result, pindex)
    end
 end)
 

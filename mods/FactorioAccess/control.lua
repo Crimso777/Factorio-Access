@@ -6,6 +6,24 @@ production_types = {}
 building_types = {}
 local util = require('util')
 
+function breakup_string(str)
+   result = {""}
+   if table_size(str) > 20 then
+      local i = 0
+      while i < #str do
+         if i%20 == 0 then
+         table.insert(result, {""})
+         end
+         table.insert(result[math.ceil((i+1)/20)+1], table.deepcopy(str[i+1]))
+         i = i + 1
+      end
+      return result
+   else
+      return str
+   end
+end
+
+
 --[[Function to increase/decrease the bar (restricted slots) of a given chest/container by a given amount, while protecting its lower and upper bounds. 
 * Returns the verbal explanation to print out. 
 * amount = number of slots to change, set negative value for a decrease.
@@ -4883,7 +4901,7 @@ function do_multi_stack_transfer(ratio,pindex)
             end
             --trim traling comma off
             item_list[#item_list]=nil
-            table.insert(result,{"access.placed-stuff",item_list})
+            table.insert(result,{"access.placed-stuff",breakup_string(item_list)})
          end
       end
    end

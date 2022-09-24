@@ -249,8 +249,7 @@ data:extend({
 {
     type = "custom-input",
     name = "scan-mode-up",
-    key_sequence = "SHIFT + PAGEUP",
-    alternative_key_sequence = "SHIFT + UP",
+    key_sequence = "SHIFT + N",
     consuming = "none"
 },
 
@@ -258,11 +257,25 @@ data:extend({
 {
     type = "custom-input",
     name = "scan-mode-down",
+    key_sequence = "N",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "scan-selection-up",
+    key_sequence = "SHIFT + PAGEUP",
+    alternative_key_sequence = "SHIFT + UP",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "scan-selection-down",
     key_sequence = "SHIFT + PAGEDOWN",
     alternative_key_sequence = "SHIFT + DOWN",
     consuming = "none"
 },
-
 
 {
     type = "custom-input",

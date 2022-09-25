@@ -1749,7 +1749,7 @@ function read_building_recipe(pindex, start_phrase)
    else
       local recipe = players[pindex].building.recipe
       if recipe ~= nil then
-         printout(start_phrase .. recipe.name, pindex)
+         printout(start_phrase .. "Currently Producing:  " .. recipe.name, pindex)
       else
          printout("Select a recipe", pindex)
       end
@@ -1795,7 +1795,7 @@ function read_building_slot(pindex, start_phrase)
       --Read the fluid found
       printout(start_phrase .. name .. " " .. type .. " " .. amount .. "/" .. capacity, pindex)
 
-   else
+   elseif #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0 then
       stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
       if stack.valid_for_read and stack.valid then
          printout(start_phrase .. stack.name .. " x " .. stack.count, pindex)
@@ -1826,6 +1826,8 @@ function read_building_slot(pindex, start_phrase)
          end
          printout(start_phrase .. "Empty slot", pindex)
       end
+   else
+      printout(start_phrase, pindex)
    end
 end
 
@@ -4133,6 +4135,9 @@ script.on_event("switch-menu", function(event)
       game.get_player(pindex).play_sound{path="Change-Menu-Tab-Sound"}
       if players[pindex].menu == "building" then
          players[pindex].building.index = 1
+         players[pindex].building.category = 1
+         players[pindex].building.recipe_selection = false
+
          players[pindex].building.sector = players[pindex].building.sector + 1
          players[pindex].building.item_selection = false
          players[pindex].item_selection = false
@@ -4151,7 +4156,8 @@ script.on_event("switch-menu", function(event)
             else
                print("Somehow is nil...", pindex)
             end
-            printout(len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name , pindex)
+            local starting_phrase =len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
+           read_building_slot(pindex, starting_phrase)
 --            if inventory == players[pindex].building.sectors[players[pindex].building.sector+1].inventory then
 --               printout("Big Problem!", pindex)
   --          end
@@ -4166,16 +4172,25 @@ script.on_event("switch-menu", function(event)
                  len = #inventory
                end
 
-               printout(len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name, pindex)
+               local starting_phrase =len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
+               read_building_slot(pindex, starting_phrase)
             end
          else
             if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
-               printout("Recipe", pindex)
+               read_building_recipe(pindex, "Select a Recipe, ", pindex)
             elseif players[pindex].building.sector == #players[pindex].building.sectors + 2 then
                read_inventory_slot(pindex, "Player Inventory, ")
             else
                players[pindex].building.sector = 1
-               printout(players[pindex].building.sectors[players[pindex].building.sector].name, pindex)
+               local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
+               local len = 0
+               if inventory ~= nil then
+                  len = #inventory
+               end
+
+               local starting_phrase =len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
+               read_building_slot(pindex, starting_phrase)
+
             end
          end
       elseif players[pindex].menu == "inventory" then 
@@ -4232,7 +4247,10 @@ script.on_event("reverse-switch-menu", function(event)
    if players[pindex].in_menu and players[pindex].menu ~= "prompt" then
       game.get_player(pindex).play_sound{path="Change-Menu-Tab-Sound"}
       if players[pindex].menu == "building" then
+         players[pindex].building.category = 1
+         players[pindex].building.recipe_selection = false
          players[pindex].building.index = 1
+
          players[pindex].building.sector = players[pindex].building.sector - 1
          players[pindex].building.item_selection = false
          players[pindex].item_selection = false
@@ -4249,7 +4267,7 @@ script.on_event("reverse-switch-menu", function(event)
             else
                players[pindex].building.sector = #players[pindex].building.sectors + 2
             end
-            printout("Player's Inventory", pindex)
+            read_inventory_slot(pindex, "Player's Inventory")
             
          elseif players[pindex].building.sector <= #players[pindex].building.sectors then
             local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
@@ -4259,14 +4277,15 @@ script.on_event("reverse-switch-menu", function(event)
             else
                print("Somehow is nil...", pindex)
             end
-            printout(len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name , pindex)
+            start_phrase = len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
+         read_building_slot(pindex, start_phrase)
          elseif players[pindex].building.recipe_list == nil then
             if players[pindex].building.sector == (#players[pindex].building.sectors + 1) then
                read_inventory_slot(pindex, "Player Inventory, ")
             end
          else
             if players[pindex].building.sector == #players[pindex].building.sectors + 1 then
-               printout("Recipe", pindex)
+               read_building_recipe(pindex, "Select a Recipe, ", pindex)
             elseif players[pindex].building.sector == #players[pindex].building.sectors + 2 then
                read_inventory_slot(pindex, "Player Inventory, ")
             end
@@ -4478,7 +4497,7 @@ script.on_event("left-click", function(event)
                   players[pindex].building.recipe_selection = true
                   players[pindex].building.category = 1
                   players[pindex].building.index = 1
-                  printout("Select a recipe", pindex)
+                  read_building_recipe(pindex)
                else
                   printout("No recipes unlocked for this building yet.", pindex)
                end
@@ -4812,14 +4831,13 @@ input.select(1, 0)
                players[pindex].menu = "building"
                players[pindex].inventory.index = 1
                players[pindex].building.index = 1
-
                local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
                local len = 0
                if inventory ~= nil then
                  len = #inventory
                end
                local start_phrase = len .. " " ..players[pindex].building.sectors[players[pindex].building.sector].name .. ", "
-			   read_building_slot(pindex, start_phrase)
+               read_building_slot(pindex, start_phrase)
             else
                printout("This building has no inventory", pindex)
             end

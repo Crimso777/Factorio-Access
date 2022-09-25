@@ -489,10 +489,29 @@ function ent_info(pindex, ent, description)
 
    if ent.prototype.electric_energy_source_prototype ~= nil and ent.is_connected_to_electric_network() == false then
       result = result .. "Not Connected"
-   elseif ent.prototype.electric_energy_source_prototype ~= nil and ent.energy == 0 then
+   elseif ent.prototype.electric_energy_source_prototype ~= nil and ent.energy == 0 and ent.type ~= "solar-panel" then
       result = result .. " Connected but no power "
    end
-   if ent.type == "pipe" then
+   if ent.type == "accumulator" then
+      local level = math.ceil(ent.energy / 50000) --In percentage
+      local charge = math.ceil(ent.energy / 1000) --In kilojoules
+      result = result .. ", " .. level .. " percent full, containing " .. charge .. " kilojoules. "
+   end
+   if ent.type == "solar-panel" then
+      local s_time = ent.surface.daytime*24 --We observed 18 = peak solar start, 6 = peak solar end, 11 = night start, 13 = night end
+      local solar_status = ""
+      if s_time > 13 and s_time <= 18 then
+         solar_status = ", increasing production, morning hours. "
+      elseif s_time > 18 or s_time < 6 then
+         solar_status = ", full production, day time. "
+      elseif s_time > 6 and s_time <= 11 then
+         solar_status = ", decreasing production, evening hours. "
+      elseif s_time > 11 and s_time <= 13 then
+         solar_status = ", zero production, night time. "
+      end
+      result = result .. solar_status
+   end
+   if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" then
       local dict = ent.get_fluid_contents()
       local fluids = {}
       for name, count in pairs(dict) do

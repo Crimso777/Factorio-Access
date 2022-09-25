@@ -1793,7 +1793,7 @@ function read_building_slot(pindex, start_phrase)
          name = name .. "nothing, "
       end
       --Read the fluid found
-      printout(start_phrase .. name .. " " .. type .. " " .. amount .. "/" .. capacity, pindex)
+      printout(start_phrase .. result, pindex)
 
    elseif #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0 then
       stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
@@ -1824,7 +1824,7 @@ function read_building_slot(pindex, start_phrase)
                result = result .. "nothing"
             end
          end
-         printout(start_phrase .. "Empty slot", pindex)
+         printout(start_phrase .. result, pindex)
       end
    else
       printout(start_phrase, pindex)

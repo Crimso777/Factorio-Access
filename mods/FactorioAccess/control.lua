@@ -6,6 +6,100 @@ production_types = {}
 building_types = {}
 local util = require('util')
 
+function breakup_string(str)
+   result = {""}
+   if table_size(str) > 20 then
+      local i = 0
+      while i < #str do
+         if i%20 == 0 then
+         table.insert(result, {""})
+         end
+         table.insert(result[math.ceil((i+1)/20)+1], table.deepcopy(str[i+1]))
+         i = i + 1
+      end
+      return result
+   else
+      return str
+   end
+end
+
+
+--[[Function to increase/decrease the bar (restricted slots) of a given chest/container by a given amount, while protecting its lower and upper bounds. 
+* Returns the verbal explanation to print out. 
+* amount = number of slots to change, set negative value for a decrease.
+]]
+function increment_inventory_bar(ent, amount)
+   local inventory = ent.get_inventory(defines.inventory.chest)
+   
+   --Checks
+   if not inventory then
+      return "Not a chest."
+   end
+   if not inventory.supports_bar() then
+      return "This inventory does not support limiting."
+   end
+   
+   local max_bar = #inventory + 1
+   local current_bar = inventory.get_bar()
+   
+   --Change bar
+   amount = amount or 1
+   current_bar = current_bar + amount
+   
+   if current_bar < 1 then
+      current_bar = 1
+   elseif current_bar > max_bar then
+      current_bar = max_bar
+   end
+   
+   inventory.set_bar(current_bar)
+   
+   --Return result
+   current_bar = current_bar - 1 --Mismatch correction
+   if current_bar == 1 then
+      return "One slot unlocked."
+   elseif current_bar >= (max_bar - 1) then
+      return "All slots unlocked."
+   else
+      return current_bar .. " slots unlocked."
+   end
+end
+
+
+function ent_production(ent)
+   local result = ""
+   if ent.name ~= "water" and ent.type == "mining-drill"  then
+      local pos = ent.position
+      local radius = ent.prototype.mining_drill_radius
+      local area = {{pos.x - radius, pos.y - radius}, {pos.x + radius, pos.y + radius}}
+      local resources = ent.surface.find_entities_filtered{area = area, type = "resource"}
+      local dict = {}
+      for i, resource in pairs(resources) do
+         if dict[resource.name] == nil then
+            dict[resource.name] = resource.amount
+         else
+            dict[resource.name] = dict[resource.name] + resource.amount
+         end
+      end
+      if table_size(dict) > 0 then
+         result = result .. ", Mining From "
+         for i, amount in pairs(dict) do
+            result = result .. " " .. i .. " "
+         end
+      else
+         result = result .. "Out of minable resources"
+      end
+   end
+   pcall(function()
+      if ent.get_recipe() ~= nil then
+         result = result .. ", Producing " .. ent.get_recipe().name
+      end
+   end)
+
+   return result
+end
+
+
 function nudge_key(direction, event)
    local adjusted = {}
    adjusted[0] = "north"
@@ -164,9 +258,12 @@ function move_cursor_structure(pindex, dir)
    end
 end
 
+--Usually called when the cursor find an entity, gives its name and key information.
 function ent_info(pindex, ent, description)
    local result = ent.name
-   result = result .. " " .. ent.type .. " "
+   if game.players[pindex].name == "Crimso" then
+      result = result .. " " .. ent.type .. " "
+   end
    if ent.type == "resource" then
       result = result .. ", x " .. ent.amount
    end
@@ -207,8 +304,12 @@ function ent_info(pindex, ent, description)
    elseif next(ent.prototype.fluidbox_prototypes) ~= nil then
       local relative_position = {x = players[pindex].cursor_pos.x - ent.position.x, y = players[pindex].cursor_pos.y - ent.position.y}
       local direction = ent.direction/2
+      local inputs = 0
       for i, box in pairs(ent.prototype.fluidbox_prototypes) do
          for i1, pipe in pairs(box.pipe_connections) do
+            if pipe.type == "input" then
+               inputs = inputs + 1
+            end
             local adjusted = {position, direction}
             if ent.name == "offshore-pump" then
                adjusted.position = {x = 0, y = 0}
@@ -225,12 +326,83 @@ function ent_info(pindex, ent, description)
                adjusted = get_adjacent_source(ent.prototype.selection_box, pipe.positions[direction + 1], direction)
             end
             if adjusted.position.x == relative_position.x and adjusted.position.y == relative_position.y then
-               result = result .. ", Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+               if ent.type == "assembling-machine" and ent.get_recipe() ~= nil then
+                  if ent.name == "oil-refinery" and ent.get_recipe().name == "basic-oil-processing" then
+                     if i == 2 then
+                        result = result .. ", crude-oil Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                     elseif i == 5 then
+                        result = result .. ", petroleum-gas Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                     else
+                        result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                     end
+                  else
+                     if pipe.type == "input" then
+                        local inputs = ent.get_recipe().ingredients
+                        for i2 = #inputs, 1, -1 do
+                           if inputs[i2].type ~= "fluid" then
+                              table.remove(inputs, i2)
+                           end
+                        end
+                        if #inputs > 0 then
+                           local i3 = (i%#inputs)
+                           if i3 == 0 then
+                              i3 = #inputs
+                           end
+                           local filter = inputs[i3]
+                           result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                        else
+                           result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                        end
+                     else
+                        local outputs = ent.get_recipe().products
+                        for i2 = #outputs, 1, -1 do
+                           if outputs[i2].type ~= "fluid" then
+                              table.remove(inputs, i2)
+                           end
+                        end
+                        if #outputs > 0 then
+                           local i3 = ((i-inputs)%#outputs)
+                           if i3 == 0 then
+                              i3 = #outputs
+                           end
+                           local filter = outputs[i3]
+                           result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                        else
+                           result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                        end
+
+                     end
+                  end
+
+               else
+                  local filter = box.filter or {name = ""}
+                  result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+               end
             end
          end
       end
    end
 
+   if ent.type == "container" or ent.type == "logistic-container" then --Chests etc: Report the most common item and say "and other items" if there are other types.
+      local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
+      local itemtable = {}
+      for name, count in pairs(itemset) do
+         table.insert(itemtable, {name = name, count = count})
+      end
+      table.sort(itemtable, function(k1, k2)
+         return k1.count > k2.count
+      end)
+      if #itemtable == 0 then
+         result = result .. ", Contains nothing "
+      else
+         result = result .. ", Contains " .. itemtable[1].count .. " " .. itemtable[1].name .. " "
+         if #itemtable > 1 then
+            result = result .. "and other items "
+         end
+      end
+      
+   end  
+	
    if ent.type == "electric-pole" then
       result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, Network currently producing "
       local power = 0
@@ -319,10 +491,29 @@ function ent_info(pindex, ent, description)
 
    if ent.prototype.electric_energy_source_prototype ~= nil and ent.is_connected_to_electric_network() == false then
       result = result .. "Not Connected"
-   elseif ent.prototype.electric_energy_source_prototype ~= nil and ent.energy == 0 then
+   elseif ent.prototype.electric_energy_source_prototype ~= nil and ent.energy == 0 and ent.type ~= "solar-panel" then
       result = result .. " Connected but no power "
    end
-   if ent.type == "pipe" then
+   if ent.type == "accumulator" then
+      local level = math.ceil(ent.energy / 50000) --In percentage
+      local charge = math.ceil(ent.energy / 1000) --In kilojoules
+      result = result .. ", " .. level .. " percent full, containing " .. charge .. " kilojoules. "
+   end
+   if ent.type == "solar-panel" then
+      local s_time = ent.surface.daytime*24 --We observed 18 = peak solar start, 6 = peak solar end, 11 = night start, 13 = night end
+      local solar_status = ""
+      if s_time > 13 and s_time <= 18 then
+         solar_status = ", increasing production, morning hours. "
+      elseif s_time > 18 or s_time < 6 then
+         solar_status = ", full production, day time. "
+      elseif s_time > 6 and s_time <= 11 then
+         solar_status = ", decreasing production, evening hours. "
+      elseif s_time > 11 and s_time <= 13 then
+         solar_status = ", zero production, night time. "
+      end
+      result = result .. solar_status
+   end
+   if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" then
       local dict = ent.get_fluid_contents()
       local fluids = {}
       for name, count in pairs(dict) do
@@ -1453,7 +1644,7 @@ function populate_categories(pindex)
          print("Empty ent")
       elseif ent.name == "water" then
          table.insert(players[pindex].nearby.resources, ent)      
-      elseif ent.ents[1].type == "resource" or ent.ents[1].type == "tree" then
+      elseif ent.ents[1].type == "resource" or ent.ents[1].type == "tree" or ent.ents[1].name == "sand-rock-big" or ent.ents[1].name == "rock-big" or ent.ents[1].name == "rock-huge" then --Note: There is no rock type, so they are specified by name.
          table.insert(players[pindex].nearby.resources, ent)
       elseif ent.ents[1].type == "container" then
          table.insert(players[pindex].nearby.containers, ent)
@@ -1470,6 +1661,36 @@ function read_belt_slot(pindex, start_phrase)
    local stack = nil
    local array = {}
    local result = start_phrase
+   local direction = players[pindex].belt.direction
+   
+   --Read lane direction
+   if players[pindex].belt.side == 1 then
+      if direction == 0 then 
+         result = result .. "West lane "
+      elseif direction == 4 then
+         result = result .. "East lane "
+      elseif direction == 6 then
+         result = result .. "South lane "
+      elseif direction == 2 then
+         result = result .. "North lane " 
+      else
+         result = result .. "Unspecified lane, "
+      end
+   elseif players[pindex].belt.side == 2 then
+      if direction == 0 then 
+         result = result .. "East lane "
+      elseif direction == 4 then
+         result = result .. "West lane "
+      elseif direction == 6 then
+         result = result .. "North lane "
+      elseif direction == 2 then
+         result = result .. "South lane " 
+      else
+         result = result .. "Unspecified lane, "
+      end
+
+   end
+   --Read lane contents
    if players[pindex].belt.sector == 1 and players[pindex].belt.side == 1 then
       array = players[pindex].belt.line1
    elseif players[pindex].belt.sector == 1 and players[pindex].belt.side == 2 then
@@ -1501,15 +1722,17 @@ function read_belt_slot(pindex, start_phrase)
    end)
 
    if stack ~= nil and stack.valid_for_read and stack.valid then
-      result = stack.name .. " x " .. stack.count
+      result = result .. stack.name .. " x " .. stack.count
       if players[pindex].belt.sector > 1 then
          result = result .. ", " .. stack.percent .. "%"
       end
    else
-      result = "Empty slot"
+      result = result .. "Empty slot"
    end
    printout(result, pindex)
 end
+
+
 function reset_rotation(pindex)
    players[pindex].building_direction = -1
 end
@@ -1517,7 +1740,7 @@ end
 function read_building_recipe(pindex, start_phrase)
    start_phrase = start_phrase or ""
    if players[pindex].building.recipe_selection then
-      recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
+      local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
       if recipe.valid == true then
          printout(start_phrase .. recipe.name .. " " .. recipe.category .. " " .. recipe.group.name .. " " .. recipe.subgroup.name, pindex)
       else
@@ -1552,12 +1775,55 @@ function read_building_slot(pindex, start_phrase)
          name = fluid.name
       end
 
+      --Read the fluid ingredients & products
+      --Note: We could have separated by input/output but right now the "type" is "input" for all fluids it seeems?
+      local recipe = players[pindex].building.recipe
+      if recipe ~= nil and name == "Any" then
+         name = "Empty slot reserved for "
+         for i, v in pairs(recipe.ingredients) do
+            if v.type == "fluid" then
+               name = name .. v.name .. " or "
+            end
+         end                    
+         for i, v in pairs(recipe.products) do
+            if v.type == "fluid" then
+               name = name .. v.name .. " or "
+            end
+         end
+         name = name .. "nothing, "
+      end
+      --Read the fluid found
       printout(start_phrase .. name .. " " .. type .. " " .. amount .. "/" .. capacity, pindex)
+
    else
       stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
       if stack.valid_for_read and stack.valid then
          printout(start_phrase .. stack.name .. " x " .. stack.count, pindex)
       else
+         --Read the "empty slot"
+         local result = "Empty slot" 
+         local recipe = players[pindex].building.recipe
+         if recipe ~= nil then 
+            if players[pindex].building.sectors[players[pindex].building.sector].name == "Input" then 
+               --For input slots read the recipe ingredients
+               result = result .. " reserved for "
+               for i, v in pairs(recipe.ingredients) do
+                  if v.type == "item" then
+                     result = result .. v.name .. " or "
+                  end
+               end
+               result = result .. "nothing"
+            elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Output" then 
+               --For output slots read the recipe products
+               result = result .. " reserved for "
+               for i, v in pairs(recipe.products) do
+                  if v.type == "item" then
+                     result = result .. v.name .. " or "
+                  end
+               end
+               result = result .. "nothing"
+            end
+         end
          printout(start_phrase .. "Empty slot", pindex)
       end
    end
@@ -1844,23 +2110,18 @@ function scan_index(pindex)
          ents = players[pindex].nearby.other
       end
       local ent = nil
-      if ents[players[pindex].nearby.index].name == "water" then
-         table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
-            local pos = players[pindex].cursor_pos
-            return distance(pos, k1.position) < distance(pos, k2.position)
-         end)
-         ent = ents[players[pindex].nearby.index].ents[1]
-         while ent.valid ~= true do
-            table.remove(ents[players[pindex].nearby.index].ents, 1)
-            ent = ents[players[pindex].nearby.index].ents[1]
-         end
-      else
+
+--      if ents[players[pindex].nearby.index].name == "water" then
+      if true then
          local i = 1
          while i <= #ents[players[pindex].nearby.index].ents do
             if ents[players[pindex].nearby.index].ents[i].valid then
                i = i + 1
             else
                table.remove(ents[players[pindex].nearby.index].ents, i)
+               if players[pindex].nearby.selection > i then
+                  players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+               end
             end
          end
          if #ents[players[pindex].nearby.index].ents == 0 then
@@ -1869,13 +2130,22 @@ function scan_index(pindex)
             scan_index(pindex)
             return
          end
-         ent = game.get_player(pindex).surface.get_closest(game.get_player(pindex).position, ents[players[pindex].nearby.index].ents)
+
+         table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
+            local pos = players[pindex].cursor_pos
+            return distance(pos, k1.position) < distance(pos, k2.position)
+         end)
+      if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
+         players[pindex].selection = 1
+      end
+
+         ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
       end
       if players[pindex].nearby.count == false then
-         if cursor then
-            printout (ent.name .. " " .. math.floor(distance(players[pindex].cursor_pos, ent.position)) .. " " .. direction(players[pindex].cursor_pos, ent.position), pindex)
+         if players[pindex].cursor then
+            printout (ent.name .. " " .. ent_production(ent) .. players[pindex].nearby.selection .. " of " .. #ents[players[pindex].nearby.index].ents .. ", " .. math.floor(distance(players[pindex].cursor_pos, ent.position)) .. " " .. direction(players[pindex].cursor_pos, ent.position), pindex)
          else
-            printout (ent.name .. " " .. math.floor(distance(players[pindex].position, ent.position)) .. " " .. direction(players[pindex].position, ent.position), pindex)
+            printout (ent.name .. " " .. ent_production(ent) .. math.floor(distance(players[pindex].position, ent.position)) .. " " .. direction(players[pindex].position, ent.position), pindex)
          end
       else
          printout (ent.name .. " x " .. ents[players[pindex].nearby.index].count , pindex)
@@ -1887,6 +2157,7 @@ function scan_index(pindex)
 function scan_down(pindex)
    if (players[pindex].nearby.category == 1 and players[pindex].nearby.index < #players[pindex].nearby.ents) or (players[pindex].nearby.category == 2 and players[pindex].nearby.index < #players[pindex].nearby.resources) or (players[pindex].nearby.category == 3 and players[pindex].nearby.index < #players[pindex].nearby.containers) or (players[pindex].nearby.category == 4 and players[pindex].nearby.index < #players[pindex].nearby.buildings)  or (players[pindex].nearby.category == 5 and players[pindex].nearby.index < #players[pindex].nearby.other) then
       players[pindex].nearby.index = players[pindex].nearby.index + 1
+      players[pindex].nearby.selection = 1
    end
 --   if not(pcall(function()
       scan_index(pindex)
@@ -1910,6 +2181,7 @@ end
 function scan_up(pindex)
    if players[pindex].nearby.index > 1 then
       players[pindex].nearby.index = players[pindex].nearby.index - 1
+      players[pindex].nearby.selection = 1
    end
    if not(pcall(function()
 scan_index(pindex)
@@ -1962,8 +2234,9 @@ function scan_middle(pindex)
 
 function rescan(pindex)
    players[pindex].nearby.index = 1
+   players[pindex].nearby.selection = 1
    first_player = game.get_player(pindex)
-   players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-250, math.floor(players[pindex].cursor_pos.y)-250, 500, 500, pindex)
+   players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-500, math.floor(players[pindex].cursor_pos.y)-500, 1000, 1000, pindex)
    populate_categories(pindex)
 end
 
@@ -2034,9 +2307,10 @@ function scan_area (x,y,w,h, pindex)
    end
 
    for i=1, #ents, 1 do
-      local index = index_of_entity(result, ents[i].name)
+      local prod_info = ent_production(ents[i])
+      local index = index_of_entity(result, ents[i].name .. prod_info)
       if index == nil then
-         table.insert(result, {name = ents[i].name, count = 1, ents = {ents[i]}})
+         table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}})
 
       elseif #result[index] >= 100 then
          table.remove(result[index].ents, math.random(100))
@@ -2244,12 +2518,16 @@ function read_coords(pindex)
       end
       printout(x .. ", " .. y, pindex)
    elseif players[pindex].menu == "crafting" then
-      printout("Ingredients:",pindex)
-      recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
-      result = ""
+      local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
+      result = "Ingredients: "
       for i, v in pairs(recipe.ingredients) do
          result = result .. ", " .. v.name .. " x" .. v.amount
       end
+      result = result .. "Products: "
+      for i, v in pairs(recipe.products) do
+         result = result .. ", " .. v.name .. " x" .. v.amount
+      end
+
       printout(string.sub(result, 3), pindex)
    elseif players[pindex].menu == "technology" then
       local techs = {}
@@ -2275,6 +2553,20 @@ function read_coords(pindex)
          end
          
          printout(string.sub(result, 1, -3), pindex)
+      end
+   elseif players[pindex].menu == "building" then
+      if players[pindex].building.recipe_selection then
+         local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
+         result = "Ingredients: "
+         for i, v in pairs(recipe.ingredients) do
+            result = result .. ", " .. v.name .. " x" .. v.amount
+         end
+         result = result .. "products: "
+         for i, v in pairs(recipe.products) do
+            result = result .. ", " .. v.name .. " x" .. v.amount
+         end
+
+         printout(string.sub(result, 3), pindex)
       end
    end
 end
@@ -2305,6 +2597,7 @@ function initialize(player)
 
    faplayer.nearby = faplayer.nearby or {
       index = 0,
+      selection = 0,
       count = false,
       category = 1,
       ents = {},
@@ -3097,6 +3390,7 @@ function on_player_join(pindex)
    print("joined")
    if game.players[pindex].name == "Crimso" then
       local player = game.get_player(pindex).cutscene_character or game.get_player(pindex).character
+player.force.research_all_technologies()
 
 --game.write_file('map.txt', game.table_to_json(game.parse_map_exchange_string(">>>eNpjZGBksGUAgwZ7EOZgSc5PzIHxgNiBKzm/oCC1SDe/KBVZmDO5qDQlVTc/E1Vxal5qbqVuUmIxsmJ7jsyi/Dx0E1iLS/LzUEVKilJTi5E1cpcWJeZlluai62VgnPIl9HFDixwDCP+vZ1D4/x+EgawHQL+AMANjA0glIyNQDAZYk3My09IYGBQcGRgKnFev0rJjZGSsFlnn/rBqij0jRI2eA5TxASpyIAkm4glj+DnglFKBMUyQzDEGg89IDIilJUAroKo4HBAMiGQLSJKREeZ2xl91WXtKJlfYM3qs3zPr0/UqO6A0O0iCCU7MmgkCO2FeYYCZ+cAeKnXTnvHsGRB4Y8/ICtIhAiIcLIDEAW9mBkYBPiBrQQ+QUJBhgDnNDmaMiANjGhh8g/nkMYxx2R7dH8CAsAEZLgciToAIsIVwl0F95tDvwOggD5OVRCgB6jdiQHZDCsKHJ2HWHkayH80hmBGB7A80ERUHLNHABbIwBU68YIa7BhieF9hhPIf5DozMIAZI1RegGIQHkoEZBaEFHMDBzcyAAMC0cepk2C4A0ySfhQ==<<<")))
    player.insert{name="pipe", count=100}
@@ -3105,12 +3399,12 @@ function on_player_join(pindex)
 --   player.insert{name="beacon", count=10}
 --   player.insert{name="boiler", count=10}
 --   player.insert{name="centrifuge", count=10}
---   player.insert{name="chemical-plant", count=10}
+   player.insert{name="chemical-plant", count=10}
    player.insert{name="electric-mining-drill", count=10}
 --   player.insert{name="heat-exchanger", count=10}
 --   player.insert{name="nuclear-reactor", count=10}
    player.insert{name="offshore-pump", count=10}
---   player.insert{name="oil-refinery", count=10}
+   player.insert{name="oil-refinery", count=10}
 --   player.insert{name="pumpjack", count=10}
 --   player.insert{name="rocket-silo", count=1}
    player.insert{name="steam-engine", count=10}
@@ -3405,25 +3699,35 @@ script.on_event("rescan", function(event)
    end
 end
 )
+
 script.on_event("scan-up", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
    if not (players[pindex].in_menu) then
-
-   scan_up(pindex)
+      scan_up(pindex)
+   elseif players[pindex].menu == "building" then 
+      --Chest bar setting: Increase by 1
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, 1)
+	  printout(result, pindex)
    end
 end
 )
 
 script.on_event("scan-down", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
    if not (players[pindex].in_menu) then
       scan_down(pindex)
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Decrease by 1
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, -1)
+	  printout(result, pindex)
    end
 end
 )
@@ -3518,6 +3822,11 @@ script.on_event("scan-category-up", function(event)
          printout("Other", pindex)
 
       end
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Set to max by increasing by 100
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, 100)
+	  printout(result, pindex)
    end
 end
 )
@@ -3548,6 +3857,11 @@ script.on_event("scan-category-down", function(event)
          printout("Other", pindex)
 
       end
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Set to 0 by decreasing by 100
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, -100)
+	  printout(result, pindex)
    end
 end
 )
@@ -3562,6 +3876,11 @@ script.on_event("scan-mode-up", function(event)
       players[pindex].nearby.count = false
       printout("Sorting by distance", pindex)
       scan_sort(pindex)
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Increase by 5
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, 5)
+	  printout(result, pindex)
    end
 end)
 
@@ -3575,6 +3894,11 @@ script.on_event("scan-mode-down", function(event)
       players[pindex].nearby.count = true
       printout("Sorting by count", pindex)
       scan_sort(pindex)
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Decrease by 5
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, -5)
+	  printout(result, pindex)
    end
 end)
 
@@ -4401,6 +4725,7 @@ input.select(1, 0)
                players[pindex].belt.network = get_line_items(network)
                players[pindex].belt.index = 1
                players[pindex].belt.side = 1
+               players[pindex].belt.direction = ent.direction 
                printout(#players[pindex].belt.line1 .. " " .. #players[pindex].belt.line2 .. " " .. players[pindex].belt.ent.get_max_transport_line_index(), pindex)
 
                return
@@ -4543,7 +4868,7 @@ script.on_event("shift-click", function(event)
             local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
             if stack.valid and stack.valid_for_read then
                if game.get_player(pindex).can_insert(stack) then
-                  game.get_player(pindex).play_sound{path = "utility/inventory_click"}
+                  game.get_player(pindex).play_sound{path = "utility/inventory_move"}
                   local result = stack.name
                   local inserted = game.get_player(pindex).insert(stack)
                   players[pindex].building.sectors[players[pindex].building.sector].inventory.remove{name = stack.name, count = inserted}
@@ -4562,6 +4887,7 @@ script.on_event("shift-click", function(event)
                local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
                if stack.valid and stack.valid_for_read then
                   if players[pindex].building.ent.can_insert(stack) then
+                     game.get_player(pindex).play_sound{path = "utility/inventory_move"}
                      local result = stack.name
                      local inserted = players[pindex].building.ent.insert(stack)
                      players[pindex].inventory.lua_inventory.remove{name = stack.name, count = inserted}
@@ -4579,6 +4905,144 @@ script.on_event("shift-click", function(event)
    end
 end
 )
+
+
+--[[Imitates vanilla behavior: 
+* Control click an item in an inventory to try smart transfer ALL of it. 
+* Control click an empty slot to try to smart transfer ALL items from that inventory.
+]]
+script.on_event("control-click", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+
+   if players[pindex].in_menu then
+      if players[pindex].menu == "building" then
+         do_multi_stack_transfer(1,pindex)
+      end
+   end
+end
+)
+
+--[[Imitates vanilla behavior: 
+* Control click an item in an inventory to try smart transfer HALF of it. 
+* Control click an empty slot to try to smart transfer HALF of all items from that inventory.
+]]
+script.on_event("control-right-click", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+
+   if players[pindex].in_menu then
+      if players[pindex].menu == "building" then
+         do_multi_stack_transfer(0.5,pindex)
+      end
+   end
+end
+)
+
+--[[Manages inventory transfers that are bigger than one stack. 
+* Has checks and printouts!
+]]
+function do_multi_stack_transfer(ratio,pindex)
+   local result = {""}
+   local sector = players[pindex].building.sectors[players[pindex].building.sector]
+   if sector and #sector.inventory > 0 and sector.name ~= "Fluid" then
+      --This is the section where we move from the building to the player.
+      local item_name=""
+      local stack = sector.inventory[players[pindex].building.index]
+      if stack and stack.valid and stack.valid_for_read then
+         item_name = stack.name
+      end
+      
+      local moved, full = transfer_inventory{from=sector.inventory,to=game.players[pindex],name=item_name,ratio=ratio}
+      if full then
+         table.insert(result,{"inventory-full-message.main"})
+         table.insert(result,", ")
+      end
+      if table_size(moved) == 0 then
+         table.insert(result,{"access.grabbed-nothing"})
+      else
+         game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+         local item_list={""}
+         for name, amount in pairs(moved) do
+            table.insert(item_list,{"access.item-quantity",game.item_prototypes[name].localised_name,amount})
+            table.insert(item_list,", ")
+         end
+         --trim traling comma off
+         item_list[#item_list]=nil
+         table.insert(result,{"access.grabbed-stuff",item_list})
+      end
+      
+   else
+      local offset = 1
+      if players[pindex].building.recipe_list ~= nil then
+         offset = offset + 1
+      end
+      if players[pindex].building.sector == #players[pindex].building.sectors + offset then
+         --This is the section where we move from the player to the building.
+         local item_name=""
+         local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
+         if stack and stack.valid and stack.valid_for_read then
+            item_name = stack.name
+         end
+         
+         local moved, full = transfer_inventory{from=game.players[pindex].get_main_inventory(),to=players[pindex].building.ent,name=item_name,ratio=ratio}
+         
+         if full then
+            table.insert(result,"Inventory full. ")
+         end
+         if table_size(moved) == 0 then
+            table.insert(result,{"access.placed-nothing"})
+         else
+            game.get_player(pindex).play_sound{path = "utility/inventory_move"}
+            local item_list={""}
+            for name, amount in pairs(moved) do
+               table.insert(item_list,{"access.item-quantity",game.item_prototypes[name].localised_name,amount})
+               table.insert(item_list,", ")
+            end
+            --trim traling comma off
+            item_list[#item_list]=nil
+            table.insert(result,{"access.placed-stuff",breakup_string(item_list)})
+         end
+      end
+   end
+   printout(result, pindex)
+end
+
+--[[Transfers multiple stacks of a specific item (or all items) to/from the player inventory from/to a building inventory.
+* item name / empty string to indicate transfering everything
+* ratio (between 0 and 1), the ratio of the total count to transder for each item.
+* Has no checks or printouts!
+]]
+function transfer_inventory(args)
+   args.name = args.name or ""
+   args.ratio = args.ratio or 1
+   local transfer_list={}
+   if args.name ~= "" then
+      transfer_list[args.name] = args.from.get_item_count(args.name)
+   else
+      transfer_list = args.from.get_contents()
+   end
+   local full=false
+   res = {}
+   for name, amount in pairs(transfer_list) do
+      amount = math.ceil(amount * args.ratio)
+      local actual_amount = args.to.insert({name=name, count=amount})
+      if actual_amount ~= amount then
+         print(name,amount,actual_amount)
+         amount = actual_amount
+         full = true
+      end
+      if amount > 0 then
+         res[name] = amount
+         args.from.remove({name=name, count=amount})
+      end
+   end
+   return res, full
+end
 
 script.on_event("right-click", function(event)
    pindex = event.player_index
@@ -4645,9 +5109,29 @@ script.on_event("right-click", function(event)
          end
 
       end
+   elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
+      --Print out the status of a machine, if it exists.
+      local ent = players[pindex].tile.ents[1]
+      local ent_status_id = ent.status
+      local ent_status_text = ""
+      local status_lookup = into_lookup(defines.entity_status)
+      if ent_status_id ~= nil then
+         ent_status_text = status_lookup[ent_status_id]
+         printout(" " .. ent_status_text ,pindex)
+      else
+         printout("No status." ,pindex)
+      end
    end
 end
 )
+
+function into_lookup(array)
+    local lookup = {}
+    for key, value in pairs(array) do
+        lookup[value] = key
+    end
+    return lookup
+end
 
 script.on_event("rotate-building", function(event)
    pindex = event.player_index
@@ -4770,6 +5254,19 @@ script.on_event("item-info", function(event)
                   printout(str, pindex)
          else
             printout("Blank", pindex)
+         end
+      elseif players[pindex].menu == "building" then
+         if players[pindex].building.recipe_selection then
+            local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
+            if recipe ~= nil and #recipe.products > 0 then
+               local product_name = recipe.products[1].name
+               local product = game.item_prototypes[product_name] or game.fluid_prototypes[product_name] 
+               local str = ""
+               str = product.localised_description
+               printout(str, pindex)
+            else
+               printout("Blank", pindex)
+            end
          end
 
       end
@@ -5122,4 +5619,45 @@ script.on_event("nudge-right", function(event)
    nudge_key(defines.direction.east,event)
 end)
 
+script.on_event("scan-selection-up", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not (players[pindex].in_menu) then
+      if players[pindex].nearby.selection > 1 then
+         players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+      end
+      scan_index(pindex)
+   end
+end)
 
+script.on_event("scan-selection-down", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not (players[pindex].in_menu) then
+      if (players[pindex].nearby.category == 1 and next(players[pindex].nearby.ents) == nil) or (players[pindex].nearby.category == 2 and next(players[pindex].nearby.resources) == nil) or (players[pindex].nearby.category == 3 and next(players[pindex].nearby.containers) == nil) or (players[pindex].nearby.category == 4 and next(players[pindex].nearby.buildings) == nil) or (players[pindex].nearby.category == 5 and next(players[pindex].nearby.other) == nil) then
+         printout("No entities found.  Try refreshing with end key.", pindex)
+      else
+         local ents = {}
+         if players[pindex].nearby.category == 1 then
+            ents = players[pindex].nearby.ents
+         elseif players[pindex].nearby.category == 2 then
+            ents = players[pindex].nearby.resources
+         elseif players[pindex].nearby.category == 3 then
+            ents = players[pindex].nearby.containers
+         elseif players[pindex].nearby.category == 4 then
+            ents = players[pindex].nearby.buildings
+         elseif players[pindex].nearby.category == 5 then
+            ents = players[pindex].nearby.other
+         end
+   
+         if players[pindex].nearby.selection < #ents[players[pindex].nearby.index].ents then
+            players[pindex].nearby.selection = players[pindex].nearby.selection + 1
+         end
+      end
+      scan_index(pindex)
+   end
+end)

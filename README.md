@@ -70,6 +70,8 @@ Place building: OPEN SQUARE BRACKET
 
 Open building's menu: OPEN SQUARE BRACKET
 
+Nudge building by one tile: CONTROL + SHIFT + DIRECTION, where the direction is one of W A S D.
+
 
 ## Cursor
 

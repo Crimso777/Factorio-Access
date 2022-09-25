@@ -261,7 +261,9 @@ end
 --Usually called when the cursor find an entity, gives its name and key information.
 function ent_info(pindex, ent, description)
    local result = ent.name
-   result = result .. " " .. ent.type .. " "
+   if game.players[pindex].name == "Crimso" then
+      result = result .. " " .. ent.type .. " "
+   end
    if ent.type == "resource" then
       result = result .. ", x " .. ent.amount
    end

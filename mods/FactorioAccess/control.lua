@@ -6,6 +6,21 @@ production_types = {}
 building_types = {}
 local util = require('util')
 
+
+function printout_resource_patches(pindex)
+   local out={""}
+   local player=game.players[pindex]
+   for resource, stuff in pairs(global.charted_resources[player.force.name][player.surface.index]) do
+      for patch, _ in pairs(stuff.patches) do
+         table.insert(out,game.item_prototypes[resource].localised_name)
+         table.insert(out," " .. patch.total .. " at " .. math.floor(patch.tot_x / patch.total + 0.5) .. " x, " ..  math.floor(patch.tot_y / patch.total + 0.5) .. " y. "
+            )
+      end
+   end
+   print(serpent.line(out))
+   printout(out,pindex)
+end
+
 function breakup_string(str)
    result = {""}
    if table_size(str) > 20 then
@@ -5349,6 +5364,13 @@ function ensure_global_structures_are_up_to_date()
    for pindex, player in pairs(game.players) do
       initialize(player)
    end
+   
+   if not global.charted_resources then
+      for _ , force in pairs(game.forces) do
+         force.rechart()
+      end
+   end
+   
    
    global.entity_types = {}
    entity_types = global.entity_types

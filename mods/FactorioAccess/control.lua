@@ -6,6 +6,21 @@ production_types = {}
 building_types = {}
 local util = require('util')
 
+
+function printout_resource_patches(pindex)
+   local out={""}
+   local player=game.players[pindex]
+   for resource, stuff in pairs(global.charted_resources[player.force.name][player.surface.index]) do
+      for patch, _ in pairs(stuff.patches) do
+         table.insert(out,game.item_prototypes[resource].localised_name)
+         table.insert(out," " .. patch.total .. " at " .. math.floor(patch.tot_x / patch.total + 0.5) .. " x, " ..  math.floor(patch.tot_y / patch.total + 0.5) .. " y. "
+            )
+      end
+   end
+   print(serpent.line(out))
+   printout(out,pindex)
+end
+
 function breakup_string(str)
    result = {""}
    if table_size(str) > 20 then
@@ -1557,6 +1572,21 @@ end
 
 function center_of_tile(pos)
    return {x = math.floor(pos.x)+0.5, y = math.floor(pos.y)+ .5}
+end
+
+function int_pos_to_int(pos)
+   local x = pos.x < 0 and -1-2*pos.x or 2*pos.x
+   local xy = x + (pos.y < 0 and -1-2*pos.y or 2*pos.y)
+   return (xy+1)*xy/2 + x
+end
+
+function int_to_int_pos(numb)
+   local xy = math.floor(math.sqrt(2*numb+0.25)-0.5)
+   local x = numb - (xy+1)*xy/2
+   local y = xy - x
+   x = (x - x%2)/2 * (x % 2 == 1 and -1 or 1)
+   y = (y - y%2)/2 * (y % 2 == 1 and -1 or 1)
+   return {x=x,y=y}
 end
 
 function get_power_string(power)
@@ -5335,6 +5365,13 @@ function ensure_global_structures_are_up_to_date()
       initialize(player)
    end
    
+   if not global.charted_resources then
+      for _ , force in pairs(game.forces) do
+         force.rechart()
+      end
+   end
+   
+   
    global.entity_types = {}
    entity_types = global.entity_types
    
@@ -5636,6 +5673,98 @@ end)
 script.on_event("nudge-right", function(event)
    nudge_key(defines.direction.east,event)
 end)
+
+
+function find_patches_to_join(chunks, patches,pos)
+   local close_patches={}
+   for x = pos.x-1, pos.x+1 do
+      for y = pos.y-1, pos.y+1 do
+         local id = int_pos_to_int({x=x,y=y})
+         if chunks[id] then
+            close_patches[chunks[id].patch]=true
+         end
+      end
+   end
+   local main_patch = next(close_patches,nil)
+   if main_patch then
+      local to_merge = next(close_patches,main_patch)
+      while to_merge do
+         main_patch.total = main_patch.total + to_merge.total
+         main_patch.tot_x = main_patch.tot_x + to_merge.tot_x
+         main_patch.tot_y = main_patch.tot_y + to_merge.tot_y
+         for _,chunk_pos_id in pairs(to_merge.chunks) do
+            chunks[chunk_pos_id].patch = main_patch
+            table.insert(main_patch.chunks,chunk_pos_id)
+         end
+         patches[to_merge]=nil
+         
+         to_merge = next(close_patches,to_merge)
+      end
+   else
+      main_patch = {
+         total=0,
+         tot_x=0,
+         tot_y=0,
+         chunks={}
+      }
+      patches[main_patch]=true
+   end
+   table.insert(main_patch.chunks,int_pos_to_int(pos))
+   return main_patch
+end
+
+function update_resources_in_chunk(event)
+   global.charted_resources = global.charted_resources or {}
+   local cr = global.charted_resources
+   cr[event.force.name] = cr[event.force.name] or {}
+   local crf = cr[event.force.name]
+   crf[event.surface_index] = crf[event.surface_index] or {}
+   local crfs = crf[event.surface_index]
+   
+   local chunk_pos_id = int_pos_to_int(event.position)
+
+   local surf = game.surfaces[event.surface_index]
+   for resource, _ in pairs(game.get_filtered_entity_prototypes({{filter="type",type="resource"}})) do
+      crfs[resource] = crfs[resource] or {patches={},chunks={}}
+      local crfsr = crfs[resource]
+      local patches = crfsr.patches
+   
+      local total=0
+      local tot_x=0
+      local tot_y=0
+      for _,ent in pairs(surf.find_entities_filtered{area=event.area,name=resource}) do
+         total = total + ent.amount
+         tot_x = tot_x + ent.amount*ent.position.x
+         tot_y = tot_y + ent.amount*ent.position.y
+      end
+      
+      
+      if total > 0 or crfsr.chunks[chunk_pos_id] then
+         local former = crfsr.chunks[chunk_pos_id] or {
+            total = 0,
+            tot_x = 0,
+            tot_y = 0,
+            patch = find_patches_to_join(crfsr.chunks, patches,event.position)
+         }
+         local new = {
+            total = total,
+            tot_x = tot_x,
+            tot_y = tot_y,
+            patch = former.patch
+         }
+         new.patch.total = new.patch.total + total - former.total
+         new.patch.tot_x = new.patch.tot_x + tot_x - former.tot_x
+         new.patch.tot_y = new.patch.tot_y + tot_y - former.tot_y
+         
+         --todo: maybe clean up chunks and patches with 0 total
+         crfsr.chunks[chunk_pos_id] = new
+      end
+   end
+end
+
+script.on_event(defines.events.on_chunk_charted, update_resources_in_chunk)
+
+
 
 script.on_event("scan-selection-up", function(event)
    pindex = event.player_index

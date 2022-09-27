@@ -3878,11 +3878,6 @@ script.on_event("scan-mode-up", function(event)
       players[pindex].nearby.count = false
       printout("Sorting by distance", pindex)
       scan_sort(pindex)
-   elseif players[pindex].menu == "building" then
-      --Chest bar setting: Increase by 5
-	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_inventory_bar(ent, 5)
-	  printout(result, pindex)
    end
 end)
 
@@ -3896,11 +3891,6 @@ script.on_event("scan-mode-down", function(event)
       players[pindex].nearby.count = true
       printout("Sorting by count", pindex)
       scan_sort(pindex)
-   elseif players[pindex].menu == "building" then
-      --Chest bar setting: Decrease by 5
-	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_inventory_bar(ent, -5)
-	  printout(result, pindex)
    end
 end)
 
@@ -5647,6 +5637,11 @@ script.on_event("scan-selection-up", function(event)
          players[pindex].nearby.selection = players[pindex].nearby.selection - 1
       end
       scan_index(pindex)
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Increase by 5
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, 5)
+	  printout(result, pindex)
    end
 end)
 
@@ -5677,5 +5672,10 @@ script.on_event("scan-selection-down", function(event)
          end
       end
       scan_index(pindex)
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Increase by 5
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, -5)
+	  printout(result, pindex)
    end
 end)

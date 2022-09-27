@@ -1711,7 +1711,7 @@ function read_belt_slot(pindex, start_phrase)
       if players[pindex].belt.side == 1 then
          array = players[pindex].belt.network.upstream.left
       elseif players[pindex].belt.side == 2 then
-         array = players[pindex].belt.network.upstream.rright
+         array = players[pindex].belt.network.upstream.right
       end
 
    else

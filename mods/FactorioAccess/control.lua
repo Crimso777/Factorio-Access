@@ -393,9 +393,9 @@ function ent_info(pindex, ent, description)
          return k1.count > k2.count
       end)
       if #itemtable == 0 then
-         result = result .. ", Contains nothing "
+         result = result .. " containing nothing "
       else
-         result = result .. ", Contains " .. itemtable[1].count .. " " .. itemtable[1].name .. " "
+         result = result .. " containing " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
          if #itemtable > 1 then
             result = result .. "and other items "
          end

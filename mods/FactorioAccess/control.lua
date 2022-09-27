@@ -357,7 +357,7 @@ function ent_info(pindex, ent, description)
                         local outputs = ent.get_recipe().products
                         for i2 = #outputs, 1, -1 do
                            if outputs[i2].type ~= "fluid" then
-                              table.remove(inputs, i2)
+                              table.remove(outputs, i2)
                            end
                         end
                         if #outputs > 0 then

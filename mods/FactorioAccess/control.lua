@@ -2154,7 +2154,7 @@ function scan_index(pindex)
          if players[pindex].cursor then
             printout (ent.name .. " " .. ent_production(ent) .. players[pindex].nearby.selection .. " of " .. #ents[players[pindex].nearby.index].ents .. ", " .. math.floor(distance(players[pindex].cursor_pos, ent.position)) .. " " .. direction(players[pindex].cursor_pos, ent.position), pindex)
          else
-            printout (ent.name .. " " .. ent_production(ent) .. math.floor(distance(players[pindex].position, ent.position)) .. " " .. direction(players[pindex].position, ent.position), pindex)
+            printout (ent.name .. " " .. ent_production(ent) .. players[pindex].nearby.selection .. " of " .. #ents[players[pindex].nearby.index].ents .. ", " .. math.floor(distance(players[pindex].position, ent.position)) .. " " .. direction(players[pindex].position, ent.position), pindex)
          end
       else
          printout (ent.name .. " x " .. ents[players[pindex].nearby.index].count , pindex)
@@ -3774,24 +3774,35 @@ script.on_event("jump-to-scan", function(event)
             ents = players[pindex].nearby.other
          end
          local ent = nil
-         if ents[players[pindex].nearby.index].name == "water" then
-            table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
-               local pos = game.get_player(pindex).position
-               return distance(pos, k1.position) < distance(pos, k2.position)
-            end)
-            ent = ents[players[pindex].nearby.index].ents[1]
-            while ent.valid ~= true do
-               table.remove(ents[players[pindex].nearby.index], 1)
-               ent = ents[players[pindex].nearby.index][1]
-            end
-         else
-            for i, dud in ipairs(ents[players[pindex].nearby.index].ents) do
-               if not(dud.valid) then
-                  table.remove(ents[players[pindex].nearby.index].ents, i)
+      if true then
+         local i = 1
+         while i <= #ents[players[pindex].nearby.index].ents do
+            if ents[players[pindex].nearby.index].ents[i].valid then
+               i = i + 1
+            else
+               table.remove(ents[players[pindex].nearby.index].ents, i)
+               if players[pindex].nearby.selection > i then
+                  players[pindex].nearby.selection = players[pindex].nearby.selection - 1
                end
             end
-            ent = game.get_player(pindex).surface.get_closest(game.get_player(pindex).position, ents[players[pindex].nearby.index].ents)
          end
+         if #ents[players[pindex].nearby.index].ents == 0 then
+            table.remove(ents,players[pindex].nearby.index)
+            players[pindex].nearby.index = math.min(players[pindex].nearby.index, #ents)
+            scan_index(pindex)
+            return
+         end
+
+         table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
+            local pos = players[pindex].cursor_pos
+            return distance(pos, k1.position) < distance(pos, k2.position)
+         end)
+      if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
+         players[pindex].selection = 1
+      end
+
+         ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
+      end
       if players[pindex].cursor then
          players[pindex].cursor_pos = center_of_tile(ent.position)
          printout("Cursor has jumped to " .. ent.name .. " at " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)

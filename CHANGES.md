@@ -1,3 +1,47 @@
+#Version 0.3.0
+
+Updated 9/30/2022
+
+## New Features
+
+-New scanner categorization format.  Scanned entities will now be categorized by what they produce.  You can now tell the difference between a mining drill producing iron, and one producing copper, all from the scan list.
+
+-New Scanner Controls:  Ppress SHIFT+PAGEUP and SHIFT+PAGEDOWN to select a particular building from the scan list.  For example, if you have 3 mining drills, it is now possible to track the one that is 3rd farthest from your position.
+
+-New info: Fluid input and output tiles of buildings will now identify which fluid they should contain. 
+
+-Building status info. Press RIGHT BRACKET with your hand empty when facing a building to read out its status, such as having its output full or missing ingredients. Great for diagnosing problems.
+
+-Chest inventory limiting (bar). Useful for controlling automatically filled chests. When the chest inventory is open, press PAGE UP or PAGE DOWN to increase or decrease the limit by 1. Hold shift while pressing to increase or decrease by 5. Hold CONTROL while pressing to increase or decrease by the maximum amount.
+
+-New inventory transfer shortcut (same as Vanilla Factorio) between building and player inventories. When you have a building inventory open, pressing CONTROL + LEFT BRACKET for a selected item in an inventory will cause an attempt to transfer the entire supply of this item to the other inventory. Non-transferred items will remain in their original inventory. Similarly, pressing CONTROL + RIGHT BRACKET will try to transfer half of the entire supply of the selected item.
+
+-New inventory smart insert shortcut (same as Vanilla Factorio) between building and player inventories. When you have a building inventory open and select an empty slot, pressing CONTROL + LEFT BRACKET will cause an attempt to transfer the full contents of the selected inventory into the other inventory. This is useful for easily filling up labs and assembling machines with everything applicable from your own inventory instead of searching for items individually. Non-transferred items will remain in their original inventory. Similarly, pressing CONTROL + RIGHT BRACKET on an empty slot will try to transfer half of the entire supply of every item.
+
+-New entity info upon encounter: Chests will announce their main contents. Pipes to ground, pumps, and storage tanks will announce the fluids they contain. Accumulators announce their charge percentage and amount. Solar panels announce their current production level based on the time of day. Electric poles announce the current power usage and then the current power generation capacity.
+
+-New info: Transport belt analyzer now announces the position of each lane on the belt segment in front of you. For example, iron plates could be on the south lane of a belt segment facing west. This info is helpful for building sideloading junctions.
+
+-New info: The reserved empty slots for ingredients and products inside assembling machines and chemical plants now announce what is expected to go in them.
+
+## Changes
+
+-Rocks are now categorized as resources because they can contain stone and coal.
+
+-Entity information will no longer state the type of an entity, which usually was a repeat of the entity’s name.
+
+## Bug fixes
+
+-When you open a menu or an inventory, the item in the first slot was not being read. This should be fixed now for all menus.
+
+-Transport belt analyzer now correctly reads contents of upstream belts
+
+## Other
+
+-Thanks to everyone who filled out the player survey!
+
+
+
 # Version 0.2.0
 
 Updated 07/27/22

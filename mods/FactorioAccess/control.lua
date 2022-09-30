@@ -434,7 +434,7 @@ function ent_info(pindex, ent, description)
                         local outputs = ent.get_recipe().products
                         for i2 = #outputs, 1, -1 do
                            if outputs[i2].type ~= "fluid" then
-                              table.remove(inputs, i2)
+                              table.remove(outputs, i2)
                            end
                         end
                         if #outputs > 0 then
@@ -1718,7 +1718,7 @@ function read_belt_slot(pindex, start_phrase)
       if players[pindex].belt.side == 1 then
          array = players[pindex].belt.network.upstream.left
       elseif players[pindex].belt.side == 2 then
-         array = players[pindex].belt.network.upstream.rright
+         array = players[pindex].belt.network.upstream.right
       end
 
    else
@@ -1800,7 +1800,7 @@ function read_building_slot(pindex, start_phrase)
          name = name .. "nothing, "
       end
       --Read the fluid found
-      printout(start_phrase .. result, pindex)
+      printout(start_phrase .. name, pindex)
 
    elseif #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0 then
       stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]

@@ -72,6 +72,8 @@ Open building's menu: OPEN SQUARE BRACKET
 
 Nudge building by one tile: CONTROL + SHIFT + DIRECTION, where the direction is one of W A S D.
 
+Get building status: CLOSE SQUARE BRACKET
+
 
 ## Cursor
 
@@ -94,17 +96,20 @@ Teleport player to cursor: SHIFT + T
 
 Scan for nearby entities: END
 
+Repeat scanned entry: HOME
+
 Navigate scanned entity list: PAGE UP and PAGE DOWN
+
+Switch between different instances of the same entity: SHIFT + PAGE UP and SHIFT + PAGE DOWN
 
 Change scanned category: CONTROL + PAGE UP and CONTROL + PAGE DOWN
 
-Change Sorting mode for scanned list: SHIFT + PAGE UP and SHIFT + PAGE DOWN
+Change Sorting mode for scanned list: N and SHIFT + N 
 
-Repeat scanned entry: HOME
+Move cursor to scanned target in cursor mode: CONTROL + HOME
 
-Move cursor to scanned target: CONTROL + HOME
+Teleport to the scanned target outside of cursor mode: CONTROL + HOME
 
-note: If you are not in cursor mode, this will simply teleport the player to the nearest position to the target.
 
 ## Fast Travel
 

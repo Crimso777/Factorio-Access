@@ -269,7 +269,84 @@ function ent_info(pindex, ent, description)
    end
 
    result = result .. (description or "")
+   
+   --Explain the contents of a container/pipe/belt without pause and before the direction
+   if ent.type == "container" or ent.type == "logistic-container" then --Chests etc: Report the most common item and say "and other items" if there are other types.
+      local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
+      local itemtable = {}
+      for name, count in pairs(itemset) do
+         table.insert(itemtable, {name = name, count = count})
+      end
+      table.sort(itemtable, function(k1, k2)
+         return k1.count > k2.count
+      end)
+      if #itemtable == 0 then
+         result = result .. " containing nothing "
+      else
+         result = result .. " containing " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
+         if #itemtable > 1 then
+            result = result .. "and other items "
+         end
+      end
+      
+   end  
+   
+   if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" then
+      local dict = ent.get_fluid_contents()
+      local fluids = {}
+      for name, count in pairs(dict) do
+         table.insert(fluids, {name = name, count = count})
+      end
+      table.sort(fluids, function(k1, k2)
+         return k1.count > k2.count
+      end)
+      if #fluids > 0 then
+         result = result .. " containing " .. fluids[1].name .. " "
+      else
+      result = result .. " containing no fluid "
+      end
+   end
+   
+   if ent.type == "transport-belt" then
+      local left = ent.get_transport_line(1).get_contents()
+      local right = ent.get_transport_line(2).get_contents()
 
+      for name, count in pairs(right) do
+         if left[name] ~= nil then
+            left[name] = left[name] + count
+         else
+            left[name] = count
+         end
+      end
+      local contents = {}
+      for name, count in pairs(left) do
+         table.insert(contents, {name = name, count = count})
+      end
+      table.sort(contents, function(k1, k2)
+         return k1.count > k2.count
+      end)
+      if #contents > 0 then
+         result = result .. " carrying " .. contents[1].name
+         if #contents > 1 then
+            for i = 2, #contents-1 do
+               result = result .. ", " .. contents[i].name
+            end
+            result = result .. ", and " .. contents[#contents].name
+         end
+
+      else
+         result = result .. " carrying Nothing"
+      end
+   end
+   
+   --Explain the recipe of a machine without pause and before the direction
+   pcall(function()
+      if ent.get_recipe() ~= nil then
+         result = result .. " producing " .. ent.get_recipe().name
+      end
+   end)
+
+   --Explain the entity facing direction
    if ent.prototype.is_building and ent.supports_direction then
       result = result .. ", Facing "
       if ent.direction == 0 then 
@@ -382,26 +459,6 @@ function ent_info(pindex, ent, description)
          end
       end
    end
-
-   if ent.type == "container" or ent.type == "logistic-container" then --Chests etc: Report the most common item and say "and other items" if there are other types.
-      local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
-      local itemtable = {}
-      for name, count in pairs(itemset) do
-         table.insert(itemtable, {name = name, count = count})
-      end
-      table.sort(itemtable, function(k1, k2)
-         return k1.count > k2.count
-      end)
-      if #itemtable == 0 then
-         result = result .. ", Contains nothing "
-      else
-         result = result .. ", Contains " .. itemtable[1].count .. " " .. itemtable[1].name .. " "
-         if #itemtable > 1 then
-            result = result .. "and other items "
-         end
-      end
-      
-   end  
 	
    if ent.type == "electric-pole" then
       result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, Network currently producing "
@@ -476,11 +533,7 @@ function ent_info(pindex, ent, description)
          end
       end
    end
-   pcall(function()
-      if ent.get_recipe() ~= nil then
-         result = result .. ", Producing " .. ent.get_recipe().name
-      end
-   end)
+   
    if ent.prototype.burner_prototype ~= nil then
       if ent.energy == 0 then
 --         local inv = ent.get_fuel_inventory()
@@ -512,52 +565,6 @@ function ent_info(pindex, ent, description)
          solar_status = ", zero production, night time. "
       end
       result = result .. solar_status
-   end
-   if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" then
-      local dict = ent.get_fluid_contents()
-      local fluids = {}
-      for name, count in pairs(dict) do
-         table.insert(fluids, {name = name, count = count})
-      end
-      table.sort(fluids, function(k1, k2)
-         return k1.count > k2.count
-      end)
-      if #fluids > 0 then
-         result = result .. ", Contains " .. fluids[1].name .. " "
-      else
-      result = result .. ", Contains no fluid "
-      end
-   end
-   if ent.type == "transport-belt" then
-      local left = ent.get_transport_line(1).get_contents()
-      local right = ent.get_transport_line(2).get_contents()
-
-      for name, count in pairs(right) do
-         if left[name] ~= nil then
-            left[name] = left[name] + count
-         else
-            left[name] = count
-         end
-      end
-      local contents = {}
-      for name, count in pairs(left) do
-         table.insert(contents, {name = name, count = count})
-      end
-      table.sort(contents, function(k1, k2)
-         return k1.count > k2.count
-      end)
-      if #contents > 0 then
-         result = result .. ", Carrying " .. contents[1].name
-         if #contents > 1 then
-            for i = 2, #contents-1 do
-               result = result .. ", " .. contents[i].name
-            end
-            result = result .. ", and " .. contents[#contents].name
-         end
-
-      else
-         result = result .. ", Carrying Nothing"
-      end
    end
    return result
 end
@@ -3878,11 +3885,6 @@ script.on_event("scan-mode-up", function(event)
       players[pindex].nearby.count = false
       printout("Sorting by distance", pindex)
       scan_sort(pindex)
-   elseif players[pindex].menu == "building" then
-      --Chest bar setting: Increase by 5
-	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_inventory_bar(ent, 5)
-	  printout(result, pindex)
    end
 end)
 
@@ -3896,11 +3898,6 @@ script.on_event("scan-mode-down", function(event)
       players[pindex].nearby.count = true
       printout("Sorting by count", pindex)
       scan_sort(pindex)
-   elseif players[pindex].menu == "building" then
-      --Chest bar setting: Decrease by 5
-	  local ent = players[pindex].tile.ents[1]
-	  local result = increment_inventory_bar(ent, -5)
-	  printout(result, pindex)
    end
 end)
 
@@ -5647,6 +5644,11 @@ script.on_event("scan-selection-up", function(event)
          players[pindex].nearby.selection = players[pindex].nearby.selection - 1
       end
       scan_index(pindex)
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Increase by 5
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, 5)
+	  printout(result, pindex)
    end
 end)
 
@@ -5677,5 +5679,10 @@ script.on_event("scan-selection-down", function(event)
          end
       end
       scan_index(pindex)
+   elseif players[pindex].menu == "building" then
+      --Chest bar setting: Increase by 5
+	  local ent = players[pindex].tile.ents[1]
+	  local result = increment_inventory_bar(ent, -5)
+	  printout(result, pindex)
    end
 end)

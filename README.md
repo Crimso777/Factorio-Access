@@ -13,6 +13,7 @@ To update to the most recent patch, follow the instructions below for the patch 
 
 Note:  If you have done a full installation using the .zip instructions, there is no need to follow the patch install directions until a new patch comes out.  
 
+
 ## Mod .zip file install
 
 1. Download "Factorio Access.zip"
@@ -21,7 +22,6 @@ Note:  If you have done a full installation using the .zip instructions, there i
 4. Paste the files into your factorio folder
 5. That's it!  You are now ready to run launcher.exe in administrator mode
 6. If you are a jaws user, you may want to copy Factorio.jkm from the .zip into your JAWS settings folder, found in your user's AppData folder. An example file path is `C:\Users\Crimso\AppData\Roaming\Freedom Scientific\JAWS\2022\Settings\enu\`
-
 
 
 ## Mod patch install
@@ -72,7 +72,7 @@ Open building's menu: OPEN SQUARE BRACKET
 
 Nudge building by one tile: CONTROL + SHIFT + DIRECTION, where the direction is one of W A S D.
 
-Get building status: CLOSE SQUARE BRACKET
+Get building status: CLOSE SQUARE BRACKET, for applicable buildings when your hand is empty
 
 
 ## Cursor
@@ -123,6 +123,7 @@ Confirm an option: LEFT BRACKET
 
 Note:  Options include Teleporting to a saved point, renaming a saved point, deleting a saved point, and creating a new point.
 
+
 ## BStride
 
 Travel freely from building to building as if they were laid out in a grid pattern.
@@ -136,6 +137,7 @@ Next navigate the list of adjacent buildings with the two perpendicular directio
 Last, confirm your selection by pressing the direction you started with.  For instance, if I wanted to go to the 2nd item in the northern list I would hit W to go north, D to select option 2, and W again to confirm.
 
 Once you find your target, press LEFT BRACKET to teleport your character to the building.
+
 
 ## Warnings
 
@@ -158,11 +160,9 @@ Save game: F1
 
 Set quickbar #: CONTROL + Any number
 
-Quickbar: Any number
+Pick from quickbar: Any number
 
 Recalibrate: CONTROL + END
-
-Note: If you zoom in and out frequently, you should also recalibrate in order for certain actions like mining and opening buildings to work.
 
 
 ## While in a menu
@@ -180,6 +180,16 @@ Coordinates of current inventory slot: K
 Smart Insert/Smart Withdrawal: SHIFT + OPEN SQUARE BRACKET
 
 Note: This will insert an item stack, or withdraw an item stack from a building. It is smart because it will decide the proper inventory to send the item to.  For instance, smart inserting coal into a furnace will attempt to put it in the fuel category, as opposed to the input category.
+
+Bulk transfer: CONTROL + OPEN SQUARE BRACKET
+
+Note: When you have a building inventory open, pressing CONTROL + OPEN SQUARE BRACKET for a selected item in an inventory will cause an attempt to transfer the entire supply of this item to the other inventory. Non-transferred items will remain in their original inventory. Similarly, pressing CONTROL + CLOSE SQUARE BRACKET will try to transfer half of the entire supply of the selected item.
+
+Note 2: When you have a building inventory open and select an empty slot, pressing CONTROL + OPEN SQUARE BRACKET will cause an attempt to transfer the full contents of the selected inventory into the other inventory. This is useful for easily filling up labs and assembling machines with everything applicable from your own inventory instead of searching for items individually. Non-transferred items will remain in their original inventory. Similarly, pressing CONTROL + CLOSE SQUARE BRACKET on an empty slot will try to transfer half of the entire supply of every item.
+
+Modify chest inventory slot limits: PAGE UP or PAGE DOWN. 
+
+Note: You can hold SHIFT to modify limits by increments of 5 instead of 1 and you can hold CONTROL to set the limit to maximum or zero.
 
 
 ### Crafting
@@ -253,7 +263,6 @@ If you want to help others or discuss the development of the mod or the wiki, fe
 # Changes
 
 An updated changelog can be found [here](https://github.com/Crimso777/Factorio-Access/blob/main/CHANGES.md)
-
 
 
 # Donations

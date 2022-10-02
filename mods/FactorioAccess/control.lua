@@ -478,7 +478,7 @@ function ent_info(pindex, ent, description)
          end
          capacity = capacity + cap_add   
       end
-      result = result .. get_power_string(power*60) .. " / " .. get_power_string(capacity*60) .. " "
+      result = result .. get_power_string(power*60) .. " out of " .. get_power_string(capacity*60) .. " capacity, "
    end
    if ent.drop_position ~= nil then
       local position = table.deepcopy(ent.drop_position)
@@ -1570,18 +1570,18 @@ function get_power_string(power)
    result = ""
    if power > 1000000000000 then
       power = power/1000000000000
-      result = result .. string.format(" %.3f Terawatts", power) 
+      result = result .. string.format(" %.2f Terawatts", power) 
    elseif power > 1000000000 then
       power = power / 1000000000
-      result = result .. string.format(" %.3f Gigawatts", power) 
+      result = result .. string.format(" %.2f Gigawatts", power) 
    elseif power > 1000000 then
       power = power / 1000000
-      result = result .. string.format(" %.3f Megawatts", power) 
+      result = result .. string.format(" %.2f Megawatts", power) 
    elseif power > 1000 then
       power = power / 1000
-      result = result .. string.format(" %.3f Kilowatts", power) 
+      result = result .. string.format(" %.1f Kilowatts", power) 
    else
-      result = result .. string.format(" %.3f Watts", power) 
+      result = result .. string.format(" %.1f Watts", power) 
    end
    return result
 end

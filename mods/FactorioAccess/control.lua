@@ -4783,6 +4783,7 @@ end
 --[[Attempts to build the item in hand.
 * Does nothing if the hand is empty or the item is not a place-able entity.
 * If the item is an offshore pump, calls a different, special function for it.
+* You can offset the building with respect to the direction the player is facing.
 ]]
 function build_item_in_hand(pindex, offset_val)
    local stack = game.get_player(pindex).cursor_stack

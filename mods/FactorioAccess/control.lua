@@ -2603,6 +2603,7 @@ function initialize(player)
    faplayer.item_selection = faplayer.item_selection or false
    faplayer.item_cache = faplayer.item_cache or {}
    faplayer.zoom = faplayer.zoom or 1
+   faplayer.walk_and_build = faplayer.walk_and_build or false
 
    faplayer.nearby = faplayer.nearby or {
       index = 0,
@@ -3561,6 +3562,10 @@ function move(direction,pindex)
          end
          read_tile(pindex)
          target(pindex)
+         
+         if players[pindex].walk_and_build then
+            build_item_in_hand(pindex, -2)
+         end
       else
          printout("Tile Occupied", pindex)
          target(pindex)
@@ -4650,93 +4655,9 @@ input.select(1, 0)
    else
       local stack = game.get_player(pindex).cursor_stack
       if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.name ~= "offshore-pump" then
-         local ent = stack.prototype.place_result
-         local position = {x,y}
-
-         if not(players[pindex].cursor) then
-            position = game.get_player(pindex).position
-         if players[pindex].building_direction < 0 then
-            players[pindex].building_direction = 0
-         end
-         if players[pindex].player_direction == defines.direction.north then
-            if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
-               position.y = position.y + math.ceil(2* ent.selection_box.left_top.y)/2 - 1
-            elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
-               position.y = position.y + math.ceil(2* ent.selection_box.left_top.x)/2 - 1
-            end
-         elseif players[pindex].player_direction == defines.direction.south then
-            if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
-               position.y = position.y + math.ceil(2* ent.selection_box.right_bottom.y)/2 + .5
-            elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
-               position.y = position.y + math.ceil(2* ent.selection_box.right_bottom.x)/2 + .5
-            end
-         elseif players[pindex].player_direction == defines.direction.west then
-            if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
-               position.x = position.x + math.ceil(2* ent.selection_box.left_top.x)/2 - 1
-            elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
-               position.x = position.x + math.ceil(2* ent.selection_box.left_top.y)/2 - 1
-            end
-
-         elseif players[pindex].player_direction == defines.direction.east then
-            if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
-               position.x = position.x + math.ceil(2* ent.selection_box.right_bottom.x)/2 + .5
-            elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
-               position.x = position.x + math.ceil(2* ent.selection_box.right_bottom.y)/2 + .5
-            end
-         end     
-         else
-            position = {x = math.floor(players[pindex].cursor_pos.x), y = math.floor(players[pindex].cursor_pos.y)}
-            local box = ent.selection_box
-               box.right_bottom = {x = (math.ceil(box.right_bottom.x * 2))/2, y = (math.ceil(box.right_bottom.y * 2))/2}
-            if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
-               position.x = position.x + box.right_bottom.x
-               position.y = position.y + box.right_bottom.y
-            else
-               position.x = position.x + box.right_bottom.y
-               position.y = position.y + box.right_bottom.x
-            end
-         end
-         local building = {
-            position = position,
-            direction = players[pindex].building_direction * 2,
-            alt = false
-         }
-         building.position = game.get_player(pindex).surface.find_non_colliding_position(ent.name, position, .5, .05)
-         if building.position ~= nil and game.get_player(pindex).can_build_from_cursor(building) then 
-            game.get_player(pindex).build_from_cursor(building)  
-            read_tile(pindex)
-         else
-            printout("Cannot place that there.", pindex)
-            print(players[pindex].player_direction .. " " .. game.get_player(pindex).character.position.x .. " " .. game.get_player(pindex).character.position.y .. " " .. players[pindex].cursor_pos.x .. " " .. players[pindex].cursor_pos.y .. " " .. position.x .. " " .. position.y)
-         end
+         build_item_in_hand(pindex, 0)
       elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
-         local ent = stack.prototype.place_result
-         players[pindex].pump.positions = {}
-         local initial_position = game.get_player(pindex).position
-         initial_position.x = math.floor(initial_position.x) 
-         initial_position.y = math.floor(initial_position.y)
-         for i1 = -10, 10 do
-            for i2 = -10, 10 do
-               for i3 = 0, 3 do
-               local position = {x = initial_position.x + i1, y = initial_position.y + i2}
-                  if game.get_player(pindex).can_build_from_cursor{name = "offshore-pump", position = position, direction = i3 * 2} then
-                     table.insert(players[pindex].pump.positions, {position = position, direction = i3*2})
-                  end
-               end
-            end
-         end
-         if #players[pindex].pump.positions == 0 then
-            printout("No available positions.  Try moving closer to water.", pindex)
-         else
-            players[pindex].in_menu = true
-            players[pindex].menu = "pump"
-            printout("There are " .. #players[pindex].pump.positions .. " possibilities, scroll up and down, then select one to build, or press e to cancel.", pindex)
-            table.sort(players[pindex].pump.positions, function(k1, k2) 
-               return distance(initial_position, k1.position) < distance(initial_position, k2.position)
-            end)
-
-            players[pindex].pump.index = 0
-         end
+         build_offshore_pump_in_hand(pindex)
       elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
          local ent = players[pindex].tile.ents[1]
          if ent.operable and ent.prototype.is_building then
@@ -4857,6 +4778,122 @@ input.select(1, 0)
    end
 end
 )
+
+
+--[[Attempts to build the item in hand.
+* Does nothing if the hand is empty or the item is not a place-able entity.
+* If the item is an offshore pump, calls a different, special function for it.
+]]
+function build_item_in_hand(pindex, offset_val)
+   local stack = game.get_player(pindex).cursor_stack
+   local offset = offset_val or 0
+   
+   if stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
+      build_offshore_pump_in_hand(pindex)
+      return
+   end
+   
+   if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.name ~= "offshore-pump" then
+      local ent = stack.prototype.place_result
+      local position = {x,y}
+
+      if not(players[pindex].cursor) then
+         position = game.get_player(pindex).position
+      if players[pindex].building_direction < 0 then
+         players[pindex].building_direction = 0
+      end
+      if players[pindex].player_direction == defines.direction.north then
+         if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
+            position.y = position.y + math.ceil(2* ent.selection_box.left_top.y)/2 - 1 - offset
+         elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
+            position.y = position.y + math.ceil(2* ent.selection_box.left_top.x)/2 - 1 - offset
+         end
+      elseif players[pindex].player_direction == defines.direction.south then
+         if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
+            position.y = position.y + math.ceil(2* ent.selection_box.right_bottom.y)/2 + .5 + offset
+         elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
+            position.y = position.y + math.ceil(2* ent.selection_box.right_bottom.x)/2 + .5 + offset
+         end
+      elseif players[pindex].player_direction == defines.direction.west then
+         if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
+            position.x = position.x + math.ceil(2* ent.selection_box.left_top.x)/2 - 1 - offset
+         elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
+            position.x = position.x + math.ceil(2* ent.selection_box.left_top.y)/2 - 1 - offset
+         end
+
+      elseif players[pindex].player_direction == defines.direction.east then
+         if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
+            position.x = position.x + math.ceil(2* ent.selection_box.right_bottom.x)/2 + .5 + offset
+         elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
+            position.x = position.x + math.ceil(2* ent.selection_box.right_bottom.y)/2 + .5 + offset
+         end
+      end     
+      else
+         position = {x = math.floor(players[pindex].cursor_pos.x), y = math.floor(players[pindex].cursor_pos.y)}
+         local box = ent.selection_box
+            box.right_bottom = {x = (math.ceil(box.right_bottom.x * 2))/2, y = (math.ceil(box.right_bottom.y * 2))/2}
+         if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
+            position.x = position.x + box.right_bottom.x
+            position.y = position.y + box.right_bottom.y
+         else
+            position.x = position.x + box.right_bottom.y
+            position.y = position.y + box.right_bottom.x
+         end
+      end
+      local building = {
+         position = position,
+         direction = players[pindex].building_direction * 2,
+         alt = false
+      }
+      building.position = game.get_player(pindex).surface.find_non_colliding_position(ent.name, position, .5, .05)
+      if building.position ~= nil and game.get_player(pindex).can_build_from_cursor(building) then 
+         game.get_player(pindex).build_from_cursor(building)  
+         read_tile(pindex)
+      else
+         printout("Cannot place that there.", pindex)
+         print(players[pindex].player_direction .. " " .. game.get_player(pindex).character.position.x .. " " .. game.get_player(pindex).character.position.y .. " " .. players[pindex].cursor_pos.x .. " " .. players[pindex].cursor_pos.y .. " " .. position.x .. " " .. position.y)
+      end
+   end
+end
+
+--[[Assisted building function for offshore pumps.
+* Called as a special case by build_item_in_hand
+]]
+function build_offshore_pump_in_hand(pindex)
+   local stack = game.get_player(pindex).cursor_stack
+
+   if stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
+      local ent = stack.prototype.place_result
+      players[pindex].pump.positions = {}
+      local initial_position = game.get_player(pindex).position
+      initial_position.x = math.floor(initial_position.x) 
+      initial_position.y = math.floor(initial_position.y)
+      for i1 = -10, 10 do
+         for i2 = -10, 10 do
+            for i3 = 0, 3 do
+            local position = {x = initial_position.x + i1, y = initial_position.y + i2}
+               if game.get_player(pindex).can_build_from_cursor{name = "offshore-pump", position = position, direction = i3 * 2} then
+                  table.insert(players[pindex].pump.positions, {position = position, direction = i3*2})
+               end
+            end
+         end
+      end
+      if #players[pindex].pump.positions == 0 then
+         printout("No available positions.  Try moving closer to water.", pindex)
+      else
+         players[pindex].in_menu = true
+         players[pindex].menu = "pump"
+         printout("There are " .. #players[pindex].pump.positions .. " possibilities, scroll up and down, then select one to build, or press e to cancel.", pindex)
+         table.sort(players[pindex].pump.positions, function(k1, k2) 
+            return distance(initial_position, k1.position) < distance(initial_position, k2.position)
+         end)
+
+         players[pindex].pump.index = 0
+      end
+   end
+end
+
+
 script.on_event("shift-click", function(event)
    pindex = event.player_index
       if not check_for_player(pindex) then
@@ -5499,6 +5536,20 @@ script.on_event("toggle-walk",function(event)
    end
    players[pindex].walk = (players[pindex].walk + 1) % 3
    printout(walk_type_speech[players[pindex].walk +1], pindex)
+end)
+
+--Toggle building while walking
+script.on_event("toggle-walk-and-build", function(event)
+   pindex = event.player_index
+   if not (players[pindex].in_menu == true or players[pindex].cursor) then
+      if players[pindex].walk_and_build == true then
+         players[pindex].walk_and_build = false
+         printout("Disabled walk and build", pindex)
+      else
+         players[pindex].walk_and_build = true
+         printout("Enabled walk and build", pindex)
+      end
+   end
 end)
 
 script.on_event("recalibrate",function(event)

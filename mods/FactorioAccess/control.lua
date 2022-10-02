@@ -3272,53 +3272,6 @@ function move(direction,pindex)
    end
 end
 
---Copy of part of move function, but directly take a step backward without turning.
-function step_backward(pindex)
-   local direction = players[pindex].player_direction
-   if players[pindex].walk == 2 then
-      return
-   end
-   local first_player = game.get_player(pindex)
-   local pos = players[pindex].position
-   local new_pos = offset_position(pos,direction,-1)
-   if players[pindex].player_direction == direction then
-      can_port = first_player.surface.can_place_entity{name = "character", position = new_pos}
-      if can_port then
-         if players[pindex].walk == 1 then
-            table.insert(players[pindex].move_queue,{direction=direction,dest=new_pos})
-         else
-            teleported = first_player.teleport(new_pos)
-            if not teleported then
-               printout("Teleport Failed", pindex)
-            end
-         end
-         players[pindex].position = new_pos
-         players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction,-1)
-         if players[pindex].tile.previous ~= nil
-            and players[pindex].tile.previous.valid
-            and players[pindex].tile.previous.type == "transport-belt"
-         then
-            game.get_player(pindex).play_sound{path = "utility/metal_walking_sound"}
-         else
-            local tile = game.get_player(pindex).surface	.get_tile(new_pos.x, new_pos.y)
-            local sound_path = "tile-walking/" .. tile.name
-            if game.is_valid_sound_path(sound_path) then
-               game.get_player(pindex).play_sound{path = "tile-walking/" .. tile.name}
-            end
-         end
-         read_tile(pindex)
-         target(pindex)
-      else
-         printout("Tile Occupied", pindex)
-         target(pindex)
-      end
-   end
-   
-   if players[pindex].walk_and_build then
-      build_item_in_hand(pindex)
-   end
-end
-
 
 function move_key(direction,event)
    local pindex = event.player_index
@@ -5181,19 +5134,13 @@ script.on_event("CAPSLOCK", function(event)
    end
 end)
 
---Take a step back
-script.on_event("BACKSPACE", function(event)
-   step_backward(event.player_index)
-end)
-
 
 --[[Moves the player forward and places the item in hand. 
 * Needed mainly for efficiently placing pipes and transport belts.
 * If you set the parameter "forward" to 0, the engineer takes a step back and then tries to place the item. Great for laying down rows of machines.
 ]]
-function move_drag_place(event, forward)
+function walk_and_build(event)
    local direction = players[event.player_index].player_direction
-   forward =  forward or 1
    local pindex = event.player_index
    if not check_for_player(pindex) or players[pindex].menu == "prompt" then
       return 
@@ -5204,11 +5151,7 @@ function move_drag_place(event, forward)
    end
    
    --Move the player
-   if forward == 1 then
-      move_key(direction, event)
-   else
-      step_backward(event.player_index)
-   end
+   move_key(direction, event)
    
    --Build the item in hand
    build_item_in_hand(pindex)

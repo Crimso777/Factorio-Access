@@ -2514,8 +2514,9 @@ function read_tile(pindex)
    printout(result, pindex)
 end
 
-
+--Read the current co-ordinates of the cursor on the map or in a menu. Provides extra information in some menus.
 function read_coords(pindex)
+   local ent = players[pindex].tile.ents[players[pindex].tile.index - 1]
    if not(players[pindex].in_menu) then
       printout(math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
    elseif players[pindex].menu == "inventory" then
@@ -2524,6 +2525,25 @@ function read_coords(pindex)
       if x == 0 then
          x = x + 10
          y = y - 1
+      end
+      printout(x .. ", " .. y, pindex)
+   elseif players[pindex].menu == "building" and (ent.type == "container" or ent.type == "logistic-container") then
+      local x = -1
+      local y = -1
+      if 1 == 1 then --Setting 1: Chest rows are 8 wide
+         x = players[pindex].building.index %8
+         y = math.floor(players[pindex].building.index/8) + 1
+         if x == 0 then
+            x = x + 8
+            y = y - 1
+         end
+      else --Setting 2: Chest rows are 10 wide
+         x = players[pindex].building.index %10
+         y = math.floor(players[pindex].building.index/10) + 1
+         if x == 0 then
+            x = x + 10
+            y = y - 1
+         end
       end
       printout(x .. ", " .. y, pindex)
    elseif players[pindex].menu == "crafting" then

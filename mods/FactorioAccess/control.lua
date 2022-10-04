@@ -5245,7 +5245,7 @@ end
 )
 
 
---Reads the custom written description for an item**
+--Reads the custom written description for an item
 script.on_event("item-info", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then

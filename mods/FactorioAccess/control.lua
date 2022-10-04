@@ -5245,6 +5245,7 @@ end
 )
 
 
+--Reads the custom written description for an item**
 script.on_event("item-info", function(event)
    pindex = event.player_index
       if not check_for_player(pindex) then
@@ -5302,6 +5303,7 @@ script.on_event("item-info", function(event)
             printout("Blank", pindex)
          end
       elseif players[pindex].menu == "building" then
+         local ent = players[pindex].tile.ents[1]
          if players[pindex].building.recipe_selection then
             local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
             if recipe ~= nil and #recipe.products > 0 then
@@ -5309,6 +5311,20 @@ script.on_event("item-info", function(event)
                local product = game.item_prototypes[product_name] or game.fluid_prototypes[product_name] 
                local str = ""
                str = product.localised_description
+               printout(str, pindex)
+            else
+               printout("Blank", pindex)
+            end
+         elseif ent.type == "container" or ent.type == "logistic-container" then
+            local inventory = ent.get_inventory(defines.inventory.chest)
+            local stack = inventory[players[pindex].building.index]
+            if stack.valid_for_read and stack.valid == true then
+               local str = ""
+               if stack.prototype.place_result ~= nil then
+                  str = stack.prototype.place_result.localised_description
+               else
+                  str = stack.prototype.localised_description
+               end
                printout(str, pindex)
             else
                printout("Blank", pindex)

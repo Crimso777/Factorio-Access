@@ -5248,10 +5248,16 @@ end
 --Reads the custom written description for an item**
 script.on_event("item-info", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
-   if players[pindex].in_menu then
+   if not players[pindex].in_menu then
+      local ent = players[pindex].tile.ents[1]
+      if ent ~= nil then
+         local str = ent.localised_description
+         printout(str, pindex)
+      end
+   elseif players[pindex].in_menu then
       if players[pindex].menu == "inventory" then
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
          if stack.valid_for_read and stack.valid == true then

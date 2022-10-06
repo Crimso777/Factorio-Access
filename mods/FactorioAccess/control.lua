@@ -5706,72 +5706,71 @@ script.on_event("scan-selection-down", function(event)
    end
 end)
 
---Returns the curved rail direction that would rotate 45 degrees to the right from the input direction and the end rail direction too
-function get_curve_rail_right_dir(dir_in)
-   local int curve_rail_dir = -1
-   local int end_rail_dir = -1
-   if dir_in == 0 then
-      int curve_rail_dir = 1
-      int end_rail_dir = 7
-   elseif dir_in == 1 then
-      int curve_rail_dir = 6
-      int end_rail_dir = 2
-   elseif dir_in == 2 then
-      int curve_rail_dir = 3
-      int end_rail_dir = 1
-   elseif dir_in == 3 then
-      int curve_rail_dir = 0
-      int end_rail_dir = 4
-   elseif dir_in == 4 then
-      int curve_rail_dir = 5
-      int end_rail_dir = 3
-   elseif dir_in == 5 then
-      int curve_rail_dir = 2
-      int end_rail_dir = 6
-   elseif dir_in == 6 then
-      int curve_rail_dir = 7
-      int end_rail_dir = 5
-   elseif dir_in == 7 then
-      int curve_rail_dir = 4
-      int end_rail_dir = 0
-   else
-      int curve_rail_dir = -2
-      int end_rail_dir = -2
+
+script.on_event("g-key", function(event)
+   local pos = event.player.position
+   local dir = 0 --north for now
+   local pindex = event.player_index
+   
+   build_rail_turn_90_degrees_right(pos, dir, pindex)
+end)
+
+
+--Builds a 90 degree rail turn to the right as a 14x14 object. Enter the start tile position and the direction to face when starting to turn right. 0 for North, 2 for East, etc.
+function build_rail_turn_90_degrees_right(pos, dir, pindex)
+   --1. Firstly, check if the player has enough rails to place this (11 units)
+   --todo check
+   rail_count = 0
+   if rail_count < 11 then
+      printout("You need at least 11 rails in hand to build this turn.", pindex)
+      return
    end
-   return curve_rail_dir, end_rail_dir
+
+   --2. Secondly, check if the space is clear (depends on direction). Simple version is a 14x14 square in the appropriate spot having 0 non-rail entities in it.
+   local x_add = 0
+   local x_add = 0
+   if dir == 0  then
+      x_add =  14
+      y_add = -14
+   elseif dir == 2 then
+      x_add =  14
+      y_add =  14
+   elseif dir == 4 then
+      x_add = -14
+      y_add =  14
+   elseif dir == 6 then
+      x_add = -14
+      y_add = -14
+   end
+   
+   --todo scan the area (pos.x, pos.y) to (pos.x + x_add, pos.y + y_add)
+   
+   ents_found = 0
+   --todo iterate the entity list and subtract rails from it
+   if ents_found > 0 then
+      printout("Building area occupied.", pindex)
+      return
+   end
+   
+   --todo later: maybe scan additional areas to exclude from the previous area, since not every signle tile of the 14x14 square is actually used. For example, the inner 9x9 and the outer 4x4 squares are unused.
+   
+   --3. Thirdly build the five rail entities
+   if dir == 0 then
+      --todo build a straight rail of direction 0, with the top left corner at 0,-2 with respect to pos 
+      --todo build a curved rail of direction 1, with the top left corner at 0,-10 with respect to pos
+      --todo build a straight rail of direction 7, with the top left corner at 4,-10 with respect to pos
+      --todo build a curved rail of direction 6, with the top left corner at 4,-14 with respect to pos
+      --todo build a straight rail of direction 6, with the top left corner at 12,-14 with respect to pos
+   elseif dir == 2 then
+      --todo similar to above
+   elseif dir == 4 then
+      --todo similar to above
+   elseif dir == 6 then
+      --todo similar to above
+   end
 end
 
---Returns the curved rail direction that would rotate 45 degrees to the left from the input direction and the end rail direction too
-function get_curve_rail_left_dir(dir_in)
-   local int curve_rail_dir = -1
-   local int end_rail_dir = -1
-   if dir_in == 0 then
-      int curve_rail_dir = 0
-      int end_rail_dir = 
-   elseif dir_in == 1 then
-      int curve_rail_dir = 5
-      int end_rail_dir = 0
-   elseif dir_in == 2 then
-      int curve_rail_dir = 2
-      int end_rail_dir = 
-   elseif dir_in == 3 then
-      int curve_rail_dir = 7
-      int end_rail_dir = 2
-   elseif dir_in == 4 then
-      int curve_rail_dir = 4
-      int end_rail_dir = 
-   elseif dir_in == 5 then
-      int curve_rail_dir = 1
-      int end_rail_dir = 4
-   elseif dir_in == 6 then
-      int curve_rail_dir = 6
-      int end_rail_dir = 
-   elseif dir_in == 7 then
-      int curve_rail_dir = 3
-      int end_rail_dir = 0
-   else
-      int curve_rail_dir = -2
-      int end_rail_dir = -2
-   end
-   return curve_rail_dir, end_rail_dir
+--Builds a 90 degree rail turn to the left as a 14x14 object. Enter the start tile position and the direction to face when starting to turn left. 0 for North, 2 for East, etc.
+function build_rail_turn_90_degrees_left(pos, dir, pindex)
+   --todo copy and tweak
 end

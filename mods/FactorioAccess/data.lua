@@ -605,4 +605,11 @@ data:extend({
     consuming = "none"
 }
 
+{
+    type = "custom-input",
+    name = "g-key",
+    key_sequence = "G",
+    consuming = "none"
+}
+
 })

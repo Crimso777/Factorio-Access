@@ -5705,3 +5705,73 @@ script.on_event("scan-selection-down", function(event)
 	  printout(result, pindex)
    end
 end)
+
+--Returns the curved rail direction that would rotate 45 degrees to the right from the input direction and the end rail direction too
+function get_curve_rail_right_dir(dir_in)
+   local int curve_rail_dir = -1
+   local int end_rail_dir = -1
+   if dir_in == 0 then
+      int curve_rail_dir = 1
+      int end_rail_dir = 7
+   elseif dir_in == 1 then
+      int curve_rail_dir = 6
+      int end_rail_dir = 2
+   elseif dir_in == 2 then
+      int curve_rail_dir = 3
+      int end_rail_dir = 1
+   elseif dir_in == 3 then
+      int curve_rail_dir = 0
+      int end_rail_dir = 4
+   elseif dir_in == 4 then
+      int curve_rail_dir = 5
+      int end_rail_dir = 3
+   elseif dir_in == 5 then
+      int curve_rail_dir = 2
+      int end_rail_dir = 6
+   elseif dir_in == 6 then
+      int curve_rail_dir = 7
+      int end_rail_dir = 5
+   elseif dir_in == 7 then
+      int curve_rail_dir = 4
+      int end_rail_dir = 0
+   else
+      int curve_rail_dir = -2
+      int end_rail_dir = -2
+   end
+   return curve_rail_dir, end_rail_dir
+end
+
+--Returns the curved rail direction that would rotate 45 degrees to the left from the input direction and the end rail direction too
+function get_curve_rail_left_dir(dir_in)
+   local int curve_rail_dir = -1
+   local int end_rail_dir = -1
+   if dir_in == 0 then
+      int curve_rail_dir = 0
+      int end_rail_dir = 
+   elseif dir_in == 1 then
+      int curve_rail_dir = 5
+      int end_rail_dir = 0
+   elseif dir_in == 2 then
+      int curve_rail_dir = 2
+      int end_rail_dir = 
+   elseif dir_in == 3 then
+      int curve_rail_dir = 7
+      int end_rail_dir = 2
+   elseif dir_in == 4 then
+      int curve_rail_dir = 4
+      int end_rail_dir = 
+   elseif dir_in == 5 then
+      int curve_rail_dir = 1
+      int end_rail_dir = 4
+   elseif dir_in == 6 then
+      int curve_rail_dir = 6
+      int end_rail_dir = 
+   elseif dir_in == 7 then
+      int curve_rail_dir = 3
+      int end_rail_dir = 0
+   else
+      int curve_rail_dir = -2
+      int end_rail_dir = -2
+   end
+   return curve_rail_dir, end_rail_dir
+end

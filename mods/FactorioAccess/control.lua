@@ -351,12 +351,20 @@ function ent_info(pindex, ent, description)
       result = result .. ", Facing "
       if ent.direction == 0 then 
          result = result .. "North "
-      elseif ent.direction == 4 then
-         result = result .. "South "
-      elseif ent.direction == 6 then
-         result = result .. "West "
+      elseif ent.direction == 1 then
+         result = result .. "Northeast "
       elseif ent.direction == 2 then
          result = result .. "East "
+      elseif ent.direction == 3 then
+         result = result .. "Southeast "
+      elseif ent.direction == 4 then
+         result = result .. "South "
+      elseif ent.direction == 5 then
+         result = result .. "Southwest "
+      elseif ent.direction == 6 then
+         result = result .. "West "
+      elseif ent.direction == 7 then
+         result = result .. "Northwest "
       end
    end
    if ent.prototype.type == "generator" then

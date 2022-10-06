@@ -5718,6 +5718,9 @@ end)
 
 --Builds a 90 degree rail turn to the right as a 14x14 object. Enter the start tile position and the direction to face when starting to turn right. 0 for North, 2 for East, etc.
 function build_rail_turn_90_degrees_right(pos, dir, pindex)
+   local player = players[pindex]
+   local surface = player.surface
+   
    --1. Firstly, check if the player has enough rails to place this (11 units)
    --todo check how many rails the player has in their hand
    rail_count = 100
@@ -5759,7 +5762,9 @@ function build_rail_turn_90_degrees_right(pos, dir, pindex)
    --3. Thirdly build the five rail entities
    if dir == 0 then
       --todo build a straight rail of direction 0, with the top left corner at 0,-2 with respect to pos 
+      surface.create_entity{name = "rail", position = {pos.x, pos.y-2}, direction = 0, force = game.forces.player}
       --todo build a curved rail of direction 1, with the top left corner at 0,-10 with respect to pos
+      surface.create_entity{name = "rail", position = {pos.x+10, pos.y-10}, direction = 1, force = game.forces.player}
       --todo build a straight rail of direction 7, with the top left corner at 4,-10 with respect to pos
       --todo build a curved rail of direction 6, with the top left corner at 4,-14 with respect to pos
       --todo build a straight rail of direction 6, with the top left corner at 12,-14 with respect to pos
@@ -5770,6 +5775,8 @@ function build_rail_turn_90_degrees_right(pos, dir, pindex)
    elseif dir == 6 then
       --todo similar to above
    end
+   
+   --4. Unless done automatically, remove 11 rails from the player's hand
 end
 
 --Builds a 90 degree rail turn to the left as a 14x14 object. Enter the start tile position and the direction to face when starting to turn left. 0 for North, 2 for East, etc.

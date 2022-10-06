@@ -5707,19 +5707,18 @@ script.on_event("scan-selection-down", function(event)
 end)
 
 
-script.on_event("g-key", function(event)
-   local pos = event.player.position
-   local dir = 0 --north for now
+script.on_event("g-key", function(event)--***
    local pindex = event.player_index
+   local dir = 0 --north for now
    
-   build_rail_turn_90_degrees_right(pos, dir, pindex)
+   build_rail_turn_90_degrees_right(dir, pindex)
 end)
 
 
 --Builds a 90 degree rail turn to the right as a 14x14 object. Enter the start tile position and the direction to face when starting to turn right. 0 for North, 2 for East, etc.
-function build_rail_turn_90_degrees_right(pos, dir, pindex)
-   local player = players[pindex]
-   local surface = player.surface
+function build_rail_turn_90_degrees_right(dir, pindex)
+   local surf = game.get_player(pindex).surface
+   local pos = players[pindex].position
    
    --1. Firstly, check if the player has enough rails to place this (11 units)
    --todo check how many rails the player has in their hand
@@ -5728,8 +5727,16 @@ function build_rail_turn_90_degrees_right(pos, dir, pindex)
       printout("You need at least 11 rails in hand to build this turn.", pindex)
       return
    end
-
-   --2. Secondly, check if the space is clear (depends on direction). Simple version is a 14x14 square in the appropriate spot having 0 non-rail entities in it.
+   
+   --2. Secondly, check if the player is on a straight rail
+   local ent = players[pindex].tile.ents[1]
+   if ent == nil or ent.name ~= "straight-rail" then
+      printout("Must start at a straight rail.", pindex)
+      return
+   end
+   
+   
+   --3. Thridly, check if the space is clear (depends on direction). Simple version is a 14x14 square in the appropriate spot having 0 non-rail entities in it.
    local x_add = 0
    local x_add = 0
    if dir == 0  then
@@ -5759,15 +5766,13 @@ function build_rail_turn_90_degrees_right(pos, dir, pindex)
    
    --todo later: maybe scan additional areas to exclude from the previous area, since not every signle tile of the 14x14 square is actually used. For example, the inner 9x9 and the outer 4x4 squares are unused.
    
-   --3. Thirdly build the five rail entities
-   if dir == 0 then
-      --todo build a straight rail of direction 0, with the top left corner at 0,-2 with respect to pos 
-      surface.create_entity{name = "rail", position = {pos.x, pos.y-2}, direction = 0, force = game.forces.player}
-      --todo build a curved rail of direction 1, with the top left corner at 0,-10 with respect to pos
-      surface.create_entity{name = "rail", position = {pos.x+10, pos.y-10}, direction = 1, force = game.forces.player}
-      --todo build a straight rail of direction 7, with the top left corner at 4,-10 with respect to pos
-      --todo build a curved rail of direction 6, with the top left corner at 4,-14 with respect to pos
-      --todo build a straight rail of direction 6, with the top left corner at 12,-14 with respect to pos
+   --4. Finally build the five rail entities to create the turn
+   if dir == 0 then 
+      surf.create_entity{name = "straight-rail", position = {pos.x, pos.y-2}, direction = 0, force = game.forces.player}
+      surf.create_entity{name = "curved-rail", position = {pos.x+2, pos.y-6}, direction = 1, force = game.forces.player}--x+0, y-10 ; <x>+2,<y>-4 vert curved rail
+      surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y-10}, direction = 7, force = game.forces.player}
+      surf.create_entity{name = "curved-rail", position = {pos.x+8, pos.y-12}, direction = 6, force = game.forces.player} --x+4, y-14; <x>+4,<y>-2 horz curved rail
+      surf.create_entity{name = "straight-rail", position = {pos.x+12, pos.y-14}, direction = 2, force = game.forces.player}
    elseif dir == 2 then
       --todo similar to above
    elseif dir == 4 then
@@ -5776,7 +5781,8 @@ function build_rail_turn_90_degrees_right(pos, dir, pindex)
       --todo similar to above
    end
    
-   --4. Unless done automatically, remove 11 rails from the player's hand
+   --5 Remove 11 rail units from the player's hand
+   --todo
 end
 
 --Builds a 90 degree rail turn to the left as a 14x14 object. Enter the start tile position and the direction to face when starting to turn left. 0 for North, 2 for East, etc.

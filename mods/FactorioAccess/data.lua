@@ -603,7 +603,7 @@ data:extend({
     name = "open-structure-travel",
     key_sequence = "CONTROL + S",
     consuming = "none"
-}
+},
 
 {
     type = "custom-input",

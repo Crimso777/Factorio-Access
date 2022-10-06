@@ -5719,8 +5719,8 @@ end)
 --Builds a 90 degree rail turn to the right as a 14x14 object. Enter the start tile position and the direction to face when starting to turn right. 0 for North, 2 for East, etc.
 function build_rail_turn_90_degrees_right(pos, dir, pindex)
    --1. Firstly, check if the player has enough rails to place this (11 units)
-   --todo check
-   rail_count = 0
+   --todo check how many rails the player has in their hand
+   rail_count = 100
    if rail_count < 11 then
       printout("You need at least 11 rails in hand to build this turn.", pindex)
       return
@@ -5743,10 +5743,12 @@ function build_rail_turn_90_degrees_right(pos, dir, pindex)
       y_add = -14
    end
    
-   --todo scan the area (pos.x, pos.y) to (pos.x + x_add, pos.y + y_add)
+   --todo scan the area for entities: (pos.x, pos.y) to (pos.x + x_add, pos.y + y_add)
    
    ents_found = 0
+   
    --todo iterate the entity list and subtract rails from it
+   
    if ents_found > 0 then
       printout("Building area occupied.", pindex)
       return

@@ -5958,6 +5958,16 @@ function build_straight_rail_intersection_with_signals(dir, pindex)
       printout("Must start at a straight rail.", pindex)
       return
    end
+   --Also check if player and rail face the same direction todo fix and copy to all 4 rail placement functions
+   if ent ~= nil and ent.name == "straight-rail" then
+      if (ent.direction == 0 or ent.direction == 2) and (players[pindex].player_direction == 1 or players[pindex].player_direction == 3)  then
+         printout("Must face the same direction axis as the straight rail.", pindex)
+         return
+      elseif (ent.direction == 1 or ent.direction == 3) and (players[pindex].player_direction == 0 or players[pindex].player_direction == 2)  then
+         printout("Must face the same direction axis as the straight rail.", pindex)
+         return
+      end
+   end
    
    --3. Thridly, check if the space is clear (depends on direction). Simple version is a 8x8 square centered on the player.
    --todo scan the area for entities: (pos.x-4, pos.y-4) to (pos.x+4, pos.y+4)

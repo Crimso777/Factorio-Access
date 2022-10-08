@@ -5983,7 +5983,7 @@ function build_straight_rail_intersection_with_signals(dir, pindex)
    build_straight_rail_intersection(dir, pindex)     
    
    --5 Finally build the free signals
-      if dir == 0 then 
+   if dir == 0 then 
       --todo signal placement
       
    elseif dir == 2 then
@@ -5996,4 +5996,87 @@ function build_straight_rail_intersection_with_signals(dir, pindex)
       --todo signal placement
       
    end
+end
+
+
+--Appends a new straight or diagonal rail to a rail end found around the input position
+function append_rail(pos, pindex)
+   local surf = game.get_player(pindex).surface
+   
+   --0 Check if there is at least 1 rail in hand, else return
+
+   --1 Scan the area around within a 2 tile radius of pos
+
+   --2 For the first straight rail found, get the end rail and its exit direction using "get_rail_segment_end"
+   end_rail = 0
+   dir = 0
+
+   --3 If the end rail is not within 2 tiles of pos, try the other end
+
+   --4 If also not within 2 tiles, return a small error beep
+
+   --5 Else it is an end rail. Get its position and find the correct position and direction for the appended rail.
+   end_rail_pos = 0
+   append_dir = -1
+   append_pos = end_rail_pos
+
+   if end_rail.name == "straight-rail" then
+      if end_rail_dir == 0 then 
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 1 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 2 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 3 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 4 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 5 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 6 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 7 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      end
+   elseif end_rail.name == "curved-rail" then
+      if end_rail_dir == 0 then 
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 1 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 2 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 3 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 4 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 5 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 6 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      elseif end_rail_dir == 7 then
+         append_dir = -1
+         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+      end
+   end
+
+   --6. Check if the selected 2x2 space is free for building, else return
+   
+   --7. Finally, create the appended rail and subtract 1 rail from the hand.
+   surf.create_entity{name = "straight-rail", position = append_pos, direction = append_dir, force = game.forces.player}
+
 end

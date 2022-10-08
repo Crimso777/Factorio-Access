@@ -2514,16 +2514,41 @@ function read_tile(pindex)
    printout(result, pindex)
 end
 
-
+--Read the current co-ordinates of the cursor on the map or in a menu. Provides extra information in some menus.
 function read_coords(pindex)
+   local ent = players[pindex].building.ent
+   local offset = 0
+   if players[pindex].menu == "building" and players[pindex].building.recipe_list ~= nil then
+      offset = 1
+   end
    if not(players[pindex].in_menu) then
       printout(math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
-   elseif players[pindex].menu == "inventory" then
+   elseif players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
       local x = players[pindex].inventory.index %10
       local y = math.floor(players[pindex].inventory.index/10) + 1
       if x == 0 then
          x = x + 10
          y = y - 1
+      end
+      printout(x .. ", " .. y, pindex)
+--   elseif players[pindex].menu == "building" and (ent.type == "container" or ent.type == "logistic-container") then
+   elseif players[pindex].menu == "building" then
+      local x = -1
+      local y = -1
+      if 1 == 1 then --Setting 1: Chest rows are 8 wide
+         x = players[pindex].building.index %8
+         y = math.floor(players[pindex].building.index/8) + 1
+         if x == 0 then
+            x = x + 8
+            y = y - 1
+         end
+      else --Setting 2: Chest rows are 10 wide
+         x = players[pindex].building.index %10
+         y = math.floor(players[pindex].building.index/10) + 1
+         if x == 0 then
+            x = x + 10
+            y = y - 1
+         end
       end
       printout(x .. ", " .. y, pindex)
    elseif players[pindex].menu == "crafting" then
@@ -5225,13 +5250,24 @@ end
 )
 
 
+--Reads the custom written description for an item
 script.on_event("item-info", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
-   if players[pindex].in_menu then
-      if players[pindex].menu == "inventory" then
+   local offset = 0
+   if players[pindex].menu == "building" and players[pindex].building.recipe_list ~= nil then
+      offset = 1
+   end
+   if not players[pindex].in_menu then
+      local ent = players[pindex].tile.ents[1]
+      if ent ~= nil then
+         local str = ent.localised_description
+         printout(str, pindex)
+      end
+   elseif players[pindex].in_menu then
+      if players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
          local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
          if stack.valid_for_read and stack.valid == true then
                      local str = ""
@@ -5282,6 +5318,7 @@ script.on_event("item-info", function(event)
             printout("Blank", pindex)
          end
       elseif players[pindex].menu == "building" then
+         local ent = players[pindex].tile.ents[1]
          if players[pindex].building.recipe_selection then
             local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
             if recipe ~= nil and #recipe.products > 0 then
@@ -5289,6 +5326,20 @@ script.on_event("item-info", function(event)
                local product = game.item_prototypes[product_name] or game.fluid_prototypes[product_name] 
                local str = ""
                str = product.localised_description
+               printout(str, pindex)
+            else
+               printout("Blank", pindex)
+            end
+         elseif  players[pindex].building.sector <= #players[pindex].building.sectors then
+            local inventory = ent.get_inventory(defines.inventory.chest)
+            local stack = inventory[players[pindex].building.index]
+            if stack.valid_for_read and stack.valid == true then
+               local str = ""
+               if stack.prototype.place_result ~= nil then
+                  str = stack.prototype.place_result.localised_description
+               else
+                  str = stack.prototype.localised_description
+               end
                printout(str, pindex)
             else
                printout("Blank", pindex)

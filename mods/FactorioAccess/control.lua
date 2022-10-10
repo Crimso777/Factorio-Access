@@ -5374,27 +5374,9 @@ script.on_event("item-info", function(event)
             else
                printout("Blank", pindex)
             end
-         elseif  players[pindex].building.sector <= #players[pindex].building.sectors then --Note: Not all sectors are supported!
-            local inventory = ent.get_inventory(defines.inventory.chest)
-            if players[pindex].building.sectors[players[pindex].building.sector].name == "Output" then
-               inventory = ent.get_output_inventory()
-            elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Modules" then
-               inventory = ent.get_module_inventory()
-            elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Fuel" then
-               inventory = ent.get_fuel_inventory()
-            elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Input" and ent.prototype.type == "assembling-machine" then
-               inventory = ent.get_inventory(defines.inventory.assembling_machine_input)
-            elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Input" and ent.prototype.type == "furnace" then
-               inventory = ent.get_inventory(defines.inventory.furnace_source)
-            elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Input" and ent.prototype.type == "lab" then
-               inventory = ent.get_inventory(defines.inventory.lab_input )
-            elseif players[pindex].building.sectors[players[pindex].building.sector].name == "Input" and ent.prototype.type == "rocket-silo" then
-               inventory = ent.get_inventory(defines.inventory.rocket_silo_input )
-            else
-               printout("Error: Unable to examine items in this building sector. If possible, try taking the item in hand.", pindex)
-               return
-            end
-            if inventory.is_empty() then --Catches inventory size 0 crash
+         elseif players[pindex].building.sector <= #players[pindex].building.sectors then
+            local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
+            if players[pindex].building.sectors[players[pindex].building.sector].name ~= "Fluid" and inventory.is_empty() then --Catches inventory size 0 crash
                printout("Blank", pindex)
                return
             end

@@ -2393,7 +2393,7 @@ function jump_to_player(pindex)
    local first_player = game.get_player(pindex)
    players[pindex].cursor_pos.x = math.floor(first_player.position.x)+.5
    players[pindex].cursor_pos.y = math.floor(first_player.position.y) + .5
-   read_coords(pindex)
+   read_coords(pindex, "Cursor returned to ")
 end
 
    
@@ -2523,14 +2523,16 @@ function read_tile(pindex)
 end
 
 --Read the current co-ordinates of the cursor on the map or in a menu. Provides extra information in some menus.
-function read_coords(pindex)
+function read_coords(pindex, start_phrase)
+   start_phrase = start_phrase or ""
+   local result = start_phrase
    local ent = players[pindex].building.ent
    local offset = 0
    if players[pindex].menu == "building" and players[pindex].building.recipe_list ~= nil then
       offset = 1
    end
    if not(players[pindex].in_menu) then
-      printout(math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
+      printout(result .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
    elseif players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
       local x = players[pindex].inventory.index %10
       local y = math.floor(players[pindex].inventory.index/10) + 1
@@ -2538,7 +2540,7 @@ function read_coords(pindex)
          x = x + 10
          y = y - 1
       end
-      printout(x .. ", " .. y, pindex)
+      printout(result .. x .. ", " .. y, pindex)
    elseif players[pindex].menu == "building" then
       local x = -1
       local y = -1
@@ -2557,11 +2559,11 @@ function read_coords(pindex)
             y = y - 1
          end
       end
-      printout(x .. ", " .. y, pindex)
+      printout(result .. x .. ", " .. y, pindex)
 
    elseif players[pindex].menu == "crafting" then
       local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
-      result = "Ingredients: "
+      result = result .. "Ingredients: "
       for i, v in pairs(recipe.ingredients) do
          result = result .. ", " .. v.name .. " x" .. v.amount
       end
@@ -2570,7 +2572,7 @@ function read_coords(pindex)
          result = result .. ", " .. v.name .. " x" .. v.amount
       end
 
-      printout(string.sub(result, 3), pindex)
+      printout(result .. string.sub(result, 3), pindex)
    elseif players[pindex].menu == "technology" then
       local techs = {}
       if players[pindex].technology.category == 1 then
@@ -2582,7 +2584,7 @@ function read_coords(pindex)
       end
    
       if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
-         local result = "Requires "
+         result = result .. "Requires "
          if #techs[players[pindex].technology.index].prerequisites < 1 then
             result = result .. " No prior research "
          end
@@ -2594,12 +2596,12 @@ function read_coords(pindex)
             result = result .. ingredient.name .. " " .. " , "
          end
          
-         printout(string.sub(result, 1, -3), pindex)
+         printout(result .. string.sub(result, 1, -3), pindex)
       end
    elseif players[pindex].menu == "building" then
       if players[pindex].building.recipe_selection then
          local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
-         result = "Ingredients: "
+         result = result .. "Ingredients: "
          for i, v in pairs(recipe.ingredients) do
             result = result .. ", " .. v.name .. " x" .. v.amount
          end
@@ -2608,7 +2610,7 @@ function read_coords(pindex)
             result = result .. ", " .. v.name .. " x" .. v.amount
          end
 
-         printout(string.sub(result, 3), pindex)
+         printout(result .. string.sub(result, 3), pindex)
       end
    end
 end

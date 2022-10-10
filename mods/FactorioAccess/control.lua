@@ -2375,14 +2375,14 @@ function toggle_cursor(pindex)
    if not(players[pindex].cursor) then
       printout("Cursor enabled.", pindex)
       players[pindex].cursor = true
-      players[pindex].walk_and_build = false
+      players[pindex].build_lock = false
    else
       printout("Cursor disabled", pindex)
       players[pindex].cursor = false
       players[pindex].cursor_pos = offset_position(players[pindex].position,players[pindex].player_direction,1)
       target(pindex)
       players[pindex].player_direction = game.get_player(pindex).character.direction
-      players[pindex].walk_and_build = false
+      players[pindex].build_lock = false
    end
 end
 
@@ -2636,7 +2636,7 @@ function initialize(player)
    faplayer.item_selection = faplayer.item_selection or false
    faplayer.item_cache = faplayer.item_cache or {}
    faplayer.zoom = faplayer.zoom or 1
-   faplayer.walk_and_build = faplayer.walk_and_build or false
+   faplayer.build_lock = faplayer.build_lock or false
 
    faplayer.nearby = faplayer.nearby or {
       index = 0,
@@ -3596,7 +3596,7 @@ function move(direction,pindex)
          read_tile(pindex)
          target(pindex)
          
-         if players[pindex].walk_and_build then
+         if players[pindex].build_lock then
             build_item_in_hand(pindex, -1)
          end
       else
@@ -3630,7 +3630,7 @@ function move_key(direction,event)
          read_tile(pindex)
          target(pindex)
          players[pindex].player_direction = direction
-         if players[pindex].walk_and_build then
+         if players[pindex].build_lock then
             build_item_in_hand(pindex, -1)            
          end
       else
@@ -4824,7 +4824,7 @@ end
 --[[Attempts to build the item in hand.
 * Does nothing if the hand is empty or the item is not a place-able entity.
 * If the item is an offshore pump, calls a different, special function for it.
-* You can offset the building with respect to the direction the player is facing.
+* You can offset the building with respect to the direction the player is facing. The offset is multiplied by the placed building width.
 ]]
 function build_item_in_hand(pindex, offset_val)
    local stack = game.get_player(pindex).cursor_stack
@@ -4835,7 +4835,7 @@ function build_item_in_hand(pindex, offset_val)
       return
    end
    
-   if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.name ~= "offshore-pump" then
+   if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
       local ent = stack.prototype.place_result
       local dimensions = get_tile_dimensions(stack.prototype, players[pindex].building_direction*2)
       local position = {x,y}
@@ -4873,6 +4873,11 @@ function build_item_in_hand(pindex, offset_val)
       else
          printout("Cannot place that there.", pindex)
          print(players[pindex].player_direction .. " " .. game.get_player(pindex).character.position.x .. " " .. game.get_player(pindex).character.position.y .. " " .. players[pindex].cursor_pos.x .. " " .. players[pindex].cursor_pos.y .. " " .. position.x .. " " .. position.y)
+      end
+   else
+      if players[pindex].build_lock == true and 1 == 1 then --This check may become a toggle-able game setting
+         players[pindex].build_lock = false
+         printout("Build lock disabled, empty hand.", pindex)
       end
    end
 end
@@ -5585,15 +5590,15 @@ script.on_event("toggle-walk",function(event)
 end)
 
 --Toggle building while walking
-script.on_event("toggle-walk-and-build", function(event)
+script.on_event("toggle-build-lock", function(event)
    pindex = event.player_index
    if not (players[pindex].in_menu == true) then
-      if players[pindex].walk_and_build == true then
-         players[pindex].walk_and_build = false
-         printout("Disabled walk and build", pindex)
+      if players[pindex].build_lock == true then
+         players[pindex].build_lock = false
+         printout("Build lock disabled.", pindex)
       else
-         players[pindex].walk_and_build = true
-         printout("Enabled walk and build", pindex)
+         players[pindex].build_lock = true
+         printout("Build lock enabled", pindex)
       end
    end
 end)

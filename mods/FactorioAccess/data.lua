@@ -531,6 +531,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "toggle-walk-and-build",
+    key_sequence = "CONTROL + B",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "toggle-walk",
     key_sequence = "CONTROL + W",
     consuming = "none"

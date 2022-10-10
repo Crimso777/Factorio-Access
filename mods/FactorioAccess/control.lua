@@ -4873,7 +4873,12 @@ function build_item_in_hand(pindex, offset_val)
          game.get_player(pindex).build_from_cursor(building)  
 --         read_tile(pindex)
       else
-         printout("Cannot place that there.", pindex)
+         if players[pindex].build_lock == true then
+            printout("Can't place.", pindex) 
+            --note: we want to mute this message entirely if build lock is on and the entity preventing the placement is the same as the item in hand
+         else
+            printout("Cannot place that there.", pindex)
+         end
          print(players[pindex].player_direction .. " " .. game.get_player(pindex).character.position.x .. " " .. game.get_player(pindex).character.position.y .. " " .. players[pindex].cursor_pos.x .. " " .. players[pindex].cursor_pos.y .. " " .. position.x .. " " .. position.y)
       end
    else

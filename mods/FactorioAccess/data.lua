@@ -531,7 +531,7 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "toggle-walk-and-build",
+    name = "toggle-build-lock",
     key_sequence = "CONTROL + B",
     consuming = "none"
 },

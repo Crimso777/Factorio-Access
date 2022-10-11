@@ -2375,14 +2375,14 @@ function toggle_cursor(pindex)
    if not(players[pindex].cursor) then
       printout("Cursor enabled.", pindex)
       players[pindex].cursor = true
-      players[pindex].walk_and_build = false
+      players[pindex].build_lock = false
    else
       printout("Cursor disabled", pindex)
       players[pindex].cursor = false
       players[pindex].cursor_pos = offset_position(players[pindex].position,players[pindex].player_direction,1)
       target(pindex)
       players[pindex].player_direction = game.get_player(pindex).character.direction
-      players[pindex].walk_and_build = false
+      players[pindex].build_lock = false
    end
 end
 
@@ -2393,7 +2393,7 @@ function jump_to_player(pindex)
    local first_player = game.get_player(pindex)
    players[pindex].cursor_pos.x = math.floor(first_player.position.x)+.5
    players[pindex].cursor_pos.y = math.floor(first_player.position.y) + .5
-   read_coords(pindex)
+   read_coords(pindex, "Cursor returned to ")
 end
 
    
@@ -2523,14 +2523,16 @@ function read_tile(pindex)
 end
 
 --Read the current co-ordinates of the cursor on the map or in a menu. Provides extra information in some menus.
-function read_coords(pindex)
+function read_coords(pindex, start_phrase)
+   start_phrase = start_phrase or ""
+   local result = start_phrase
    local ent = players[pindex].building.ent
    local offset = 0
    if players[pindex].menu == "building" and players[pindex].building.recipe_list ~= nil then
       offset = 1
    end
    if not(players[pindex].in_menu) then
-      printout(math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
+      printout(result .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
    elseif players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
       local x = players[pindex].inventory.index %10
       local y = math.floor(players[pindex].inventory.index/10) + 1
@@ -2538,7 +2540,7 @@ function read_coords(pindex)
          x = x + 10
          y = y - 1
       end
-      printout(x .. ", " .. y, pindex)
+      printout(result .. x .. ", " .. y, pindex)
    elseif players[pindex].menu == "building" then
       local x = -1
       local y = -1
@@ -2557,11 +2559,11 @@ function read_coords(pindex)
             y = y - 1
          end
       end
-      printout(x .. ", " .. y, pindex)
+      printout(result .. x .. ", " .. y, pindex)
 
    elseif players[pindex].menu == "crafting" then
       local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
-      result = "Ingredients: "
+      result = result .. "Ingredients: "
       for i, v in pairs(recipe.ingredients) do
          result = result .. ", " .. v.name .. " x" .. v.amount
       end
@@ -2570,7 +2572,7 @@ function read_coords(pindex)
          result = result .. ", " .. v.name .. " x" .. v.amount
       end
 
-      printout(string.sub(result, 3), pindex)
+      printout(result .. string.sub(result, 3), pindex)
    elseif players[pindex].menu == "technology" then
       local techs = {}
       if players[pindex].technology.category == 1 then
@@ -2582,7 +2584,7 @@ function read_coords(pindex)
       end
    
       if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
-         local result = "Requires "
+         result = result .. "Requires "
          if #techs[players[pindex].technology.index].prerequisites < 1 then
             result = result .. " No prior research "
          end
@@ -2594,12 +2596,12 @@ function read_coords(pindex)
             result = result .. ingredient.name .. " " .. " , "
          end
          
-         printout(string.sub(result, 1, -3), pindex)
+         printout(result .. string.sub(result, 1, -3), pindex)
       end
    elseif players[pindex].menu == "building" then
       if players[pindex].building.recipe_selection then
          local recipe = players[pindex].building.recipe_list[players[pindex].building.category][players[pindex].building.index]
-         result = "Ingredients: "
+         result = result .. "Ingredients: "
          for i, v in pairs(recipe.ingredients) do
             result = result .. ", " .. v.name .. " x" .. v.amount
          end
@@ -2608,7 +2610,7 @@ function read_coords(pindex)
             result = result .. ", " .. v.name .. " x" .. v.amount
          end
 
-         printout(string.sub(result, 3), pindex)
+         printout(result .. string.sub(result, 3), pindex)
       end
    end
 end
@@ -2636,7 +2638,8 @@ function initialize(player)
    faplayer.item_selection = faplayer.item_selection or false
    faplayer.item_cache = faplayer.item_cache or {}
    faplayer.zoom = faplayer.zoom or 1
-   faplayer.walk_and_build = faplayer.walk_and_build or false
+   faplayer.build_lock = faplayer.build_lock or false
+   faplayer.setting_inventory_wraps_around = faplayer.setting_inventory_wraps_around or true
 
    faplayer.nearby = faplayer.nearby or {
       index = 0,
@@ -2770,6 +2773,7 @@ end)
 
 
 function menu_cursor_move(direction,pindex)
+   players[pindex].setting_inventory_wraps_around = true--**temporary line because I could not find where to initialize this properly
    if     direction == defines.direction.north then
       menu_cursor_up(pindex)
    elseif direction == defines.direction.south then
@@ -2802,14 +2806,21 @@ function menu_cursor_up(pindex)
                end         
 
    elseif players[pindex].menu == "inventory" then
-      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].inventory.index = players[pindex].inventory.index -10
       if players[pindex].inventory.index < 1 then
-         players[pindex].inventory.index = players[pindex].inventory.max + players[pindex].inventory.index
-      
-
-      end
-      read_inventory_slot(pindex)
+         if players[pindex].setting_inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+            players[pindex].inventory.index = players[pindex].inventory.max + players[pindex].inventory.index
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            read_inventory_slot(pindex)
+         else --Border setting: Undo change and play error sound
+            players[pindex].inventory.index = players[pindex].inventory.index +10
+            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            printout("Border.", pindex)
+         end
+      else
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         read_inventory_slot(pindex)
+      end      
 
    elseif players[pindex].menu == "crafting" then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -2980,12 +2991,21 @@ function menu_cursor_down(pindex)
                end         
 
    elseif players[pindex].menu == "inventory" then
-      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].inventory.index = players[pindex].inventory.index +10
       if players[pindex].inventory.index > players[pindex].inventory.max then
-         players[pindex].inventory.index = players[pindex].inventory.index - players[pindex].inventory.max
+         if players[pindex].setting_inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+            players[pindex].inventory.index = players[pindex].inventory.index - players[pindex].inventory.max
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            read_inventory_slot(pindex)
+         else --Border setting: Undo change and play error sound
+            players[pindex].inventory.index = players[pindex].inventory.index -10
+            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            printout("Border.", pindex)
+         end
+      else
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         read_inventory_slot(pindex)
       end
-      read_inventory_slot(pindex)
 
    elseif players[pindex].menu == "crafting" then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3159,12 +3179,21 @@ function menu_cursor_left(pindex)
          read_item_selector_slot(pindex)
 
    elseif players[pindex].menu == "inventory" then
-      game.get_player(pindex).play_sound{path = "Inventory-Move"}
-      players[pindex].inventory.index = players[pindex].inventory.index -1
+      players[pindex].inventory.index = players[pindex].inventory.index -1    
       if players[pindex].inventory.index%10 == 0 then
-         players[pindex].inventory.index = players[pindex].inventory.index + 10
+         if players[pindex].setting_inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+            players[pindex].inventory.index = players[pindex].inventory.index + 10
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            read_inventory_slot(pindex)
+         else --Border setting: Undo change and play error sound
+            players[pindex].inventory.index = players[pindex].inventory.index +1
+            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            printout("Border.", pindex)
+         end
+      else
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         read_inventory_slot(pindex)
       end
-      read_inventory_slot(pindex)
 
    elseif players[pindex].menu == "crafting" then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3277,13 +3306,21 @@ function menu_cursor_right(pindex)
          read_item_selector_slot(pindex)
 
    elseif players[pindex].menu == "inventory" then
-      game.get_player(pindex).play_sound{path = "Inventory-Move"}
-
       players[pindex].inventory.index = players[pindex].inventory.index +1
       if players[pindex].inventory.index%10 == 1 then
-         players[pindex].inventory.index = players[pindex].inventory.index - 10
+         if players[pindex].setting_inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+            players[pindex].inventory.index = players[pindex].inventory.index - 10
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            read_inventory_slot(pindex)
+         else --Border setting: Undo change and play error sound
+            players[pindex].inventory.index = players[pindex].inventory.index -1
+            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            printout("Border.", pindex)
+         end
+      else
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         read_inventory_slot(pindex)
       end
-      read_inventory_slot(pindex)
 
    elseif players[pindex].menu == "crafting" then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3596,7 +3633,7 @@ function move(direction,pindex)
          read_tile(pindex)
          target(pindex)
          
-         if players[pindex].walk_and_build then
+         if players[pindex].build_lock then
             build_item_in_hand(pindex, -1)
          end
       else
@@ -3630,7 +3667,7 @@ function move_key(direction,event)
          read_tile(pindex)
          target(pindex)
          players[pindex].player_direction = direction
-         if players[pindex].walk_and_build then
+         if players[pindex].build_lock then
             build_item_in_hand(pindex, -1)            
          end
       else
@@ -4824,7 +4861,7 @@ end
 --[[Attempts to build the item in hand.
 * Does nothing if the hand is empty or the item is not a place-able entity.
 * If the item is an offshore pump, calls a different, special function for it.
-* You can offset the building with respect to the direction the player is facing.
+* You can offset the building with respect to the direction the player is facing. The offset is multiplied by the placed building width.
 ]]
 function build_item_in_hand(pindex, offset_val)
    local stack = game.get_player(pindex).cursor_stack
@@ -4835,7 +4872,7 @@ function build_item_in_hand(pindex, offset_val)
       return
    end
    
-   if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.name ~= "offshore-pump" then
+   if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
       local ent = stack.prototype.place_result
       local dimensions = get_tile_dimensions(stack.prototype, players[pindex].building_direction*2)
       local position = {x,y}
@@ -4871,8 +4908,18 @@ function build_item_in_hand(pindex, offset_val)
          game.get_player(pindex).build_from_cursor(building)  
 --         read_tile(pindex)
       else
-         printout("Cannot place that there.", pindex)
+         if players[pindex].build_lock == true then
+            printout("Can't place.", pindex) 
+            --note: we want to mute this message entirely if build lock is on and the entity preventing the placement is the same as the item in hand
+         else
+            printout("Cannot place that there.", pindex)
+         end
          print(players[pindex].player_direction .. " " .. game.get_player(pindex).character.position.x .. " " .. game.get_player(pindex).character.position.y .. " " .. players[pindex].cursor_pos.x .. " " .. players[pindex].cursor_pos.y .. " " .. position.x .. " " .. position.y)
+      end
+   else
+      if players[pindex].build_lock == true and 1 == 1 then --This check may become a toggle-able game setting
+         players[pindex].build_lock = false
+         printout("Build lock disabled, empty hand.", pindex)
       end
    end
 end
@@ -5362,8 +5409,12 @@ script.on_event("item-info", function(event)
             else
                printout("Blank", pindex)
             end
-         elseif  players[pindex].building.sector <= #players[pindex].building.sectors then
-            local inventory = ent.get_inventory(defines.inventory.chest)
+         elseif players[pindex].building.sector <= #players[pindex].building.sectors then
+            local inventory = players[pindex].building.sectors[players[pindex].building.sector].inventory
+            if players[pindex].building.sectors[players[pindex].building.sector].name ~= "Fluid" and inventory.is_empty() then --Catches inventory size 0 crash
+               printout("Blank", pindex)
+               return
+            end
             local stack = inventory[players[pindex].building.index]
             if stack.valid_for_read and stack.valid == true then
                local str = ""
@@ -5585,15 +5636,15 @@ script.on_event("toggle-walk",function(event)
 end)
 
 --Toggle building while walking
-script.on_event("toggle-walk-and-build", function(event)
+script.on_event("toggle-build-lock", function(event)
    pindex = event.player_index
    if not (players[pindex].in_menu == true) then
-      if players[pindex].walk_and_build == true then
-         players[pindex].walk_and_build = false
-         printout("Disabled walk and build", pindex)
+      if players[pindex].build_lock == true then
+         players[pindex].build_lock = false
+         printout("Build lock disabled.", pindex)
       else
-         players[pindex].walk_and_build = true
-         printout("Enabled walk and build", pindex)
+         players[pindex].build_lock = true
+         printout("Build lock enabled", pindex)
       end
    end
 end)

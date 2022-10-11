@@ -1,3 +1,19 @@
+# Version 0.3.1
+
+Updated 10/11/2022
+
+## New Features
+
+-Build lock. When enabled, the game will continuously try to build behind the player as they walk, or under the cursor in cursor mode. Useful for tasks like building long transport belts. Press CONTROL + B to enable or disable. It also automatically gets disabled when you switch into or out of cursor mode or empty your hand and take a step.
+
+## Changes
+
+-Getting item or entity information with the L key now works for entities on the surface and inside chests and most building menus.
+
+-Getting slot coordinates with the K key now works inside chests and most/all building menus.
+
+-In cursor mode, pressing J will announce that the cursor is returned to the player in addition to doing it.
+
 # Version 0.3.0
 
 Updated 9/30/2022

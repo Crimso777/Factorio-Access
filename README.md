@@ -5,6 +5,7 @@ This is an accessibility mod for the popular game Factorio.  The goal of this mo
 This "read me" file covers the basics of the mod, which include the installation guide, the mod controls, the FAQ and links to other information sources.
 
 
+
 # Installing Factorio and Factorio Access
 
 To install the full version, follow the instructions below for the .zip file install.
@@ -12,7 +13,6 @@ To install the full version, follow the instructions below for the .zip file ins
 To update to the most recent patch, follow the instructions below for the patch install.
 
 Note:  If you have done a full installation using the .zip instructions, there is no need to follow the patch install directions until a new patch comes out.  
-
 
 ## Mod .zip file install
 
@@ -22,7 +22,6 @@ Note:  If you have done a full installation using the .zip instructions, there i
 4. Paste the files into your factorio folder
 5. That's it!  You are now ready to run launcher.exe in administrator mode
 6. If you are a jaws user, you may want to copy Factorio.jkm from the .zip into your JAWS settings folder, found in your user's AppData folder. An example file path is `C:\Users\Crimso\AppData\Roaming\Freedom Scientific\JAWS\2022\Settings\enu\`
-
 
 ## Mod patch install
 
@@ -34,7 +33,8 @@ Note:  If you have done a full installation using the .zip instructions, there i
 6. Go to the config folder
 7. Paste config.ini into this folder
 8. All done! You can now run launcher.exe in administrator mode to play the game with the new patch
-
+   
+   
 
 # Mod controls
 
@@ -56,9 +56,15 @@ Note the 3 movement types are as follows:
 
 ## Interactions
 
-Mine: X
+Get entity description: L, for most entities such as buildings
 
-Open inventory: E
+Get building status: RIGHT BRACKET, for applicable buildings when your hand is empty
+
+Open building's menu: LEFT BRACKET
+
+Mine or pick up: X
+
+Open player inventory: E
 
 Rotate: R
 
@@ -66,14 +72,19 @@ Note: If you have something in your hand, you will rotate that.  Otherwise you w
 
 Additional Note: The first time you press the rotate key, it will simply say the direction a building is facing. Subsequent presses will actually rotate the building.
 
-Place building: OPEN SQUARE BRACKET
-
-Open building's menu: OPEN SQUARE BRACKET
+Picker tool: SHIFT + Q, brings to hand more of the selected item if you have it in your inventory
 
 Nudge building by one tile: CONTROL + SHIFT + DIRECTION, where the direction is one of W A S D.
 
-Get building status: CLOSE SQUARE BRACKET, for applicable buildings when your hand is empty
+Pick up items on the ground or on top of nearby belts: F 
 
+Copy building settings: SHIFT + RIGHT BRACKET on the building, with empty hand
+
+Paste building settings: SHIFT + LEFT BRACKET on the building, with empty hand
+
+Quickly collect the entire output of a building: CONTROL + LEFT BRACKET on the building, with empty hand
+
+Quickly collect half of the entire output of a building: CONTROL + RIGHT BRACKET on the building, with empty hand
 
 ## Cursor
 
@@ -81,18 +92,64 @@ Speak cursor coordinates: K
 
 Cursor mode: I
 
-Increase cursor size: CONTROL + I
-
-Decrease cursor size: CONTROL + SHIFT + I
-
-Note: You must be in cursor mode for the size of the cursor to make any difference.
-
+Move cursor freely in cursor mode: W A S D
 Jump cursor to character: J
 
 Teleport player to cursor: SHIFT + T
 
+Increase cursor size to examine a larger area: CONTROL + I
 
-## Scanning
+Decrease cursor size to examine a smaller area: CONTROL + SHIFT + I
+
+Note: You must be in cursor mode for the size of the cursor to make any difference.
+
+## Inventory
+
+Open player inventory: E
+
+Navigate inventory slots: W A S D
+
+Get slot coordinates: K
+
+Get selected item info: L
+
+Pick up selected item to hand: LEFT BRACKET
+
+Add selected item to quickbar: CONTROL + NUMBER KEY, for keys 1 to 9 and 0.
+
+Switch to other menus: TAB
+
+Close menus: E
+
+## Item in Hand
+
+Read item in hand: Q
+
+Get info on item in hand: L
+
+Empty the hand to your inventory: SHIFT + Q
+
+Picker tool: Grab in hand more of the item in front of you, if you have it: SHIFT+ Q
+
+Grab item in hand from the quickbar: NUMBER KEY, for set up quickbar slots
+
+Place building: LEFT BRACKET, for items that support it
+
+Toggle build lock for continuous building: CONTROL + B, while switching cursor modes and emptying the hand also disables it.
+
+Rotate: R
+
+Note: If you have something in your hand, you will rotate that. Otherwise you will rotate the building your cursor is over.
+
+Additional Note: The first time you press the rotate key, it will simply say the direction a building is facing. Subsequent presses will actually rotate the building.
+
+Drop 1 unit of the item onto the ground or onto a belt or inside an applicable building: Z
+
+Insert 1 stack of the item in hand where applicable: CONTROL + LEFT BRACKET
+
+Insert half a stack of the item in hand where applicable: CONTROL + RIGHT BRACKET
+
+## Scanner Tool
 
 Scan for nearby entities: END
 
@@ -110,7 +167,6 @@ Move cursor to scanned target in cursor mode: CONTROL + HOME
 
 Teleport to the scanned target outside of cursor mode: CONTROL + HOME
 
-
 ## Fast Travel
 
 Open Fast Travel Menu: V
@@ -122,7 +178,6 @@ Select an option: A and D
 Confirm an option: LEFT BRACKET
 
 Note:  Options include Teleporting to a saved point, renaming a saved point, deleting a saved point, and creating a new point.
-
 
 ## BStride
 
@@ -138,7 +193,6 @@ Last, confirm your selection by pressing the direction you started with.  For in
 
 Once you find your target, press LEFT BRACKET to teleport your character to the building.
 
-
 ## Warnings
 
 Warnings Menu: P
@@ -150,7 +204,6 @@ Switch Range: TAB
 Teleport cursor to Building with warning: LEFT BRACKET
 
 Close Warnings menu: E
-
 
 ## Others
 
@@ -164,55 +217,61 @@ Pick from quickbar: Any number
 
 Recalibrate: CONTROL + END
 
-
 ## While in a menu
-
-Note: Many functions are implemented only in the inventory screen, such as shift tab and item information.  Soon these features will be in building menus, but for now it is expected behavior.
 
 Change tabs within a menu: TAB and SHIFT + TAB
 
-Select Item: OPEN SQUARE BRACKET
-
-Item information: L
+Navigate inventory slots: W A S D
 
 Coordinates of current inventory slot: K
 
-Smart Insert/Smart Withdrawal: SHIFT + OPEN SQUARE BRACKET
+Selected item information: L
+
+Grab item in hand: LEFT BRACKET
+
+Smart Insert/Smart Withdrawal: SHIFT + LEFT BRACKET
 
 Note: This will insert an item stack, or withdraw an item stack from a building. It is smart because it will decide the proper inventory to send the item to.  For instance, smart inserting coal into a furnace will attempt to put it in the fuel category, as opposed to the input category.
 
-Bulk transfer: CONTROL + OPEN SQUARE BRACKET
+Multi stack smart transfer: CONTROL + LEFT BRACKET
 
-Note: When you have a building inventory open, pressing CONTROL + OPEN SQUARE BRACKET for a selected item in an inventory will cause an attempt to transfer the entire supply of this item to the other inventory. Non-transferred items will remain in their original inventory. Similarly, pressing CONTROL + CLOSE SQUARE BRACKET will try to transfer half of the entire supply of the selected item.
+Note: When you have a building inventory open, pressing CONTROL + LEFT BRACKET for a selected item in an inventory will cause an attempt to transfer the entire supply of this item to the other inventory. Non-transferred items will remain in their original inventory. Similarly, pressing CONTROL + RIGHT BRACKET will try to transfer half of the entire supply of the selected item.
 
-Note 2: When you have a building inventory open and select an empty slot, pressing CONTROL + OPEN SQUARE BRACKET will cause an attempt to transfer the full contents of the selected inventory into the other inventory. This is useful for easily filling up labs and assembling machines with everything applicable from your own inventory instead of searching for items individually. Non-transferred items will remain in their original inventory. Similarly, pressing CONTROL + CLOSE SQUARE BRACKET on an empty slot will try to transfer half of the entire supply of every item.
+Note 2: When you have a building inventory open and select an empty slot, pressing CONTROL + LEFT BRACKET will cause an attempt to transfer the full contents of the selected inventory into the other inventory. This is useful for easily filling up labs and assembling machines with everything applicable from your own inventory instead of searching for items individually. Non-transferred items will remain in their original inventory. Similarly, pressing CONTROL + RIGHT BRACKET on an empty slot will try to transfer half of the entire supply of every item.
 
 Modify chest inventory slot limits: PAGE UP or PAGE DOWN. 
 
 Note: You can hold SHIFT to modify limits by increments of 5 instead of 1 and you can hold CONTROL to set the limit to maximum or zero.
 
-
 ### Crafting
 
-Crafting components required: K
+Navigate recipe groups: W S
 
-Craft 1 item: OPEN SQUARE BRACKET
+Navigate recipes within a group: A D
 
-Craft 5 items: CLOSE SQUARE BRACKET
+Check crafting components required: K
 
-Craft as many items as possible:  SHIFT + OPEN SQUARE BRACKET
+Read recipe product description: L
 
-Unqueue 1 item: OPEN SQUARE BRACKET
+Craft 1 item: LEFT BRACKET
 
-Unqueue 5 items: CLOSE SQUARE BRACKET
+Craft 5 items: RIGHT BRACKET
 
-Unqueue all items: SHIFT + OPEN SQUARE BRACKET
+Craft as many items as possible:  SHIFT + LEFT BRACKET
 
+### Crafting Queue
 
+Navigate queue: W A S D
 
-## In item selector
+Unqueue 1 item: LEFT BRACKET
 
-Select category: OPEN SQUARE BRACKET or S
+Unqueue 5 items: RIGHT BRACKET
+
+Unqueue all items: SHIFT + LEFT BRACKET
+
+## In item selector (alternative)
+
+Select category: LEFT BRACKET or S
 
 Jump to previous category level: W
 
@@ -226,49 +285,48 @@ Q: Does this mod work with the steam version?
 
 A:  Not yet, however if you buy the game on steam you can use your product key to redeem the standalone version on factorio.com
 
-
-
 Q: Does this mod work with the demo?
 
 A:  No, in fact no mods work with the demo.
-
-
 
 Q:  Can this mod run the tutorial?
 
 A:  Not yet.  There are plans to create a custom tutorial, and to make the built in tutorial accessible, but these things are still at least a week away.
 
-
-
 Q:  My game crashed, what gives?
 
-A:  This mod is currently still in early access.  Bugs are normal and expectted.  Please post about it in the issues channel of Discord.
-
-
+A:  This mod is currently still in early access.  Bugs are normal and expected.  Please post about it in the issues channel of Discord.
 
 Q:  Do I have to pay to use the mod?
 
 A:  The mod is and always will be free.  The game itself costs $30 on [Factorio.com](www.factorio.com)
 
 
+
+# Wiki
+
+For information about the game, such as the resources, machines, and systems, please check out our own [Factorio Access Wiki](https://github.com/Crimso777/Factorio-Access/wiki).
+
+Factorio also has an [official wiki](https://wiki.factorio.com/).
+
+
+
 # Help and Support
 
 If your question wasn't answered here, please check out our [Discord server](https://discord.gg/CC4QA6KtzP), and ask your question there.
 
-For information about the game, such as the resources, machines, and systems, please check out the [Factorio Access Wiki](https://github.com/Crimso777/Factorio-Access/wiki).
-
 If you want to help others or discuss the development of the mod or the wiki, feel free to again join us at the [Discord server](https://discord.gg/CC4QA6KtzP).
+
 
 
 # Changes
 
-An updated changelog can be found [here](https://github.com/Crimso777/Factorio-Access/blob/main/CHANGES.md)
+An updated changelog can be found [here](https://github.com/Crimso777/Factorio-Access/blob/main/CHANGES.md).
+
 
 
 # Donations
 
 While this mod is completely free for all, I am a full time student working on this mod in my free time, thus any and all support is greatly appreciated.
 
-If you are so inclined, you can donate at my [Patreon](https://www.patreon.com/Crimso777)
-
-
+If you are so inclined, you can donate at my [Patreon](https://www.patreon.com/Crimso777).

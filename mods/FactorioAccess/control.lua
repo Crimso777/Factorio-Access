@@ -5808,10 +5808,12 @@ end)
 script.on_event("g-key", function(event)
    local pindex = event.player_index
    local dir = players[pindex].player_direction
+   local pos = players[pindex].position
    --build_rail_turn_90_degrees_left(dir, pindex)
    --build_rail_turn_90_degrees_right(dir, pindex)
    --build_straight_rail_intersection(dir, pindex)
-   build_straight_rail_intersection_with_signals(dir, pindex)
+   --build_straight_rail_intersection_with_signals(dir, pindex)
+   append_rail(pos, pindex)
 end)
 
 
@@ -6095,85 +6097,143 @@ function build_straight_rail_intersection_with_signals(dir, pindex)
    end
 end
 
+--Checks whether the distance between pos1 and pos2 is less than or equal to range
+--function is_within_range(pos1, pos2, range)
+--   return (pos1.x - pos2.x) * (pos1.x - pos2.x) + (pos1.y - pos2.y) * (pos1.y - pos2.y) <= range * range
+--end
 
 --Appends a new straight or diagonal rail to a rail end found around the input position
 function append_rail(pos, pindex)
    local surf = game.get_player(pindex).surface
+   local stack = game.get_player(pindex).cursor_stack
    
    --0 Check if there is at least 1 rail in hand, else return
+   if not (stack.valid and stack.valid_for_read) then
+      printout("Missing item in hand.",pindex)
+      return
+   elseif not (stack.valid and stack.valid_for_read and stack.name == "rail") then
+      printout("Not a rail in hand.",pindex)
+      return
+   end
 
-   --1 Scan the area around within a 2 tile radius of pos
+   --1 Scan the area around within a X tile radius of pos
+   local ents = surf.find_entities_filtered{position = pos, radius = 3, name = "straight-rail"}
+   if #ents == 0 then
+      game.get_player(pindex).play_sound{path = "Mine-Building"}--todo replace with an error sound
+      printout("No rails found",pindex)
+   end
 
    --2 For the first straight rail found, get the end rail and its exit direction using "get_rail_segment_end"
-   end_rail = 0
-   dir = 0
-
-   --3 If the end rail is not within 2 tiles of pos, try the other end
-
-   --4 If also not within 2 tiles, return a small error beep
+   --3 If the end rail is not within X tiles of pos, try the other end
+   local end_found = nil
+   local end_dir = nil
+   for i,rail in ipairs(ents) do
+      end_rail_1, end_dir_1 = rail.get_rail_segment_end(defines.rail_direction.front)
+      end_rail_2, end_dir_2 = rail.get_rail_segment_end(defines.rail_direction.back)
+      if util.distance(pos, end_rail_1.position) < 3 then--is within range
+         end_found = end_rail_1
+         end_dir = end_dir_1
+      elseif util.distance(pos, end_rail_2.position) < 3 then--is within range
+         end_found = end_rail_2
+         end_dir = end_dir_2
+      end
+   end   
+   
+   --4 If an end rail is not within X tiles, return a small error beep
+   if end_found == nil then
+      game.get_player(pindex).play_sound{path = "Mine-Building"}--todo replace with an error sound
+      printout("No end rails nearby.",pindex)
+      return
+   end
 
    --5 Else it is an end rail. Get its position and find the correct position and direction for the appended rail.
-   end_rail_pos = 0
-   append_dir = -1
-   append_pos = end_rail_pos
+   end_rail_pos = end_found.position
+   end_rail_dir = end_found.direction
+   append_rail_dir = -1
+   append_rail_pos = end_rail_pos
+   --note: may need to check end_dir and end_rail_dir together
+   
+   --printout(" Rail end found at " .. end_found.position.x .. " , " .. end_found.position.y .. " , facing " .. end_found.direction, pindex)--Checks
 
-   if end_rail.name == "straight-rail" then
-      if end_rail_dir == 0 then 
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+   if end_found.name == "straight-rail" then
+      if end_rail_dir == 0 or end_rail_dir == 4 then 
+         append_rail_dir = 0
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y-2}
+         else
+            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+2}
+         end
+         
+      elseif end_rail_dir == 2 or end_rail_dir == 6 then
+         append_rail_dir = 2
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x+2, end_rail_pos.y+0}
+         else
+            append_rail_pos = {end_rail_pos.x-2, end_rail_pos.y-0}
+         end
+         
       elseif end_rail_dir == 1 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
-      elseif end_rail_dir == 2 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
-      elseif end_rail_dir == 3 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
-      elseif end_rail_dir == 4 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+         append_rail_dir = 5
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y-2}
+         else
+            append_rail_pos = {end_rail_pos.x+2, end_rail_pos.y+0}
+         end
       elseif end_rail_dir == 5 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
-      elseif end_rail_dir == 6 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+         append_rail_dir = 1
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+2}
+         else
+            append_rail_pos = {end_rail_pos.x-2, end_rail_pos.y+0}
+         end
+         
+      elseif end_rail_dir == 3 then
+         append_rail_dir = 7
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x+2, end_rail_pos.y+0}
+         else
+            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+2}
+         end
       elseif end_rail_dir == 7 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+         append_rail_dir = 3
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x-2, end_rail_pos.y+0}
+         else
+            append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y-2}
+         end
       end
-   elseif end_rail.name == "curved-rail" then
+      
+   elseif end_found.name == "curved-rail" then
       if end_rail_dir == 0 then 
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+         append_rail_dir = -1
+         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
       elseif end_rail_dir == 1 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+         append_rail_dir = -1
+         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
       elseif end_rail_dir == 2 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+         append_rail_dir = -1
+         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
       elseif end_rail_dir == 3 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+         append_rail_dir = -1
+         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
       elseif end_rail_dir == 4 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+         append_rail_dir = -1
+         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
       elseif end_rail_dir == 5 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+         append_rail_dir = -1
+         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
       elseif end_rail_dir == 6 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+         append_rail_dir = -1
+         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
       elseif end_rail_dir == 7 then
-         append_dir = -1
-         append_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+         append_rail_dir = -1
+         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
       end
    end
 
    --6. Check if the selected 2x2 space is free for building, else return
    
    --7. Finally, create the appended rail and subtract 1 rail from the hand.
-   surf.create_entity{name = "straight-rail", position = append_pos, direction = append_dir, force = game.forces.player}
+   surf.create_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir, force = game.forces.player}
 
 end

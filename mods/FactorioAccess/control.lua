@@ -2639,6 +2639,7 @@ function initialize(player)
    faplayer.item_cache = faplayer.item_cache or {}
    faplayer.zoom = faplayer.zoom or 1
    faplayer.build_lock = faplayer.build_lock or false
+   faplayer.setting_inventory_wraps_around = faplayer.setting_inventory_wraps_around or true
 
    faplayer.nearby = faplayer.nearby or {
       index = 0,
@@ -2772,6 +2773,7 @@ end)
 
 
 function menu_cursor_move(direction,pindex)
+   players[pindex].setting_inventory_wraps_around = true--**temporary line because I could not find where to initialize this properly
    if     direction == defines.direction.north then
       menu_cursor_up(pindex)
    elseif direction == defines.direction.south then
@@ -2804,14 +2806,21 @@ function menu_cursor_up(pindex)
                end         
 
    elseif players[pindex].menu == "inventory" then
-      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].inventory.index = players[pindex].inventory.index -10
       if players[pindex].inventory.index < 1 then
-         players[pindex].inventory.index = players[pindex].inventory.max + players[pindex].inventory.index
-      
-
-      end
-      read_inventory_slot(pindex)
+         if players[pindex].setting_inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+            players[pindex].inventory.index = players[pindex].inventory.max + players[pindex].inventory.index
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            read_inventory_slot(pindex)
+         else --Border setting: Undo change and play error sound
+            players[pindex].inventory.index = players[pindex].inventory.index +10
+            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            printout("Border.", pindex)
+         end
+      else
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         read_inventory_slot(pindex)
+      end      
 
    elseif players[pindex].menu == "crafting" then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -2982,12 +2991,21 @@ function menu_cursor_down(pindex)
                end         
 
    elseif players[pindex].menu == "inventory" then
-      game.get_player(pindex).play_sound{path = "Inventory-Move"}
       players[pindex].inventory.index = players[pindex].inventory.index +10
       if players[pindex].inventory.index > players[pindex].inventory.max then
-         players[pindex].inventory.index = players[pindex].inventory.index - players[pindex].inventory.max
+         if players[pindex].setting_inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+            players[pindex].inventory.index = players[pindex].inventory.index - players[pindex].inventory.max
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            read_inventory_slot(pindex)
+         else --Border setting: Undo change and play error sound
+            players[pindex].inventory.index = players[pindex].inventory.index -10
+            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            printout("Border.", pindex)
+         end
+      else
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         read_inventory_slot(pindex)
       end
-      read_inventory_slot(pindex)
 
    elseif players[pindex].menu == "crafting" then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3161,12 +3179,21 @@ function menu_cursor_left(pindex)
          read_item_selector_slot(pindex)
 
    elseif players[pindex].menu == "inventory" then
-      game.get_player(pindex).play_sound{path = "Inventory-Move"}
-      players[pindex].inventory.index = players[pindex].inventory.index -1
+      players[pindex].inventory.index = players[pindex].inventory.index -1    
       if players[pindex].inventory.index%10 == 0 then
-         players[pindex].inventory.index = players[pindex].inventory.index + 10
+         if players[pindex].setting_inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+            players[pindex].inventory.index = players[pindex].inventory.index + 10
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            read_inventory_slot(pindex)
+         else --Border setting: Undo change and play error sound
+            players[pindex].inventory.index = players[pindex].inventory.index +1
+            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            printout("Border.", pindex)
+         end
+      else
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         read_inventory_slot(pindex)
       end
-      read_inventory_slot(pindex)
 
    elseif players[pindex].menu == "crafting" then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3279,13 +3306,21 @@ function menu_cursor_right(pindex)
          read_item_selector_slot(pindex)
 
    elseif players[pindex].menu == "inventory" then
-      game.get_player(pindex).play_sound{path = "Inventory-Move"}
-
       players[pindex].inventory.index = players[pindex].inventory.index +1
       if players[pindex].inventory.index%10 == 1 then
-         players[pindex].inventory.index = players[pindex].inventory.index - 10
+         if players[pindex].setting_inventory_wraps_around == true then  --Wrap around setting: Move and play move sound and read slot
+            players[pindex].inventory.index = players[pindex].inventory.index - 10
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            read_inventory_slot(pindex)
+         else --Border setting: Undo change and play error sound
+            players[pindex].inventory.index = players[pindex].inventory.index -1
+            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            printout("Border.", pindex)
+         end
+      else
+         game.get_player(pindex).play_sound{path = "Inventory-Move"}
+         read_inventory_slot(pindex)
       end
-      read_inventory_slot(pindex)
 
    elseif players[pindex].menu == "crafting" then
       game.get_player(pindex).play_sound{path = "Inventory-Move"}

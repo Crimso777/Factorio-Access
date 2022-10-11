@@ -6205,33 +6205,32 @@ function append_rail(pos, pindex)
       
    elseif end_found.name == "curved-rail" then
       if end_rail_dir == 0 then 
-         append_rail_dir = -1
-         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
-      elseif end_rail_dir == 1 then
-         append_rail_dir = -1
-         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
-      elseif end_rail_dir == 2 then
-         append_rail_dir = -1
-         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
-      elseif end_rail_dir == 3 then
-         append_rail_dir = -1
-         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
-      elseif end_rail_dir == 4 then
-         append_rail_dir = -1
-         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
-      elseif end_rail_dir == 5 then
-         append_rail_dir = -1
-         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
-      elseif end_rail_dir == 6 then
-         append_rail_dir = -1
-         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
-      elseif end_rail_dir == 7 then
-         append_rail_dir = -1
-         append_rail_pos = {end_rail_pos.x+0, end_rail_pos.y+0}
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x+10, end_rail_pos.y+0}
+            append_rail_dir = 0
+         else
+            append_rail_pos = {end_rail_pos.x+10, end_rail_pos.y+0}
+            append_rail_dir = 1
+         end
+      elseif end_rail_dir == 1 then 
+         if end_dir == defines.rail_direction.front then
+            append_rail_pos = {end_rail_pos.x+10, end_rail_pos.y+0}
+            append_rail_dir = 0
+         else
+            append_rail_pos = {end_rail_pos.x+10, end_rail_pos.y+0}
+            append_rail_dir = 7
+         end
+         
+      --todo more
       end
    end
 
    --6. Check if the selected 2x2 space is free for building, else return
+   if end_found == nil then --todo correct check here
+      game.get_player(pindex).play_sound{path = "Mine-Building"}--todo replace with an error sound
+      printout("Cannot place at end rail.",pindex)
+      return
+   end
    
    --7. Finally, create the appended rail and subtract 1 rail from the hand.
    surf.create_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir, force = game.forces.player}

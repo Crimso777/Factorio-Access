@@ -4,9 +4,17 @@ This is an accessibility mod for the popular game Factorio.  The goal of this mo
 
 This "read me" file covers the basics of the mod, which include the installation guide, the mod controls, the FAQ and links to other information sources.
 
+# Installing Factorio
 
+The game can be purchased from Factorio.com or from Steam.
 
-# Installing Factorio and Factorio Access
+After purchase, you can create an account or log in at Factorio.com. 
+
+If you have a steam key, you can have it connected with your account, or you can log in with Steam directly.
+
+From Factorio.com, either from the main page or the downloads page, you can download the latest stable release.
+
+# Installing Factorio Access
 
 To install the full version, follow the instructions below for the .zip file install.
 
@@ -283,7 +291,7 @@ Select category from currently selected tier: A and D
 
 Q: Does this mod work with the steam version?
 
-A:  Not yet, however if you buy the game on steam you can use your product key to redeem the standalone version on factorio.com
+A:  Not yet, however if you buy the game on Steam you can use your product key to redeem the standalone version on factorio.com
 
 Q: Does this mod work with the demo?
 
@@ -291,7 +299,10 @@ A:  No, in fact no mods work with the demo.
 
 Q:  Can this mod run the tutorial?
 
-A:  Not yet.  There are plans to create a custom tutorial, and to make the built in tutorial accessible, but these things are still at least a week away.
+A:  Not yet.  There are plans to create a custom tutorial, and to make the built in tutorial accessible, but these things are still weeks away. In the meantime, there is some amount of in-game help via item descriptions, while the wiki and this page are the main information sources.
+
+Q: How much of the game is accessible right now?
+A: All basic interactions with buildings and items are supported. With the recently added support for fluid handling, you can now progress until the late game, which takes dozens of hours. Some iconic optional features such as trains, combat, and multiplayer, are still being worked on. Some unique features have been added to increase accessibility. More about this can be found on the wiki.
 
 Q:  My game crashed, what gives?
 
@@ -299,7 +310,7 @@ A:  This mod is currently still in early access.  Bugs are normal and expected. 
 
 Q:  Do I have to pay to use the mod?
 
-A:  The mod is and always will be free.  The game itself costs $30 on [Factorio.com](www.factorio.com)
+A:  The mod is and always will be free.  The game itself costs $30 on [Factorio.com](www.factorio.com) and prices can vary per country on Steam.
 
 
 

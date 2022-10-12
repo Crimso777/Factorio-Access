@@ -5892,6 +5892,13 @@ function rail_ent_info(pindex, ent, description)
       end
    end
    
+   --Check if at junction
+   left_rail,temp1,temp2 = ent.get_connected_rail{rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.left}
+   right_rail,temp1,temp2 = ent.get_connected_rail{rail_direction = defines.rail_direction.back,  rail_connection_direction = defines.rail_connection_direction.right}
+   if left_rail ~= nil or right_rail ~= nil then
+      result = result .. " junction, "
+   end
+   
    --Check if there is a train stop nearby
    if is_horz_or_vert then
       local stop = nil
@@ -6326,7 +6333,15 @@ function append_rail(pos, pindex)
       return
    end
 
-   --5 Else it is an end rail. Get its position and find the correct position and direction for the appended rail.
+   --4.5 Second end rail check: The rail is also not connected to another rail
+   next_rail,temp1,temp2 = end_found.get_connected_rail{rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.straight}
+   prev_rail,temp1,temp2 = end_found.get_connected_rail{rail_direction = defines.rail_direction.back,  rail_connection_direction = defines.rail_connection_direction.straight}
+   if next_rail ~= nil and prev_rail ~= nil then
+      printout("No end rails nearby.",pindex)
+      return
+   end
+   
+   --5 Confirmed as an end rail. Get its position and find the correct position and direction for the appended rail.
    end_rail_pos = end_found.position
    end_rail_dir = end_found.direction
    append_rail_dir = -1
@@ -6413,7 +6428,9 @@ function append_rail(pos, pindex)
    end
    
    --7. Finally, create the appended rail and subtract 1 rail from the hand.
+   --game.get_player(pindex).build_from_cursor{position = append_rail_pos, direction = append_rail_dir}--acts unsolvably weird when building diagonals of rotation 5 and 7
    surf.create_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir, force = game.forces.player}
    game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 1
+   game.get_player(pindex).play_sound{path = "Mine-Building"}--todo replace with item placed sound
 
 end

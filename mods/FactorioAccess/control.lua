@@ -6306,7 +6306,7 @@ function append_rail(pos, pindex)
    --1 Scan the area around within a X tile radius of pos
    local ents = surf.find_entities_filtered{position = pos, radius = 3, name = "straight-rail"}
    if #ents == 0 then
-      game.get_player(pindex).play_sound{path = "Mine-Building"}--todo replace with an error sound
+      game.get_player(pindex).play_sound{path = "Mine-Building"}--todo sound: replace with an error sound
       printout("No rails found",pindex)
    end
 
@@ -6328,7 +6328,7 @@ function append_rail(pos, pindex)
    
    --4 If an end rail is not within X tiles, return a small error beep
    if end_found == nil then
-      game.get_player(pindex).play_sound{path = "Mine-Building"}--todo replace with an error sound
+      game.get_player(pindex).play_sound{path = "Mine-Building"}--todo sound:  replace with an error sound
       printout("No end rails nearby.",pindex)
       return
    end
@@ -6337,6 +6337,7 @@ function append_rail(pos, pindex)
    next_rail,temp1,temp2 = end_found.get_connected_rail{rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.straight}
    prev_rail,temp1,temp2 = end_found.get_connected_rail{rail_direction = defines.rail_direction.back,  rail_connection_direction = defines.rail_connection_direction.straight}
    if next_rail ~= nil and prev_rail ~= nil then
+      game.get_player(pindex).play_sound{path = "Mine-Building"}--todo sound:  replace with an error sound
       printout("No end rails nearby.",pindex)
       return
    end
@@ -6346,7 +6347,6 @@ function append_rail(pos, pindex)
    end_rail_dir = end_found.direction
    append_rail_dir = -1
    append_rail_pos = end_rail_pos
-   --note: may need to check end_dir and end_rail_dir together
    
    --printout(" Rail end found at " .. end_found.position.x .. " , " .. end_found.position.y .. " , facing " .. end_found.direction, pindex)--Checks
 
@@ -6399,24 +6399,8 @@ function append_rail(pos, pindex)
       end
       
    elseif end_found.name == "curved-rail" then
-      if end_rail_dir == 0 then 
-         if end_dir == defines.rail_direction.front then
-            append_rail_pos = {end_rail_pos.x+10, end_rail_pos.y+0}
-            append_rail_dir = 0
-         else
-            append_rail_pos = {end_rail_pos.x+10, end_rail_pos.y+0}
-            append_rail_dir = 1
-         end
-      elseif end_rail_dir == 1 then 
-         if end_dir == defines.rail_direction.front then
-            append_rail_pos = {end_rail_pos.x+10, end_rail_pos.y+0}
-            append_rail_dir = 0
-         else
-            append_rail_pos = {end_rail_pos.x+10, end_rail_pos.y+0}
-            append_rail_dir = 7
-         end
-         
-      --todo more
+         printout("Cannot append to curved end rails.",pindex)
+         return
       end
    end
 
@@ -6431,6 +6415,6 @@ function append_rail(pos, pindex)
    --game.get_player(pindex).build_from_cursor{position = append_rail_pos, direction = append_rail_dir}--acts unsolvably weird when building diagonals of rotation 5 and 7
    surf.create_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir, force = game.forces.player}
    game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 1
-   game.get_player(pindex).play_sound{path = "Mine-Building"}--todo replace with item placed sound
+   game.get_player(pindex).play_sound{path = "Mine-Building"}--todo sound: replace with item placed sound
 
 end

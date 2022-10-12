@@ -309,6 +309,39 @@ function ent_info(pindex, ent, description)
    end
    
    if ent.type == "transport-belt" then
+      --Check if corner or junction or end
+      local sideload_count = 0
+      local backload_count = 0
+      local outload_count = 0
+      local inputs = ent.belt_neighbours["inputs"]
+      local outputs = ent.belt_neighbours["outputs"]
+      for i, belt in pairs(inputs) do
+         if ent.direction ~= belt.direction then
+            sideload_count = sideload_count + 1
+         else
+            backload_count = backload_count + 1
+         end
+      end
+      for i, belt in pairs(outputs) do
+         outload_count = outload_count + 1
+      end
+      if sideload_count == 0 and backload_count == 1 and outload_count == 1 then
+         result = result --middle (no need to specify)
+      elseif sideload_count == 0 and backload_count == 0 and outload_count == 0 then
+         result = result .. " unit "
+      elseif sideload_count == 0 and backload_count == 0 and outload_count == 1 then
+         result = result .. " start "
+      elseif sideload_count == 0 and backload_count == 1 and outload_count == 0 then
+         result = result .. " end "
+      elseif sideload_count == 1 and backload_count == 0 and outload_count == 0 then
+         result = result .. " end corner "
+      elseif sideload_count == 1 and backload_count == 0 and outload_count == 1 then
+         result = result .. " corner "
+      elseif sideload_count + backload_count > 1 then
+         result = result .. " junction " --maybe different junction types will be worth specifying in the future
+      end
+      
+      --Check contents
       local left = ent.get_transport_line(1).get_contents()
       local right = ent.get_transport_line(2).get_contents()
 

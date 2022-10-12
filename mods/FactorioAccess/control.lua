@@ -6000,224 +6000,134 @@ script.on_event("g-key", function(event)
    local pindex = event.player_index
    local dir = players[pindex].player_direction
    local pos = players[pindex].position
-   --build_rail_turn_90_degrees_left(dir, pindex)
    --build_rail_turn_90_degrees_right(dir, pindex)
+   build_rail_turn_90_degrees_left(dir, pindex)
    --build_straight_rail_intersection(dir, pindex)
-   --build_straight_rail_intersection_with_signals(dir, pindex)
-   append_rail(pos, pindex)
+   --append_rail(pos, pindex)
 end)
 
 
---Builds a 90 degree rail turn to the right as a 14x14 object. Enter the start tile position and the direction to face when starting to turn right. 0 for North, 2 for East, etc.  Must be standing on the end of a straight rail with rails in hand.
+--Builds a 90 degree rail turn to the right as a 14x12 object. Enter the start tile position and the direction to face when starting to turn right. 0 for North, 2 for East, etc.  Must be standing on the end of a straight rail with rails in hand.
 function build_rail_turn_90_degrees_right(dir, pindex)
-   local surf = game.get_player(pindex).surface
-   local pos = players[pindex].position
-   
-   --1. Firstly, check if the player has enough rails to place this (11 units)
-   --todo check how many rails the player has in their hand
-   rail_count = 100
-   if rail_count < 11 then
-      printout("You need at least 11 rails in hand to build this turn.", pindex)
-      return
-   end
-   
-   --2. Secondly, check if the player is on a straight rail
-   local ent = players[pindex].tile.ents[1]
-   if ent == nil or ent.name ~= "straight-rail" then
-      printout("Must start at a straight rail.", pindex)
-      return
-   end
-     
-   --3. Thridly, check if the space is clear (depends on direction). Simple version is a 14x14 square. 
-   local x_add = 0
-   local x_add = 0
-   if dir == 0  then
-      x_add =  14
-      y_add = -14
-   elseif dir == 2 then
-      x_add =  14
-      y_add =  14
-   elseif dir == 4 then
-      x_add = -14
-      y_add =  14
-   elseif dir == 6 then
-      x_add = -14
-      y_add = -14
-   end  
-   --todo scan the area for entities: (pos.x, pos.y) to (pos.x + x_add, pos.y + y_add)
-   ents_found = 0
-   --todo iterate the entity list and ignore rails, rail signals, trees, rocks
-   
-   if ents_found > 0 then
-      printout("Building area occupied.", pindex)
-      return
-   end
-   
-   --todo later: maybe scan additional areas to exclude from the previous area, since not every signle tile of the 14x14 square is actually used. For example, the inner 9x9 and the outer 4x4 squares are unused.
-   
+   --todo copy start
    --4. Now build the five rail entities to create the turn
    if dir == 0 then 
-      surf.create_entity{name = "straight-rail", position = {pos.x, pos.y-2}, direction = 0, force = game.forces.player}
+      --surf.create_entity{name = "straight-rail", position = {pos.x, pos.y-2}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "curved-rail", position = {pos.x+2, pos.y-6}, direction = 1, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y-10}, direction = 7, force = game.forces.player}
       surf.create_entity{name = "curved-rail", position = {pos.x+8, pos.y-12}, direction = 6, force = game.forces.player} 
       surf.create_entity{name = "straight-rail", position = {pos.x+12, pos.y-14}, direction = 2, force = game.forces.player}
    elseif dir == 2 then
-      surf.create_entity{name = "straight-rail", position = {pos.x, pos.y}, direction = 2, force = game.forces.player}
+      --surf.create_entity{name = "straight-rail", position = {pos.x, pos.y}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "curved-rail", position = {pos.x+6, pos.y+2}, direction = 3, force = game.forces.player} 
       surf.create_entity{name = "straight-rail", position = {pos.x+8, pos.y+4}, direction = 1, force = game.forces.player}
       surf.create_entity{name = "curved-rail", position = {pos.x+12, pos.y+8}, direction = 0, force = game.forces.player} 
       surf.create_entity{name = "straight-rail", position = {pos.x+12, pos.y+12}, direction = 4, force = game.forces.player}
    elseif dir == 4 then
-      surf.create_entity{name = "straight-rail", position = {pos.x, pos.y-2}, direction = 4, force = game.forces.player}
+      --surf.create_entity{name = "straight-rail", position = {pos.x, pos.y-2}, direction = 4, force = game.forces.player}
       surf.create_entity{name = "curved-rail", position = {pos.x+0, pos.y+6}, direction = 5, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y+8}, direction = 3, force = game.forces.player}
       surf.create_entity{name = "curved-rail", position = {pos.x-6, pos.y+12}, direction = 2, force = game.forces.player} 
       surf.create_entity{name = "straight-rail", position = {pos.x-12, pos.y+12}, direction = 6, force = game.forces.player}
    elseif dir == 6 then
-      surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y}, direction = 6, force = game.forces.player}
+      --surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y}, direction = 6, force = game.forces.player}
       surf.create_entity{name = "curved-rail", position = {pos.x-6, pos.y+0}, direction = 7, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x-10, pos.y-4}, direction = 5, force = game.forces.player}
       surf.create_entity{name = "curved-rail", position = {pos.x-12, pos.y-6}, direction = 4, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x-14, pos.y-12}, direction = 0, force = game.forces.player}
    end
    
-   --5 Finally remove 11 rail units from the player's hand
-   --todo remove 11 rails from hand
+   --5 Finally remove 10 rail units from the player's hand
+   game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 10
 end
 
---Builds a 90 degree rail turn to the left as a 14x14 object. Enter the start tile position and the direction to face when starting to turn left. 0 for North, 2 for East, etc. Must be standing on the end of a straight rail with rails in hand.
-function build_rail_turn_90_degrees_left(dir, pindex)
+--Builds a 90 degree rail turn to the left from a horizontal or vertical end rail that is the anchor rail. The player needs to have at least 10 rails in hand.
+function build_rail_turn_90_degrees_left(anchor, pindex)
+   --todo: revise to take a straight end rail as the anchor pos
    local surf = game.get_player(pindex).surface
-   local pos = players[pindex].position
+   local stack = game.get_player(pindex).cursor_stack
    
-   --1. Firstly, check if the player has enough rails to place this (11 units)
-   --todo check how many rails the player has in their hand
-   rail_count = 100
-   if rail_count < 11 then
-      printout("You need at least 11 rails in hand to build this turn.", pindex)
+   --1. Firstly, check if the player has enough rails to place this (10 units)
+   if not (stack.valid and stack.valid_for_read and stack.name == "rail" and stack.count > 10) then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      printout("You need at least 10 rails in hand to build this turn.", pindex)
       return
    end
    
-   --2. Secondly, check if the player is on a straight rail
-   local ent = players[pindex].tile.ents[1]
-   if ent == nil or ent.name ~= "straight-rail" then
-      printout("Must start at a straight rail.", pindex)
-      return
-   end
+   --2. Secondly, find the direction faced by the end rail
+   --todo
    
-   --3. Thridly, check if the space is clear (depends on direction). Simple version is a 14x14 square. 
-   local x_add = 0
-   local x_add = 0
-   if dir == 0  then
-      x_add =  14
-      y_add = -14
-   elseif dir == 2 then
-      x_add =  14
-      y_add =  14
-   elseif dir == 4 then
-      x_add = -14
-      y_add =  14
-   elseif dir == 6 then
-      x_add = -14
-      y_add = -14
-   end  
-   --todo scan the area for entities: (pos.x, pos.y) to (pos.x + x_add, pos.y + y_add)   
-   ents_found = 0 
-   --todo iterate the entity list and ignore rails, rail signals, trees, rocks
+   --3. Thridly, check if the space is clear by running surf.can_place_entity for each rail
+   --todo: Maybe automatically clear trees and rocks in the rectangle in front of the player
    
-   if ents_found > 0 then
+   local can_place_all = true
+   --todo section after testing placement
+   
+   if not can_place_all then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("Building area occupied.", pindex)
       return
    end
-   
-   --todo later: maybe scan additional areas to exclude from the previous area, since not every signle tile of the 14x14 square is actually used. For example, the inner 9x9 and the outer 4x4 squares are unused.
    
    --4. Now build the five rail entities to create the turn
    if dir == 0 then 
-      surf.create_entity{name = "straight-rail", position = {pos.x, pos.y-2}, direction = 0, force = game.forces.player}
-      surf.create_entity{name = "curved-rail", position = {pos.x+0, pos.y-6}, direction = 0, force = game.forces.player}
-      surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y-10}, direction = 1, force = game.forces.player}
-      surf.create_entity{name = "curved-rail", position = {pos.x-6, pos.y-12}, direction = 3, force = game.forces.player} 
-      surf.create_entity{name = "straight-rail", position = {pos.x-12, pos.y-14}, direction = 2, force = game.forces.player}
+      --surf.create_entity{name = "straight-rail", position = {pos.x, pos.y-2}, direction = 0, force = game.forces.player}
+      surf.create_entity{name = "curved-rail", position = {pos.x+0, pos.y-4}, direction = 0, force = game.forces.player}
+      surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y-8}, direction = 1, force = game.forces.player}
+      surf.create_entity{name = "curved-rail", position = {pos.x-6, pos.y-10}, direction = 3, force = game.forces.player} 
+      surf.create_entity{name = "straight-rail", position = {pos.x-12, pos.y-12}, direction = 2, force = game.forces.player}
    elseif dir == 2 then
-      surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y}, direction = 2, force = game.forces.player}
-      surf.create_entity{name = "curved-rail", position = {pos.x+8, pos.y+0}, direction = 2, force = game.forces.player} 
-      surf.create_entity{name = "straight-rail", position = {pos.x+10, pos.y-4}, direction = 3, force = game.forces.player}
-      surf.create_entity{name = "curved-rail", position = {pos.x+14, pos.y-6}, direction = 5, force = game.forces.player} 
-      surf.create_entity{name = "straight-rail", position = {pos.x+14, pos.y-12}, direction = 4, force = game.forces.player}
+      --surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y}, direction = 2, force = game.forces.player}
+      surf.create_entity{name = "curved-rail", position = {pos.x+6, pos.y+0}, direction = 2, force = game.forces.player} 
+      surf.create_entity{name = "straight-rail", position = {pos.x+8, pos.y-4}, direction = 3, force = game.forces.player}
+      surf.create_entity{name = "curved-rail", position = {pos.x+12, pos.y-6}, direction = 5, force = game.forces.player} 
+      surf.create_entity{name = "straight-rail", position = {pos.x+12, pos.y-12}, direction = 4, force = game.forces.player}
    elseif dir == 4 then
-      surf.create_entity{name = "straight-rail", position = {pos.x, pos.y+2}, direction = 4, force = game.forces.player}
-      surf.create_entity{name = "curved-rail", position = {pos.x+2, pos.y+8}, direction = 4, force = game.forces.player}
-      surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y+10}, direction = 5, force = game.forces.player}
-      surf.create_entity{name = "curved-rail", position = {pos.x+8, pos.y+14}, direction = 7, force = game.forces.player} 
-      surf.create_entity{name = "straight-rail", position = {pos.x+12, pos.y+14}, direction = 6, force = game.forces.player}
+      --surf.create_entity{name = "straight-rail", position = {pos.x, pos.y+2}, direction = 4, force = game.forces.player}
+      surf.create_entity{name = "curved-rail", position = {pos.x+2, pos.y+6}, direction = 4, force = game.forces.player}
+      surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y+8}, direction = 5, force = game.forces.player}
+      surf.create_entity{name = "curved-rail", position = {pos.x+8, pos.y+12}, direction = 7, force = game.forces.player} 
+      surf.create_entity{name = "straight-rail", position = {pos.x+12, pos.y+12}, direction = 6, force = game.forces.player}
    elseif dir == 6 then
-      surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y}, direction = 6, force = game.forces.player}
-      surf.create_entity{name = "curved-rail", position = {pos.x-6, pos.y+2}, direction = 6, force = game.forces.player}
-      surf.create_entity{name = "straight-rail", position = {pos.x-10, pos.y+4}, direction = 7, force = game.forces.player}
-      surf.create_entity{name = "curved-rail", position = {pos.x-12, pos.y+8}, direction = 1, force = game.forces.player}
-      surf.create_entity{name = "straight-rail", position = {pos.x-14, pos.y+12}, direction = 0, force = game.forces.player}
+      --surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y}, direction = 6, force = game.forces.player}
+      surf.create_entity{name = "curved-rail", position = {pos.x-4, pos.y+2}, direction = 6, force = game.forces.player}
+      surf.create_entity{name = "straight-rail", position = {pos.x-8, pos.y+4}, direction = 7, force = game.forces.player}
+      surf.create_entity{name = "curved-rail", position = {pos.x-10, pos.y+8}, direction = 1, force = game.forces.player}
+      surf.create_entity{name = "straight-rail", position = {pos.x-12, pos.y+12}, direction = 0, force = game.forces.player}
    end
    
-   --5 Finally remove 11 rail units from the player's hand
-   --todo remove 11 rails from hand
+   --5 Finally remove 10 rail units from the player's hand
+   game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 10
 end
 
---Builds a straight rail intersection in front of the player. Must be standing on the end of a straight rail with rails in hand.
+--Builds a minimal straight rail intersection on a horizontal or vertical end rail.
 function build_straight_rail_intersection(dir, pindex)
-   local surf = game.get_player(pindex).surface
-   local pos = players[pindex].position
+   --todo copy start
    
-   --1. Firstly, check if the player has enough rails to place this (5 units)
-   --todo check how many rails the player has in their hand
-   rail_count = 100
-   if rail_count < 5 then
-      printout("You need at least 11 rails in hand to build this turn.", pindex)
-      return
-   end
-   
-   --2. Secondly, check if the player is on a straight rail
-   local ent = players[pindex].tile.ents[1]
-   if ent == nil or ent.name ~= "straight-rail" then
-      printout("Must start at a straight rail.", pindex)
-      return
-   end
-   
-   --3. Thridly, check if the space is clear (depends on direction). Simple version is a 8x8 square centered on the player.
-   --todo scan the area for entities: (pos.x-4, pos.y-4) to (pos.x+4, pos.y+4)
-   ents_found = 0
-   --todo iterate the entity list and ignore rails, rail signals, trees, rocks
-   
-   if ents_found > 0 then
-      printout("Building area occupied.", pindex)
-      return
-   end
-   
-   --4. Finally build the five rail entities to create the intersection
+   --4. Now build the five rail entities to create the intersection
    if dir == 0 then 
-      surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y-2}, direction = 0, force = game.forces.player}
+      --surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y-2}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y-4}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y-2}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y-2}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y-2}, direction = 2, force = game.forces.player}
       
    elseif dir == 2 then
-      surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+0}, direction = 2, force = game.forces.player}
+      --surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+0}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y+0}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y-2}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+0}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+2}, direction = 0, force = game.forces.player}
       
    elseif dir == 4 then
-      surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y+2}, direction = 0, force = game.forces.player}
+      --surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y+2}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y+4}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y+2}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y+2}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+2}, direction = 2, force = game.forces.player}
       
    elseif dir == 6 then
-      surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y+0}, direction = 2, force = game.forces.player}
+      --surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y+0}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y+0}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y-2}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y+0}, direction = 0, force = game.forces.player}
@@ -6225,67 +6135,8 @@ function build_straight_rail_intersection(dir, pindex)
       
    end
    
-   --5 Finally remove 5 rail units from the player's hand
-   --todo remove 5 rails from hand
-end
-
---Work in progress. Builds a straight rail intersection in front of the player with free rail signals. Must be standing on the end of a straight rail with rails in hand. 
-function build_straight_rail_intersection_with_signals(dir, pindex)
-   local surf = game.get_player(pindex).surface
-   local pos = players[pindex].position
-   
-   --1. Firstly, check if the player has enough rails to place this (5 units)
-   --todo check how many rails the player has in their hand
-   rail_count = 100
-   if rail_count < 5 then
-      printout("You need at least 11 rails in hand to build this turn.", pindex)
-      return
-   end
-   
-   --2. Secondly, check if the player is on a straight rail
-   local ent = players[pindex].tile.ents[1]
-   if ent == nil or ent.name ~= "straight-rail" then
-      printout("Must start at a straight rail.", pindex)
-      return
-   end
-   --Also check if player and rail face the same direction todo fix and copy to all 4 rail placement functions
-   if ent ~= nil and ent.name == "straight-rail" then
-      if (ent.direction == 0 or ent.direction == 2) and (players[pindex].player_direction == 1 or players[pindex].player_direction == 3)  then
-         printout("Must face the same direction axis as the straight rail.", pindex)
-         return
-      elseif (ent.direction == 1 or ent.direction == 3) and (players[pindex].player_direction == 0 or players[pindex].player_direction == 2)  then
-         printout("Must face the same direction axis as the straight rail.", pindex)
-         return
-      end
-   end
-   
-   --3. Thridly, check if the space is clear (depends on direction). Simple version is a 8x8 square centered on the player.
-   --todo scan the area for entities: (pos.x-4, pos.y-4) to (pos.x+4, pos.y+4)
-   ents_found = 0
-   --todo iterate the entity list and ignore rails, rail signals, trees, rocks
-   
-   if ents_found > 0 then
-      printout("Building area occupied.", pindex)
-      return
-   end
-   
-   --4. Next build the five rail entities to create the intersection and remove 5 rails from hand
-   build_straight_rail_intersection(dir, pindex)     
-   
-   --5 Finally build the free signals
-   if dir == 0 then 
-      --todo signal placement
-      
-   elseif dir == 2 then
-      --todo signal placement
-      
-   elseif dir == 4 then
-      --todo signal placement
-      
-   elseif dir == 6 then
-      --todo signal placement
-      
-   end
+   --5 Finally remove 4 rail units from the player's hand
+   game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 4
 end
 
 
@@ -6296,9 +6147,11 @@ function append_rail(pos, pindex)
    
    --0 Check if there is at least 1 rail in hand, else return
    if not (stack.valid and stack.valid_for_read) then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("Missing item in hand.",pindex)
       return
    elseif not (stack.valid and stack.valid_for_read and stack.name == "rail") then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("Not a rail in hand.",pindex)
       return
    end
@@ -6306,7 +6159,7 @@ function append_rail(pos, pindex)
    --1 Scan the area around within a X tile radius of pos
    local ents = surf.find_entities_filtered{position = pos, radius = 3, name = "straight-rail"}
    if #ents == 0 then
-      game.get_player(pindex).play_sound{path = "Mine-Building"}--todo sound: replace with an error sound
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("No rails found",pindex)
    end
 
@@ -6328,7 +6181,7 @@ function append_rail(pos, pindex)
    
    --4 If an end rail is not within X tiles, return a small error beep
    if end_found == nil then
-      game.get_player(pindex).play_sound{path = "Mine-Building"}--todo sound:  replace with an error sound
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("No end rails nearby.",pindex)
       return
    end
@@ -6337,7 +6190,7 @@ function append_rail(pos, pindex)
    next_rail,temp1,temp2 = end_found.get_connected_rail{rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.straight}
    prev_rail,temp1,temp2 = end_found.get_connected_rail{rail_direction = defines.rail_direction.back,  rail_connection_direction = defines.rail_connection_direction.straight}
    if next_rail ~= nil and prev_rail ~= nil then
-      game.get_player(pindex).play_sound{path = "Mine-Building"}--todo sound:  replace with an error sound
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("No end rails nearby.",pindex)
       return
    end
@@ -6401,13 +6254,12 @@ function append_rail(pos, pindex)
    elseif end_found.name == "curved-rail" then
          printout("Cannot append to curved end rails.",pindex)
          return
-      end
    end
 
    --6. Check if the selected 2x2 space is free for building, else return
-   if end_found == nil then --todo correct check here
-      game.get_player(pindex).play_sound{path = "Mine-Building"}--todo replace with an error sound
-      printout("Cannot place at end rail.",pindex)
+   if not surf.can_place_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir} then 
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      printout("Cannot extend the end rail.",pindex)
       return
    end
    
@@ -6415,6 +6267,7 @@ function append_rail(pos, pindex)
    --game.get_player(pindex).build_from_cursor{position = append_rail_pos, direction = append_rail_dir}--acts unsolvably weird when building diagonals of rotation 5 and 7
    surf.create_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir, force = game.forces.player}
    game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 1
-   game.get_player(pindex).play_sound{path = "Mine-Building"}--todo sound: replace with item placed sound
+   game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
 
 end
+

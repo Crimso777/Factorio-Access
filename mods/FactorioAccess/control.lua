@@ -268,6 +268,9 @@ function ent_info(pindex, ent, description)
    if ent.type == "resource" then
       result = result .. ", x " .. ent.amount
    end
+   if ent.name == "straight-rail" or ent.name == "curved-rail" then
+      return rail_ent_info(pindex, ent, description)
+   end
 
    result = result .. (description or "")
    
@@ -577,6 +580,7 @@ function ent_info(pindex, ent, description)
    end
    return result
 end
+
 function compile_building_network (ent, radius)
    local ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius, type = building_types}
    local adj = {hor = {}, vert = {}}
@@ -5803,6 +5807,186 @@ script.on_event("scan-selection-down", function(event)
    end
 end)
 
+--Key information about rail units. ***
+function rail_ent_info(pindex, ent, description)  
+   local result = ""
+   local is_end_rail = false
+   local is_horz_or_vert = false
+   
+   --Check if end rail: The rail is at the end of its segment and is also not connected to another rail
+   end_rail_1, end_dir_1 = ent.get_rail_segment_end(defines.rail_direction.front)
+   end_rail_2, end_dir_2 = ent.get_rail_segment_end(defines.rail_direction.back)
+   next_rail,temp1,temp2 = ent.get_connected_rail{rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.straight}
+   prev_rail,temp1,temp2 = ent.get_connected_rail{rail_direction = defines.rail_direction.back,  rail_connection_direction = defines.rail_connection_direction.straight}
+   if (ent.unit_number == end_rail_1.unit_number or ent.unit_number == end_rail_2.unit_number) and (next_rail == nil or prev_rail == nil) then
+      result = result .. "End rail "
+      is_end_rail = true
+   else
+      result = result .. "Rail "
+      is_end_rail = false
+   end
+      
+   --Explain the rail facing direction
+   if ent.name == "straight-rail" and is_end_rail == true then --Must force directions south and west
+      if ent.direction == 0 then 
+         if ent.unit_number == end_rail_1.unit_number then
+            result = result .. " straight facing North "
+         else
+            result = result .. " straight facing South "
+         end
+         is_horz_or_vert = true
+      elseif ent.direction == 2 then
+         if ent.unit_number == end_rail_1.unit_number then
+            result = result .. " straight facing East "
+         else
+            result = result .. " straight facing West "
+         end
+         is_horz_or_vert = true
+         
+      elseif ent.direction == 1 then
+         result = result .. " on falling diagonal left "
+      elseif ent.direction == 5 then
+         result = result .. " on falling diagonal right "
+      elseif ent.direction == 3 then
+         result = result .. " on rising diagonal left "
+      elseif ent.direction == 7 then
+         result = result .. " on rising diagonal right "
+      end
+      
+   elseif ent.name == "straight-rail" and is_end_rail == false then
+      if ent.direction == 0 or ent.direction == 4 then 
+         result = result .. " vertical "
+         is_horz_or_vert = true
+      elseif ent.direction == 2 or ent.direction == 6 then
+         result = result .. " horizontal "
+         is_horz_or_vert = true
+         
+      elseif ent.direction == 1 then
+         result = result .. " falling diagonal left "
+      elseif ent.direction == 5 then
+         result = result .. " falling diagonal right "
+      elseif ent.direction == 3 then
+         result = result .. " rising diagonal left "
+      elseif ent.direction == 7 then
+         result = result .. " rising diagonal right "
+      end
+      
+   elseif ent.name == "curved-rail" then
+      result = result .. " curved in direction "
+      if ent.direction == 0 then 
+         result = result ..  "0 with north and falling ends"
+      elseif ent.direction == 1 then
+         result = result ..  "1 with north and rising ends"
+      elseif ent.direction == 2 then
+         result = result ..  "2 with east  and rising ends"
+      elseif ent.direction == 3 then
+         result = result ..  "3 with east  and falling ends"
+      elseif ent.direction == 4 then
+         result = result ..  "4 with south and falling ends"
+      elseif ent.direction == 5 then
+         result = result ..  "5 with south and rising ends"
+      elseif ent.direction == 6 then
+         result = result ..  "6 with west  and rising ends"
+      elseif ent.direction == 7 then
+         result = result ..  "7, west and falling ends"
+      end
+   end
+   
+   --Check if there is a train stop nearby
+   if is_horz_or_vert then
+      local stop = nil
+      local segment_ent_1 = ent.get_rail_segment_entity(defines.rail_direction.front, false)
+      local segment_ent_2 = ent.get_rail_segment_entity(defines.rail_direction.back, false)
+      if segment_ent_1 ~= nil and segment_ent_1.name == "train-stop" and util.distance(ent.position, segment_ent_1.position) < 45 then
+         stop = segment_ent_1
+      elseif segment_ent_2 ~= nil and segment_ent_2.name == "train-stop" and util.distance(ent.position, segment_ent_2.position) < 45 then
+         stop = segment_ent_2
+      end
+      if stop == nil then
+         return result
+      end
+      
+      --Check if this rail is in the direction of the trains stop
+      local rail_dir_1 = segment_ent_1 == stop
+      local rail_dir_2 = segment_ent_2 == stop
+      local stop_dir = stop.connected_rail_direction
+      local pairing_correct = false
+      
+      if rail_dir_1 and stop_dir == defines.rail_direction.front then
+         --result = result .. ", pairing 1, "
+         pairing_correct = true
+      elseif rail_dir_1 and stop_dir == defines.rail_direction.back then
+         --result = result .. ", pairing 2, "
+         pairing_correct = false
+      elseif rail_dir_2 and stop_dir == defines.rail_direction.front then
+         --result = result .. ", pairing 3, "
+         pairing_correct = false
+      elseif rail_dir_2 and stop_dir == defines.rail_direction.back then
+         --result = result .. ", pairing 4, "
+         pairing_correct = true
+      else
+         result = result .. ", pairing error, "
+         pairing_correct = false
+      end
+      
+      if not pairing_correct then
+         return result
+      end
+      
+      --Count distance and determine railcar slot
+      local dist = util.distance(ent.position, stop.position)
+      --result = result .. " stop distance " .. dist
+      if dist < 2 then
+         result = result .. " station locomotive space front"
+      elseif dist < 3 then
+         result = result .. " station locomotive space middle"
+      elseif dist < 5 then
+         result = result .. " station locomotive space middle"
+      elseif dist < 7 then
+         result = result .. " station locomotive end and gap 1"
+      elseif dist < 9 then
+         result = result .. " station space 1 front"
+      elseif dist < 11 then
+         result = result .. " station space 1 middle"
+      elseif dist < 13 then
+         result = result .. " station space 1 end"
+      elseif dist < 15 then
+         result = result .. " station gap 2 and station space 2 front"
+      elseif dist < 17 then
+         result = result .. " station space 2 middle"
+      elseif dist < 19 then
+         result = result .. " station space 2 middle"
+      elseif dist < 21 then
+         result = result .. " station space 2 end and gap 3"
+      elseif dist < 23 then
+         result = result .. " station space 3 front"
+      elseif dist < 25 then
+         result = result .. " station space 3 middle"
+      elseif dist < 27 then
+         result = result .. " station space 3 end"
+      elseif dist < 29 then
+         result = result .. " station gap 4 and station space 4 front"
+      elseif dist < 31 then
+         result = result .. " station space 4 middle"
+      elseif dist < 33 then
+         result = result .. " station space 4 middle"
+      elseif dist < 35 then
+         result = result .. " station space 4 end and gap 5"
+      elseif dist < 37 then
+         result = result .. " station space 5 front"
+      elseif dist < 39 then
+         result = result .. " station space 5 middle"
+      elseif dist < 41 then
+         result = result .. " station space 5 end"
+      elseif dist < 43 then
+         result = result .. " station gap 6 and station space 6 front"
+      elseif dist < 45 then
+         result = result .. " station space 6 middle"
+      end
+   end
+   
+   return result
+end
 
 --**Temporary Test script to build rail turns and intersections
 script.on_event("g-key", function(event)
@@ -6097,12 +6281,8 @@ function build_straight_rail_intersection_with_signals(dir, pindex)
    end
 end
 
---Checks whether the distance between pos1 and pos2 is less than or equal to range
---function is_within_range(pos1, pos2, range)
---   return (pos1.x - pos2.x) * (pos1.x - pos2.x) + (pos1.y - pos2.y) * (pos1.y - pos2.y) <= range * range
---end
 
---Appends a new straight or diagonal rail to a rail end found around the input position
+--Appends a new straight or diagonal rail to a rail end found near the input position. The cursor needs to be holding rails.
 function append_rail(pos, pindex)
    local surf = game.get_player(pindex).surface
    local stack = game.get_player(pindex).cursor_stack
@@ -6234,5 +6414,6 @@ function append_rail(pos, pindex)
    
    --7. Finally, create the appended rail and subtract 1 rail from the hand.
    surf.create_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir, force = game.forces.player}
+   game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 1
 
 end

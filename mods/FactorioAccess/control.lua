@@ -382,6 +382,8 @@ function ent_info(pindex, ent, description)
       elseif ent.direction == 7 then
          result = result .. "Northwest "
       end
+   elseif ent.name == "locomotive" or ent.prototype.type == "car" then
+      result = result .. " facing " .. get_heading(ent)
    end
    if ent.prototype.type == "generator" then
       result = result .. ", "
@@ -2578,8 +2580,10 @@ function read_coords(pindex, start_phrase)
          else
             result = result .. " parked facing " .. get_heading(vehicle) .. " at "
          end
+         printout(result .. math.floor(vehicle.position.x) .. ", " .. math.floor(vehicle.position.y), pindex)
+      else
+         printout(result .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
       end
-      printout(result .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
    elseif players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
       local x = players[pindex].inventory.index %10
       local y = math.floor(players[pindex].inventory.index/10) + 1

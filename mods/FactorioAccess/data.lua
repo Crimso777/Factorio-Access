@@ -614,13 +614,6 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "g-key",
-    key_sequence = "G",
-    consuming = "none"
-},
-
-{
-    type = "custom-input",
     name = "shift-g-key",
     key_sequence = "SHIFT + G",
     consuming = "none"
@@ -635,8 +628,15 @@ data:extend({
 
 {
     type = "custom-input",
-    name = "control-shift-g-key",
-    key_sequence = "CONTROL + SHIFT + G",
+    name = "control-left",
+    key_sequence = "CONTROL + LEFT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "control-right",
+    key_sequence = "CONTROL + RIGHT",
     consuming = "none"
 }
 

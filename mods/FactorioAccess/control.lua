@@ -4880,9 +4880,21 @@ function build_item_in_hand(pindex, offset_val)
    local stack = game.get_player(pindex).cursor_stack
    local offset = offset_val or 0
    
-   if stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
+   if not (stack.valid and stack.valid_for_read) then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      printout("Invalid item in hand!", pindex)
+      return
+   end
+   
+   if stack.name == "offshore-pump" then
       build_offshore_pump_in_hand(pindex)
       return
+   elseif stack.name == "rail" then 
+      if offset_val ~= 1.337 then --sentinel value to allow free building rails
+         local pos = players[pindex].cursor_pos
+         append_rail(pos, pindex)
+         return
+      end
    end
    
    if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
@@ -5064,6 +5076,12 @@ script.on_event("control-click", function(event)
    if players[pindex].in_menu then
       if players[pindex].menu == "building" then
          do_multi_stack_transfer(1,pindex)
+      end
+   else
+      --Straight rail free placement
+      local stack = game.get_player(pindex).cursor_stack 
+      if stack.valid and stack.valid_for_read and stack.name == "rail" then
+         build_item_in_hand(pindex, 1.337)--Uses sentinel value
       end
    end
 end
@@ -5875,51 +5893,47 @@ function mine_trees_and_rocks_in_area(area, pindex)
    return outcome, comment
 end
 
---**Temporary Test script to build rail turns and intersections
-script.on_event("g-key", function(event)
+
+script.on_event("control-left", function(event)
    local pindex = event.player_index
-   local dir = players[pindex].player_direction
-   local pos = players[pindex].position
    local ent = players[pindex].tile.ents[1]
-   append_rail(pos, pindex)
+   if not check_for_player(pindex) then
+      return
+   end
+   --Build left turns on end rails
+   if ent ~= nil and ent.name == "straight-rail" then
+      build_rail_turn_left_90_degrees(ent, pindex)
+   end
 end)
 
---**Temporary Test script to build rail turns and intersections
+
+script.on_event("control-right", function(event)
+   local pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
+   if not check_for_player(pindex) then
+      return
+   end
+   --Build right turns on end rails
+   if ent ~= nil and ent.name == "straight-rail" then
+      build_rail_turn_right_90_degrees(ent, pindex)
+   end
+end)
+
+
+--**Use this unassigned key binding to test stuff
 script.on_event("shift-g-key", function(event)
    local pindex = event.player_index
-   local dir = players[pindex].player_direction
-   local pos = players[pindex].position
    local ent = players[pindex].tile.ents[1]
-   build_rail_turn_right_90_degrees(ent, pindex)
-   --build_rail_turn_left_90_degrees(ent, pindex)
-   --build_straight_rail_intersection(ent, pindex)
-   --append_rail(pos, pindex)
+   ---do stuff here
+
 end)
 
 
---**Temporary Test script to build rail turns and intersections
+--**Use this unassigned key binding to test stuff
 script.on_event("control-g-key", function(event)
    local pindex = event.player_index
-   local dir = players[pindex].player_direction
-   local pos = players[pindex].position
    local ent = players[pindex].tile.ents[1]
-   --build_rail_turn_right_90_degrees(ent, pindex)
-   build_rail_turn_left_90_degrees(ent, pindex)
-   --build_straight_rail_intersection(ent, pindex)
-   --append_rail(pos, pindex)
-end)
-
-
---**Temporary Test script to build rail turns and intersections
-script.on_event("control-shift-g-key", function(event)
-   local pindex = event.player_index
-   local dir = players[pindex].player_direction
-   local pos = players[pindex].position
-   local ent = players[pindex].tile.ents[1]
-   --build_rail_turn_right_90_degrees(ent, pindex)
-   --build_rail_turn_left_90_degrees(ent, pindex)
-   build_straight_rail_intersection(ent, pindex)
-   --append_rail(pos, pindex)
+   --do stuff here
 end)
 
 

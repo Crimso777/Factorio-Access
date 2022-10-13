@@ -746,7 +746,12 @@ function teleport_to_closest(pindex, pos, muted)
       radius = radius + 1 
       new_pos = surf.find_non_colliding_position("character", pos, radius, .1, true)
    end
-
+   
+   if game.get_player(pindex).driving then
+      printout("Cannot teleport while in a vehicle.", pindex)
+      return
+   end
+   
    local can_port = first_player.surface.can_place_entity{name = "character", position = new_pos} 
    if can_port then
       local teleported = first_player.teleport(new_pos)
@@ -2416,8 +2421,9 @@ function toggle_cursor(pindex)
 end
 
 function teleport_to_cursor(pindex)
-teleport_to_closest(pindex, players[pindex].cursor_pos)
+   teleport_to_closest(pindex, players[pindex].cursor_pos)
 end
+
 function jump_to_player(pindex)
    local first_player = game.get_player(pindex)
    players[pindex].cursor_pos.x = math.floor(first_player.position.x)+.5
@@ -3781,8 +3787,14 @@ script.on_event("teleport-to-cursor", function(event)
    if not check_for_player(pindex) then
       return
    end
+   if game.get_player(pindex).driving then
+      printout("Cannot teleport while in a vehicle.", pindex)
+      return
+   end
    if not (players[pindex].in_menu) then
-   teleport_to_cursor(pindex)
+      teleport_to_cursor(pindex)
+   else
+      printout("Cannot teleport while in a menu.", pindex)
    end
 end
 )

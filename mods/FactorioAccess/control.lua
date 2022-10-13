@@ -2543,6 +2543,7 @@ function read_tile(pindex)
    printout(result, pindex)
 end
 
+
 --Read the current co-ordinates of the cursor on the map or in a menu. Provides extra information in some menus.
 function read_coords(pindex, start_phrase)
    start_phrase = start_phrase or ""
@@ -2553,6 +2554,15 @@ function read_coords(pindex, start_phrase)
       offset = 1
    end
    if not(players[pindex].in_menu) then
+      if game.get_player(pindex).driving then
+         local vehicle = game.get_player(pindex).vehicle
+         result = result .. " in " .. vehicle.name .. " "
+         if vehicle.speed > 0 then
+            result = result .. " heading " .. get_heading(vehicle) .. " at "
+         else
+            result = result .. " parked facing " .. get_heading(vehicle) .. " at "
+         end
+      end
       printout(result .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
    elseif players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
       local x = players[pindex].inventory.index %10
@@ -2763,6 +2773,7 @@ function initialize(player)
    }
 
 end
+
 
 script.on_event(defines.events.on_player_changed_position,function(event)
       local pindex = event.player_index
@@ -3702,7 +3713,22 @@ function move_key(direction,event)
    end
 end
 
-
+--Called when a player enters or exits a vehicle
+script.on_event(defines.events.on_player_driving_changed_state, function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if game.get_player(pindex).driving then
+      players[pindex].last_vehicle = game.get_player(pindex).vehicle
+      printout("Entered " .. game.get_player(pindex).vehicle.name ,pindex)
+   elseif players[pindex].last_vehicle ~= nil then
+      printout("Exited " .. players[pindex].last_vehicle.name ,pindex)
+      teleport_to_closest(pindex, players[pindex].last_vehicle.position)
+   else
+      printout("Driving state changed." ,pindex)
+   end
+end)
 
 script.on_event("cursor-up", function(event)
    move_key(defines.direction.north,event)
@@ -5362,7 +5388,7 @@ script.on_event("rotate-building", function(event)
             printout(ent.name .. " cannot be rotated.", pindex)
          end               
       else
-         print("not a valid stack for rotating")
+         print("not a valid stack for rotating", pindex)
       end
    end
 end

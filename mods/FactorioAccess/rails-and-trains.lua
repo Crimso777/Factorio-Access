@@ -700,3 +700,33 @@ function append_rail(pos, pindex)
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
 
 end
+
+--Converts the entity orientation value to a heading
+function get_heading(ent)
+   local heading = "unknown"
+   if ent == nil then
+      return "nill error"
+   end
+   local ori = ent.orientation
+   if ori < 0.0625 then
+      heading = "North"
+   elseif ori < 0.1875 then
+      heading = "Northeast"
+   elseif ori < 0.3125 then
+      heading = "East"
+   elseif ori < 0.4375 then
+      heading = "Southeast"
+   elseif ori < 0.5625 then
+      heading = "South"
+   elseif ori < 0.6875 then
+      heading = "Southwest"
+   elseif ori < 0.8125 then
+      heading = "West"
+   elseif ori < 0.9375 then
+      heading = "Northwest"
+   else
+      heading = "North"
+   end      
+   return heading
+end
+

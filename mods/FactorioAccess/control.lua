@@ -275,7 +275,7 @@ function ent_info(pindex, ent, description)
 
    result = result .. (description or "")
    
-   --Explain the contents of a container/pipe/belt without pause and before the direction
+   --Explain the contents of a container
    if ent.type == "container" or ent.type == "logistic-container" then --Chests etc: Report the most common item and say "and other items" if there are other types.
       local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
       local itemtable = {}
@@ -295,7 +295,7 @@ function ent_info(pindex, ent, description)
       end
       
    end  
-   
+   --Explain the contents of a pipe or storage tank or etc.
    if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" then
       local dict = ent.get_fluid_contents()
       local fluids = {}
@@ -311,7 +311,7 @@ function ent_info(pindex, ent, description)
       result = result .. " containing no fluid "
       end
    end
-   
+   --Explain the type and content of a transport belt
    if ent.type == "transport-belt" then
       local left = ent.get_transport_line(1).get_contents()
       local right = ent.get_transport_line(2).get_contents()
@@ -350,6 +350,14 @@ function ent_info(pindex, ent, description)
          result = result .. " producing " .. ent.get_recipe().name
       end
    end)
+   
+   --State the name of a train stop
+   if ent.name == "train-stop" then
+      result = result .. " " .. ent.backer_name .. " "
+   --State the ID number of a train
+   elseif ent.name == "locomotive" or ent.name == "cargo-wagon" or ent.name == "fluid-wagon" then
+      result = result .. " with train ID " .. ent.train.id
+   end
 
    --Explain the entity facing direction
    if ent.prototype.is_building and ent.supports_direction then

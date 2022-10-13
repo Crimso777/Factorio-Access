@@ -2573,6 +2573,8 @@ function read_coords(pindex, start_phrase)
          result = result .. " in " .. vehicle.name .. " "
          if vehicle.speed > 0 then
             result = result .. " heading " .. get_heading(vehicle) .. " at "
+         elseif vehicle.speed < 0 then
+            result = result .. " reversing while facing" .. get_heading(vehicle) .. " at "
          else
             result = result .. " parked facing " .. get_heading(vehicle) .. " at "
          end

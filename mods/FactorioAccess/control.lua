@@ -266,6 +266,9 @@ function ent_info(pindex, ent, description)
    if game.players[pindex].name == "Crimso" then
       result = result .. " " .. ent.type .. " "
    end
+   if game.get_player(pindex).driving then
+      return
+   end
    if ent.type == "resource" then
       result = result .. ", x " .. ent.amount
    end
@@ -733,7 +736,8 @@ function read_travel_slot(pindex)
       printout(entry.name .. " at " .. math.floor(entry.position.x) .. ", " .. math.floor(entry.position.y), pindex)
    end
 end
-function teleport_to_closest(pindex, pos)
+function teleport_to_closest(pindex, pos, muted)
+   local muted = muted or false
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
    local radius = .5
@@ -749,9 +753,13 @@ function teleport_to_closest(pindex, pos)
       if teleported then
          players[pindex].position = table.deepcopy(new_pos)
          if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
-            printout("Teleported " .. math.ceil(distance(pos,new_pos)) .. " " .. direction(pos, new_pos) .. " of target", pindex)
+            if not muted then
+               printout("Teleported " .. math.ceil(distance(pos,new_pos)) .. " " .. direction(pos, new_pos) .. " of target", pindex)
+            end
          else
-            printout("Teleported to target", pindex)
+            if not muted then
+               printout("Teleported to target", pindex)
+            end
          end
 
       else
@@ -3633,6 +3641,8 @@ end
 function move(direction,pindex)
    if players[pindex].walk == 2 then
       return
+   elseif game.get_player(pindex).driving then
+      return
    end
    local first_player = game.get_player(pindex)
    local pos = players[pindex].position
@@ -3724,7 +3734,7 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
       printout("Entered " .. game.get_player(pindex).vehicle.name ,pindex)
    elseif players[pindex].last_vehicle ~= nil then
       printout("Exited " .. players[pindex].last_vehicle.name ,pindex)
-      teleport_to_closest(pindex, players[pindex].last_vehicle.position)
+      teleport_to_closest(pindex, players[pindex].last_vehicle.position, true)
    else
       printout("Driving state changed." ,pindex)
    end

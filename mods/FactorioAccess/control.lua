@@ -5982,8 +5982,13 @@ end)
 script.on_event("shift-g-key", function(event)
    local pindex = event.player_index
    local ent = players[pindex].tile.ents[1]
-   ---do stuff here
-
+   if not check_for_player(pindex) then
+      return
+   end
+   --Build small_plus_intersection on end rails
+   if ent ~= nil and ent.name == "straight-rail" then
+      build_small_plus_intersection(ent, pindex)
+   end
 end)
 
 
@@ -5991,7 +5996,13 @@ end)
 script.on_event("control-g-key", function(event)
    local pindex = event.player_index
    local ent = players[pindex].tile.ents[1]
-   --do stuff here
+   if not check_for_player(pindex) then
+      return
+   end
+   --Build a train stop on an end rail
+   if ent ~= nil and ent.name == "straight-rail" then
+      build_end_train_stop(ent, pindex)
+   end
 end)
 
 

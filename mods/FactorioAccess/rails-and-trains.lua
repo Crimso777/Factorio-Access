@@ -450,7 +450,7 @@ end
 
 
 --Builds a minimal straight rail intersection on a horizontal or vertical end rail. Note: We should build other intersections with blueprint imports.
-function build_straight_rail_intersection(anchor_rail, pindex)
+function build_small_plus_intersection(anchor_rail, pindex)
    local build_comment = ""
    local surf = game.get_player(pindex).surface
    local stack = game.get_player(pindex).cursor_stack
@@ -699,6 +699,87 @@ function append_rail(pos, pindex)
    game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 1
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
 
+end
+
+
+--Places a train stop facing the direction of the end rail.
+function build_end_train_stop(anchor_rail, pindex)
+   local build_comment = ""
+   local surf = game.get_player(pindex).surface
+   local stack = game.get_player(pindex).cursor_stack
+   local pos = nil
+   local dir = -1
+   local build_area = nil
+   local can_place_all = true
+   local is_end_rail
+   
+   --1. Firstly, check if the player has a train stop in hand
+   if not (stack.valid and stack.valid_for_read and stack.name == "train-stop" and stack.count > 0) then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      printout("You need at least 1 train stop in hand to build this structure.", pindex)
+      return
+   end
+   
+   --2. Secondly, verify the end rail and find its direction
+   is_end_rail, dir, build_comment = check_end_rail(anchor_rail,pindex)
+   if not is_end_rail then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      printout(build_comment, pindex)
+      return
+   end
+   pos = anchor_rail.position
+   if dir == 1 or dir == 3 or dir == 5 or dir == 7 then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      printout("This structure is for horizontal or vertical end rails only.", pindex)
+      return
+   end
+   
+   --3. Clear trees and rocks in the build area
+   temp1, build_comment = mine_trees_and_rocks_in_area({{pos.x-5,pos.y-5},{pos.x+5,pos.y+5}}, pindex)
+   
+   --4. Check if every object can be placed
+   if dir == 0 then 
+      can_place_all = can_place_all and surf.can_place_entity{name = "train-stop", position = {pos.x+2, pos.y+0}, direction = 0, force = game.forces.player}
+      
+   elseif dir == 2 then
+      can_place_all = can_place_all and surf.can_place_entity{name = "train-stop", position = {pos.x+0, pos.y+2}, direction = 2, force = game.forces.player}
+      
+   elseif dir == 4 then
+      can_place_all = can_place_all and surf.can_place_entity{name = "train-stop", position = {pos.x-2, pos.y+0}, direction = 4, force = game.forces.player}
+      
+   elseif dir == 6 then
+      can_place_all = can_place_all and surf.can_place_entity{name = "train-stop", position = {pos.x-0, pos.y-2}, direction = 6, force = game.forces.player}
+      
+   end
+  
+   if not can_place_all then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      printout("Building area occupied, possibly by the player. Cursor mode recommended.", pindex)
+      return
+   end
+   
+   --5. Build the five rail entities to create the structure 
+   if dir == 0 then 
+      surf.create_entity{name = "train-stop", position = {pos.x+2, pos.y+0}, direction = 0, force = game.forces.player}
+      
+   elseif dir == 2 then
+      surf.create_entity{name = "train-stop", position = {pos.x+0, pos.y+2}, direction = 2, force = game.forces.player}
+      
+   elseif dir == 4 then
+      surf.create_entity{name = "train-stop", position = {pos.x-2, pos.y+0}, direction = 4, force = game.forces.player}
+      
+   elseif dir == 6 then
+      surf.create_entity{name = "train-stop", position = {pos.x-0, pos.y-2}, direction = 6, force = game.forces.player}
+      
+   end
+   
+   --6 Remove 5 rail units from the player's hand
+   game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 1
+   
+   --7. Sounds and results
+   game.get_player(pindex).play_sound{path = "entity-build/train-stop"}
+   printout("Built a train stop." .. build_comment, pindex)
+   return
 end
 
 --Converts the entity orientation value to a heading

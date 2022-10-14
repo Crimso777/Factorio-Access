@@ -3777,12 +3777,16 @@ script.on_event("read-coords", function(event)
    read_coords(pindex)
 end
 )
+
+--J Key
 script.on_event("jump-to-player", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
-   if not (players[pindex].in_menu) then
+   if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
+      read_structure_ahead(game.get_player(pindex).vehicle.train)
+   elseif not (players[pindex].in_menu) then
       if players[pindex].cursor then jump_to_player(pindex)
       end
    end
@@ -5422,12 +5426,17 @@ script.on_event("rotate-building", function(event)
 end
 )
 
---Reads the custom written description for an item
+--Reads the custom written description for an item, called with L Key
 script.on_event("item-info", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
+   if game.get_player(pindex).driving then
+      printout(vehicle_info(pindex),pindex)
+      return
+   end
+   
    local offset = 0
    if players[pindex].menu == "building" and players[pindex].building.recipe_list ~= nil then
       offset = 1
@@ -5993,6 +6002,11 @@ script.on_event("shift-g-key", function(event)
    if ent ~= nil and ent.name == "straight-rail" then
       build_small_plus_intersection(ent, pindex)
    end
+   if ent.name == "locomotive" then
+      set_train_name(ent.train, "Tom")
+   elseif ent.name == "train-stop" then
+      set_trainstop_name(ent, "Platform nine and four fifths")
+   end
 end)
 
 
@@ -6006,6 +6020,11 @@ script.on_event("control-g-key", function(event)
    --Build a train stop on an end rail
    if ent ~= nil and ent.name == "straight-rail" then
       build_end_train_stop(ent, pindex)
+   end
+   if ent.name == "locomotive" then
+      set_train_name(ent.train, "Jerry")
+   elseif ent.name == "train-stop" then
+      set_trainstop_name(ent, "El Dorado")
    end
 end)
 

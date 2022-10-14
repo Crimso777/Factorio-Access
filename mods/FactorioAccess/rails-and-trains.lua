@@ -234,12 +234,11 @@ function check_end_rail(check_rail, pindex)
 end
 
 
---Report more info about a vehicle. For trains, this would include the name, ID, and destination. todo test and debug***
+--Report more info about a vehicle. For trains, this would include the name, ID, and destination.
 function vehicle_info(pindex)
    local result = ""
    if not game.get_player(pindex).driving then
-      printout("Not in a vehicle.", pindex)
-      return
+      return "Not in a vehicle."
    end
    
    local vehicle = game.get_player(pindex).vehicle   
@@ -247,7 +246,7 @@ function vehicle_info(pindex)
    if train == nil then
       --This is a type of car or tank.
       result = vehicle.name .. " " 
-      --can add more info here?
+      --can add more info here? For example health status and fuel status
       return result
    else
       --This is a type of locomotive or wagon.
@@ -267,7 +266,7 @@ function vehicle_info(pindex)
       --Add the train state
       result = result .. train_state_text .. ", "
       
-      --Declare destination if any
+      --Declare destination if any. Note: Not tested yet.
       if train.has_path and train.path_end_stop ~= nil then 
          result = result .. " heading to train stop " .. train.path_end_stop.backer_name .. ", "
          result = result .. " traveled " .. train.path.travelled_distance .. " of " train.path.total_distance " distance. "
@@ -277,19 +276,19 @@ function vehicle_info(pindex)
 end
 
 
---Gets a train's name. The idea is that every locomotive on a train has the same backer name and this is the train's name. If there are multiple names, a warning returned. todo test and debug***
+--Gets a train's name. The idea is that every locomotive on a train has the same backer name and this is the train's name. If there are multiple names, a warning returned.
 function get_train_name(train)
    locos = train.locomotives
    local train_name = ""
    local multiple_names = false
    
-   for loco in locos["front_movers"] do
+   for i,loco in ipairs(locos["front_movers"]) do
       if train_name ~= "" and train_name ~= loco.backer_name then
          multiple_names = true
       end
       train_name = loco.backer_name
    end
-   for loco in locos["back_movers"] do
+   for i,loco in ipairs(locos["back_movers"]) do
       if train_name ~= "" and train_name ~= loco.backer_name then
          multiple_names = true
       end
@@ -299,47 +298,63 @@ function get_train_name(train)
    if train_name == "" then
       return "without a name"
    elseif multiple_names then
-      return train_name .. " with multiple names, "
+      return train_name .. ", and other names, "
    else
       return train_name
    end
 end
 
 
---Sets a train's name. The idea is that every locomotive on a train has the same backer name and this is the train's name. todo test and debug***
+--Sets a train's name. The idea is that every locomotive on a train has the same backer name and this is the train's name.
 function set_train_name(train,new_name)
    locos = train.locomotives
-   for loco in locos["front_movers"] do
+   for i,loco in ipairs(locos["front_movers"]) do
       loco.backer_name = new_name
    end
-   for loco in locos["back_movers"] do
+   for i,loco in ipairs(locos["back_movers"]) do
       loco.backer_name = new_name
    end
 end
 
 
---For a train, reports the name and distance of the nearest rail structure such as train stop. Reporting junctions will require having the structure log. todo test and debug***
-function read_nearest_structure_ahead(train)
+--Sets a trainstop name
+function set_trainstop_name(ent, new_name)
+   ent.backer_name = new_name
+end
+
+
+--For a train, reports the name and distance of the nearest rail structure such as train stop. Reporting junctions will require having the structure log. todo fix directions***
+function read_structure_ahead(train)
    local result = ""
    local front_rail = train.front_rail
    local front_last_rail = front_rail.get_rail_segment_end(defines.rail_direction.front)
    local entity_ahead = front_rail.get_rail_segment_entity(defines.rail_direction.front, false)
+   local check_further = false
    
    --Identify what is ahead
    if entity_ahead == nil then
       local is_end_rail, dir, comment = check_end_rail(front_last_rail, pindex)
       if is_end_rail then
-         result = " End rail ahead "
+         result = "End rail ahead "
       else
          result = "Junction ahead " 
-         --later: check the structure log to identify if there is a known junction
-      end
-      
+         check_further = true
+      end   
    elseif entity_ahead.name == "train-stop" then
       result = "Train stop " .. entity_ahead.backer_name .. " ahead "
-   else--must be a rail signal
-      result = "Rail signal ahead " --todo report signal color
-      --later: check the structure log to identify if there is a known junction
+   elseif entity_ahead.name == "rail-signal" then
+      result = "Rail signal ahead, state " .. entity_ahead.signal_state .. " " 
+      check_further = true
+   elseif entity_ahead.name == "rail-chain-signal" then
+      result = "Chain signal ahead, state " .. entity_ahead.chain_signal_state .. " " 
+      check_further = true
+   else
+      result = "Unknown structure ahead "
+   end
+   
+   --Todo here later: check the structure log to identify if there is a known junction
+   if check_further then
+      result = result
    end
    
    --Give a distance until the end rail. Note: The current distance is direct and ignores the rail length, which may cause errors for curved paths.

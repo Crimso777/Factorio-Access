@@ -144,6 +144,12 @@ data:extend({
 },
 {
     type = "custom-input",
+    name = "shift-j",
+    key_sequence = "SHIFT + J",
+    consuming = "none"
+},
+{
+    type = "custom-input",
     name = "teleport-to-cursor",
     key_sequence = "SHIFT + T",
     consuming = "none"

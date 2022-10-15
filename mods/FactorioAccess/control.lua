@@ -3792,6 +3792,21 @@ script.on_event("jump-to-player", function(event)
    end
 end
 )
+
+
+--SHIFT + J Key
+script.on_event("shift-j", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
+      read_structure_ahead(game.get_player(pindex).vehicle,true)
+   end
+end
+)
+
+
 script.on_event("teleport-to-cursor", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then

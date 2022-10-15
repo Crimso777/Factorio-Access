@@ -203,7 +203,7 @@ function check_end_rail(check_rail, pindex)
    end_rail_1, end_dir_1 = check_rail.get_rail_segment_end(defines.rail_direction.front)
    end_rail_2, end_dir_2 = check_rail.get_rail_segment_end(defines.rail_direction.back)
    next_rail,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.straight}
-   prev_rail,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.back,  rail_connection_direction = defines.rail_connection_direction.straight}
+   prev_rail,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.back,  rail_connection_direction = defines.rail_connection_direction.straight}--todo need to check left and right too!
    if (check_rail.unit_number == end_rail_1.unit_number or check_rail.unit_number == end_rail_2.unit_number) and (next_rail == nil or prev_rail == nil) then
       --End rail confirmed, get direction
       is_end_rail = true
@@ -324,12 +324,13 @@ end
 
 
 --For a train, reports the name and distance of the nearest rail structure such as train stop. Reporting junctions will require having the structure log.
-function read_structure_ahead(vehicle)
+function read_structure_ahead(vehicle, back_instead)
+   local back_instead = back_instead or false
    local train = vehicle.train
    local result = ""
    local front_rail = train.front_rail
-   local front_last_rail = front_rail.get_rail_segment_end(defines.rail_direction.front)
-   local entity_ahead = front_rail.get_rail_segment_entity(defines.rail_direction.front, false)
+   local front_last_rail = front_rail.get_rail_segment_end(train.rail_direction_from_front_rail)
+   local entity_ahead = front_rail.get_rail_segment_entity(train.rail_direction_from_front_rail, false)
    local check_further = false
    local distance = -1
    
@@ -338,22 +339,11 @@ function read_structure_ahead(vehicle)
       return
    end
    
-   --Check every direction to see what "front" is. todo verify if "front rail" is always on North / east side or something
-   local heading = get_heading(vehicle)
-   if heading == "North" or "East" then
-      front_last_rail = front_last_rail
-      entity_ahead = entity_ahead
-      result = heading .. " "--for debug
-   elseif heading == "South" or heading == "West" then
-      --"Front" is reversed.
-      --front_last_rail = front_rail.get_rail_segment_end(defines.rail_direction.back)
-      --entity_ahead = front_rail.get_rail_segment_entity(defines.rail_direction.back, false)
-      result = heading .. " "--for debug
-   else
-      printout("Direction not supported.",pindex)
-      return
-   --Dianogal rail "front" and "back" depend on the rail entity direction.
-   --elseif heading == "Northeast" then
+   if back_instead then
+      front_rail = train.front_rail
+      front_last_rail = front_rail.get_rail_segment_end(train.rail_direction_from_back_rail)
+      entity_ahead = front_rail.get_rail_segment_entity(train.rail_direction_from_back_rail, false)
+      result = result .. "In reverse "
    end
    
    --Check the distance ahead
@@ -370,16 +360,19 @@ function read_structure_ahead(vehicle)
       end   
    elseif entity_ahead.name == "train-stop" then
       distance = distance - 2
-      if distance > 20 then
-         result = result .. "Train stop " .. entity_ahead.backer_name .. " ahead in " .. distance .. " meters. "
+      if distance > 25 then
+         result = "Train stop " .. entity_ahead.backer_name .. " ahead in " .. distance .. " meters. "
+         if back_instead then
+            result = "Train stop " .. entity_ahead.backer_name .. " behind in " .. distance .. " meters. "
+         end
       else
          distance = util.distance(vehicle.position, entity_ahead.position) - 3.6
          if math.abs(distance) <= 0.2 then
             result = " Aligned with train stop " .. entity_ahead.backer_name
          elseif distance > 0.2 then
-            result = math.floor(distance * 10) / 10 .. " meters away from train stop " .. entity_ahead.backer_name
+            result = math.floor(distance * 10) / 10 .. " meters away from train stop " .. entity_ahead.backer_name .. ", for this vehicle. " --maybe always read front locomotive?
          elseif distance < 0.2 then
-            result = math.floor((-distance) * 10) / 10 .. " meters past train stop " .. entity_ahead.backer_name
+            result = math.floor((-distance) * 10) / 10 .. " meters past train stop " .. entity_ahead.backer_name .. ", for this vehicle. " --maybe always read front locomotive?
          end
       end
    elseif entity_ahead.name == "rail-signal" then

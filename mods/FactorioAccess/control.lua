@@ -3785,7 +3785,7 @@ script.on_event("jump-to-player", function(event)
       return
    end
    if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
-      read_structure_ahead(game.get_player(pindex).vehicle.train)
+      read_structure_ahead(game.get_player(pindex).vehicle)
    elseif not (players[pindex].in_menu) then
       if players[pindex].cursor then jump_to_player(pindex)
       end
@@ -4971,7 +4971,10 @@ function build_item_in_hand(pindex, offset_val)
       if not(players[pindex].cursor) then
          local old_pos = game.get_player(pindex).position
          local adjusted_offset = offset
-         if players[pindex].player_direction == 0 or players[pindex].player_direction == 4 then
+         if stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
+            --Allow easy placement onto rails.
+            adjusted_offset = 2.5
+         elseif players[pindex].player_direction == 0 or players[pindex].player_direction == 4 then
             adjusted_offset = adjusted_offset * (dimensions.y + .5)/2
          else
             adjusted_offset = adjusted_offset * (dimensions.x+.5)/2

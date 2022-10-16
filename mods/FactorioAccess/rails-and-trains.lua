@@ -16,27 +16,23 @@ function rail_ent_info(pindex, ent, description)
       
    --Explain the rail facing direction
    if ent.name == "straight-rail" and is_end_rail then
+      result = result .. " straight "
       if end_rail_dir == 0 then
          result = result .. " facing North "
-         is_horz_or_vert = true
-      elseif end_rail_dir == 4 then
-         result = result .. " facing South "
-         is_horz_or_vert = true
+      elseif end_rail_dir == 1 then
+         result = result .. " facing Northeast "
       elseif end_rail_dir == 2 then
          result = result .. " facing East "
-         is_horz_or_vert = true
+      elseif end_rail_dir == 3 then
+         result = result .. " facing Southeast "
+      elseif end_rail_dir == 4 then
+         result = result .. " facing South "
+      elseif end_rail_dir == 5 then
+         result = result .. " facing Southwest "
       elseif end_rail_dir == 6 then
          result = result .. " facing West "
-         is_horz_or_vert = true
-         
-      elseif end_rail_dir == 1 then
-         result = result .. " on falling diagonal left "
-      elseif end_rail_dir == 5 then
-         result = result .. " on falling diagonal right "
-      elseif end_rail_dir == 3 then
-         result = result .. " on rising diagonal left "
       elseif end_rail_dir == 7 then
-         result = result .. " on rising diagonal right "
+         result = result .. " facing Northwest "
       end
       
    elseif ent.name == "straight-rail" and is_end_rail == false then
@@ -56,8 +52,28 @@ function rail_ent_info(pindex, ent, description)
       elseif ent.direction == 7 then
          result = result .. " on rising diagonal right "
       end
-      
-   elseif ent.name == "curved-rail" then
+   
+   elseif ent.name == "curved-rail" and is_end_rail == true then
+      result = result .. " curved "
+      if end_rail_dir == 0 then
+         result = result .. " facing North "
+      elseif end_rail_dir == 1 then
+         result = result .. " facing Northeast "
+      elseif end_rail_dir == 2 then
+         result = result .. " facing East "
+      elseif end_rail_dir == 3 then
+         result = result .. " facing Southeast "
+      elseif end_rail_dir == 4 then
+         result = result .. " facing South "
+      elseif end_rail_dir == 5 then
+         result = result .. " facing Southwest "
+      elseif end_rail_dir == 6 then
+         result = result .. " facing West "
+      elseif end_rail_dir == 7 then
+         result = result .. " facing Northwest "
+      end
+   
+   elseif ent.name == "curved-rail" and is_end_rail == false then
       result = result .. " curved in direction "
       if ent.direction == 0 then 
          result = result ..  "0 with north and falling ends"
@@ -74,14 +90,13 @@ function rail_ent_info(pindex, ent, description)
       elseif ent.direction == 6 then
          result = result ..  "6 with west  and rising ends"
       elseif ent.direction == 7 then
-         result = result ..  "7, west and falling ends"
+         result = result ..  "7 west and falling ends"
       end
    end
    
-   --Check if at junction
-   left_rail,temp1,temp2 = ent.get_connected_rail{rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.left}
-   right_rail,temp1,temp2 = ent.get_connected_rail{rail_direction = defines.rail_direction.back,  rail_connection_direction = defines.rail_connection_direction.right}
-   if left_rail ~= nil or right_rail ~= nil then
+   --Check if at junction: The rail has at least 3 connections
+   local connection_count = count_rail_connections(ent)
+   if connection_count > 2 then
       result = result .. " junction, "
    end
    
@@ -182,6 +197,38 @@ function rail_ent_info(pindex, ent, description)
 end
 
 
+--Determines how many connections a rail has
+function count_rail_connections(ent)
+   local front_left_rail,temp1,temp2 = ent.get_connected_rail{ rail_direction = defines.rail_direction.front,rail_connection_direction = defines.rail_connection_direction.left}
+   local front_right_rail,temp1,temp2 = ent.get_connected_rail{rail_direction = defines.rail_direction.front,rail_connection_direction = defines.rail_connection_direction.right}
+   local back_left_rail,temp1,temp2 = ent.get_connected_rail{ rail_direction = defines.rail_direction.back,rail_connection_direction = defines.rail_connection_direction.left}
+   local back_right_rail,temp1,temp2 = ent.get_connected_rail{rail_direction = defines.rail_direction.back,rail_connection_direction = defines.rail_connection_direction.right}
+   local next_rail,temp1,temp2 = ent.get_connected_rail{rail_direction = defines.rail_direction.front,  rail_connection_direction = defines.rail_connection_direction.straight}
+   local prev_rail,temp1,temp2 = ent.get_connected_rail{rail_direction = defines.rail_direction.back,   rail_connection_direction = defines.rail_connection_direction.straight}
+   
+   local connection_count = 0
+   if next_rail ~= nil then
+      connection_count = connection_count + 1
+   end
+   if prev_rail ~= nil then
+      connection_count = connection_count + 1
+   end
+   if front_left_rail ~= nil then
+      connection_count = connection_count + 1
+   end
+   if front_right_rail ~= nil then
+      connection_count = connection_count + 1
+   end
+   if back_left_rail ~= nil then
+      connection_count = connection_count + 1
+   end
+   if back_right_rail ~= nil then
+      connection_count = connection_count + 1
+   end
+   return connection_count
+end
+
+
 --Determines if an entity is an end rail. Returns boolean is_end_rail, integer end rail direction, and string comment for errors.
 function check_end_rail(check_rail, pindex)
    local is_end_rail = false
@@ -191,37 +238,104 @@ function check_end_rail(check_rail, pindex)
    --Check if the entity is a rail
    if check_rail == nil then
       is_end_rail = false
-      comment = "Nil, a straight end rail is required."
-      return is_end_rail, -1, comment
-   elseif not (check_rail.name == "straight-rail") then
-      is_end_rail = false
-      comment = "Not a straight rail, a straight end rail is required."
+      comment = "Nil."
       return is_end_rail, -1, comment
    end
    
-   --Check if end rail: The rail is at the end of its segment and is also not connected to another rail in the forward or backward direction
+   --Check if end rail: The rail is at the end of its segment and has only 1 connection.
    end_rail_1, end_dir_1 = check_rail.get_rail_segment_end(defines.rail_direction.front)
    end_rail_2, end_dir_2 = check_rail.get_rail_segment_end(defines.rail_direction.back)
-   next_rail,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.straight}
-   prev_rail,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.back,  rail_connection_direction = defines.rail_connection_direction.straight}--todo need to check left and right too!
-   if (check_rail.unit_number == end_rail_1.unit_number or check_rail.unit_number == end_rail_2.unit_number) and (next_rail == nil or prev_rail == nil) then
+   local connection_count = count_rail_connections(check_rail)
+   if (check_rail.unit_number == end_rail_1.unit_number or check_rail.unit_number == end_rail_2.unit_number) and connection_count < 2 then
       --End rail confirmed, get direction
       is_end_rail = true
       comment = "End rail confirmed."
-      if check_rail.direction == 0 and check_rail.unit_number == end_rail_1.unit_number then
-         dir = 0
-      elseif check_rail.direction == 0 and check_rail.unit_number == end_rail_2.unit_number then
-         dir = 4
-      elseif check_rail.direction == 2 and check_rail.unit_number == end_rail_1.unit_number then
-         dir = 2
-      elseif check_rail.direction == 2 and check_rail.unit_number == end_rail_2.unit_number then
-         dir = 6
-      elseif check_rail.direction == 1 or check_rail.direction == 3 or check_rail.direction == 5 or check_rail.direction == 7 then
-         dir = check_rail.direction
-      else
-         is_end_rail = false
-         comment = "Rail direction error."
-         return is_end_rail, -3, comment
+      if check_rail.name == "straight-rail" then
+         local next_rail,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.front,  
+               rail_connection_direction = defines.rail_connection_direction.straight}
+         local prev_rail,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.back,   
+               rail_connection_direction = defines.rail_connection_direction.straight}
+         if check_rail.direction == 0 and next_rail == nil then
+            dir = 0
+         elseif check_rail.direction == 0 and prev_rail == nil then
+            dir = 4
+         elseif check_rail.direction == 1 and next_rail == nil then
+            dir = 7
+         elseif check_rail.direction == 1 and prev_rail == nil then
+            dir = 3
+         elseif check_rail.direction == 2 and next_rail == nil then
+            dir = 2
+         elseif check_rail.direction == 2 and prev_rail == nil then
+            dir = 6
+         elseif check_rail.direction == 3 and next_rail == nil then
+            dir = 1
+         elseif check_rail.direction == 3 and prev_rail == nil then
+            dir = 5
+         elseif check_rail.direction == 4 and next_rail == nil then
+            dir = 4
+         elseif check_rail.direction == 4 and prev_rail == nil then
+            dir = 0
+         elseif check_rail.direction == 5 and next_rail == nil then
+            dir = 3
+         elseif check_rail.direction == 5 and prev_rail == nil then
+            dir = 7
+         elseif check_rail.direction == 6 and next_rail == nil then
+            dir = 6
+         elseif check_rail.direction == 6 and prev_rail == nil then
+            dir = 2
+         elseif check_rail.direction == 7 and next_rail == nil then
+            dir = 5
+         elseif check_rail.direction == 7 and prev_rail == nil then
+            dir = 1
+         else
+            --This line should not be reachable
+            is_end_rail = false
+            comment = "Rail direction error."
+            return is_end_rail, -3, comment
+         end
+      elseif check_rail.name == "curved-rail" then 
+         local next_rail,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.front,  
+               rail_connection_direction = defines.rail_connection_direction.straight}
+         local prev_rail,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.back,   
+               rail_connection_direction = defines.rail_connection_direction.straight}
+         if check_rail.direction == 0 and next_rail == nil then
+            dir = 4
+         elseif check_rail.direction == 0 and prev_rail == nil then
+            dir = 7
+         elseif check_rail.direction == 1 and next_rail == nil then
+            dir = 4
+         elseif check_rail.direction == 1 and prev_rail == nil then
+            dir = 1
+         elseif check_rail.direction == 2 and next_rail == nil then
+            dir = 6
+         elseif check_rail.direction == 2 and prev_rail == nil then
+            dir = 1
+         elseif check_rail.direction == 3 and next_rail == nil then
+            dir = 6
+         elseif check_rail.direction == 3 and prev_rail == nil then
+            dir = 3
+         elseif check_rail.direction == 4 and next_rail == nil then
+            dir = 0
+         elseif check_rail.direction == 4 and prev_rail == nil then
+            dir = 3
+         elseif check_rail.direction == 5 and next_rail == nil then
+            dir = 0
+         elseif check_rail.direction == 5 and prev_rail == nil then
+            dir = 5
+         elseif check_rail.direction == 6 and next_rail == nil then
+            dir = 2
+         elseif check_rail.direction == 6 and prev_rail == nil then
+            dir = 5
+         elseif check_rail.direction == 7 and next_rail == nil then
+            dir = 2
+         elseif check_rail.direction == 7 and prev_rail == nil then
+            dir = 7
+         else
+            --This line should not be reachable
+            is_end_rail = false
+            comment = "Rail direction error."
+            return is_end_rail, -3, comment
+         end
       end
    else
       --Not the end rail
@@ -331,6 +445,9 @@ function read_structure_ahead(vehicle, back_instead)
    local front_rail = train.front_rail
    local front_last_rail = front_rail.get_rail_segment_end(train.rail_direction_from_front_rail)
    local entity_ahead = front_rail.get_rail_segment_entity(train.rail_direction_from_front_rail, false)
+   local other_entity_1 = front_rail.get_rail_segment_entity(train.rail_direction_from_front_rail, true)
+   local other_entity_2 = front_rail.get_rail_segment_entity(train.rail_direction_from_back_rail, false)
+   local other_entity_3 = front_rail.get_rail_segment_entity(train.rail_direction_from_back_rail, true)
    local check_further = false
    local distance = -1
    
@@ -339,24 +456,38 @@ function read_structure_ahead(vehicle, back_instead)
       return
    end
    
-   if back_instead then
+   if back_instead then--todo find correct other entity for the reverse direction, maybe using the back rail
       front_rail = train.front_rail
-      front_last_rail = front_rail.get_rail_segment_end(train.rail_direction_from_back_rail)
-      entity_ahead = front_rail.get_rail_segment_entity(train.rail_direction_from_back_rail, false)
+      front_last_rail   = front_rail.get_rail_segment_end(train.rail_direction_from_back_rail)
+      entity_ahead      = entity_ahead
+      other_enity_ahead = entity_ahead
       result = result .. "In reverse "
+      return---***temp
    end
-   
+     
    --Check the distance ahead
    distance = util.distance(front_rail.position, front_last_rail.position)
    
    --Identify what is ahead
    if entity_ahead == nil then
       local is_end_rail, dir, comment = check_end_rail(front_last_rail, pindex)
+      local connection_count = count_rail_connections(front_last_rail)
       if is_end_rail then
          result = result .. "End rail "
-      else
-         result = result .. "Junction or opposite direction structure "
+      elseif connection_count > 2 then
+         result = result .. "Junction "
          check_further = true
+      else
+         check_further = true
+         if other_entity_1 ~= nil then
+            result = result .. " other 1, " .. other_entity_1.name .. " "--opposite direction rail signal
+         elseif other_entity_2 ~= nil then
+            result = result .. " other 2, " .. other_entity_1.name .. " "
+         elseif other_entity_3 ~= nil then
+            result = result .. " other 3, " .. other_entity_1.name .. " "--likely to be same entity as other 1
+         else
+            result = result .. " Unknown structure " --todo iterate to next rail or something to find it.
+         end
       end   
    elseif entity_ahead.name == "train-stop" then
       distance = distance - 2

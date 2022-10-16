@@ -523,7 +523,37 @@ function read_structure_ahead(vehicle, back_instead)
    
    --Give a distance until the end rail. Note: The current distance is direct and ignores the rail length, which may cause errors for curved paths.
    if entity_ahead == nil or entity_ahead.name ~= "train-stop" then
-      result = result .. " ahead in " .. math.floor(distance) .. " meters. "
+      result = result .. " ahead in " .. math.floor(distance) .. " meters, "
+      
+      --Feature to notify passed train stops.
+      if vehicle.name == "locomotive" then
+         local heading = get_heading(vehicle)
+         local pos = vehicle.position
+         local scan_area = nil
+         local passed_stop = nil
+         --Scan behind the locomotive for 25 meters for straight rails todo test**
+         if heading == "North" then
+            scan_area = {{pos.x-3,pos.y-3},{pos.x+3,pos.y+25}}
+         elseif heading == "South" then
+            scan_area = {{pos.x-3,pos.y+3},{pos.x+3,pos.y-25}}
+         elseif heading == "East" then
+            scan_area = {{pos.x-25,pos.y-3},{pos.x+3,pos.y+3}}
+         elseif heading == "West" then
+            scan_area = {{pos.x+25,pos.y-3},{pos.x-3,pos.y+3}}
+         else
+            scan_area = {{pos.x+0,pos.y+0},{pos.x+1,pos.y+1}}
+         end
+         local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "train-stop"}
+         if #ents > 0 then
+            passed_stop = ents[1]
+            distance = util.distance(vehicle.position, passed_stop.position)
+            if distance > 12.5 then
+               result = result .. " train stop " .. passed_stop.backer_name .. " behind in " .. math.floor(distance) .. " meters. "
+            else
+               result = math.floor(distance) .. " meters past train stop " .. passed_stop.backer_name .. ", for this vehicle. " --maybe always read front locomotive?
+            end
+         end
+      end
    end
    printout(result,pindex)
    return
@@ -891,7 +921,9 @@ function append_rail(pos, pindex)
       local ents = surf.find_entities_filtered{position = pos, radius = 3, name = "straight-rail"}
       if #ents == 0 then
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-         printout("No rails found nearby.",pindex)
+         if players[pindex].build_lock == false then
+            printout("No rails found nearby.",pindex)
+         end
       end
 
       --3 For the first straight rail found, check if it is at the end of its segment and if the rail is not within X tiles of pos, try the other end
@@ -908,7 +940,9 @@ function append_rail(pos, pindex)
       end   
       if end_found == nil then
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-         printout("No end rails found nearby", pindex)
+         if players[pindex].build_lock == false then
+            printout("No end rails found nearby", pindex)
+         end
          return
       end
       
@@ -916,7 +950,7 @@ function append_rail(pos, pindex)
       is_end_rail, end_rail_dir, comment = check_end_rail(end_found,pindex)
       if not is_end_rail then
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-         printout(build_comment, pindex)
+         printout(comment, pindex)
          return
       end
    end
@@ -985,7 +1019,7 @@ function append_rail(pos, pindex)
    --6. Check if the selected 2x2 space is free for building, else return
    if not surf.can_place_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir} then 
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-      printout("Cannot extend the end rail.",pindex)
+      printout("Cannot place here to extend the rail.",pindex)
       return
    end
    

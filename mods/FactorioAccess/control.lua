@@ -4,8 +4,174 @@ groups = {}
 entity_types = {}
 production_types = {}
 building_types = {}
+
+resources = {}
+mapped = {}
+
 local util = require('util')
 
+function nearest_edge(edges, pos, name)
+   local result = {}
+   local min = math.huge
+   for str, b in pairs(edges) do
+      local edge_pos = str2pos(str)
+      local d = distance(pos, edge_pos)
+      if d < min then
+         result = edge_pos
+         min = d
+      end
+   end
+   return result
+end
+
+function scale_area(area, factor)
+   result = table.deepcopy(area)
+   result.left_top.x = area.left_top.x * factor
+   result.left_top.y = area.left_top.y * factor
+   result.right_bottom.x = area.right_bottom.x * factor
+   result.right_bottom.y = area.right_bottom.y * factor
+   return result
+end
+function area_edge(area,dir,pos,name)
+   local adjusted_area = table.deepcopy(area)
+   if dir == 0 then
+      if adjusted_area.left_top.y == math.floor(pos.y) then
+         return true
+      else
+         return false
+      end
+   elseif dir == 2 then
+      if adjusted_area.right_bottom.x == math.ceil( .001 + pos.x) then
+         return true
+      else
+         return false
+      end
+   elseif dir == 4 then
+      if adjusted_area.right_bottom.y == math.ceil(.001+pos.y) then
+         return true
+      else
+         return false
+      end
+
+   elseif dir == 6 then
+      if adjusted_area.left_top.x == math.floor(pos.x) then
+         return true
+      else
+         return false
+      end
+   end
+end
+
+function table_concat (T1, T2)
+   if T2 == nil then
+      return
+   end
+   if T1 == nil then
+      T1 = {}
+   end
+   for i, v in pairs(T2) do
+         table.insert(T1, v)
+   end
+end
+
+function pos2str (pos)
+   return pos.x .. " " .. pos.y
+end
+function str2pos(str)
+   local t = {}
+   for s in string.gmatch(str, "([^%s]+)") do
+      table.insert(t, s)
+   end
+      return {x = t[1], y = t[2]}
+end
+function find_islands(surf, area)
+   local islands = {}
+   local ents = surf.find_entities_filtered{area = area, type = "resource"}
+   local waters = surf.find_tiles_filtered{area = area, name = "water"}
+
+   if #ents == 0 and #waters == 0then return {} end
+
+   for i, ent in ipairs(ents) do
+      if islands[ent.name] == nil then
+         islands[ent.name] = {
+            name = ent.name,
+            groups = {},
+            resources = {},
+            edges = {},
+         neighbors = {}
+         }
+      end
+      islands[ent.name].groups[i] = {pos2str(ent.position)}
+      islands[ent.name].resources[pos2str(ent.position)] = {group=i, edge = false}
+   end
+   if #waters > 0 then
+      islands["water"] = {
+         name = "water",
+         groups = {},
+         resources = {},
+         edges = {},
+      neighbors = {}
+      }
+   end
+   for i, water in pairs(waters) do
+      local str = pos2str(water.position)
+      if islands["water"].resources[str] == nil then
+         islands["water"].groups[i] = {str}
+         islands["water"].resources[str] = {group=i, edge = false}
+      end
+   end
+
+   for name, entry in pairs(islands) do
+      for pos, resource in pairs(entry.resources) do
+         local position = str2pos(pos)
+         local adj = {}
+         for dir = 0, 7 do
+            adj[dir] = pos2str(offset_position(position, dir, 1))         
+         end
+         local new_group = resource.group
+         for dir, index in ipairs(adj) do
+            if entry.resources[index] == nil then
+               resource.edge = true
+            else
+               new_group = math.min(new_group, entry.resources[index].group)
+            end        
+         end
+         if resource.edge then
+--            table.insert(entry.edges, pos)
+            entry.edges[pos] = false
+            if area_edge(area, 0, position, name) then
+               entry.neighbors[0] = true
+            entry.edges[pos] = true
+            end
+            if area_edge(area, 6, position, name) then
+               entry.neighbors[6] = true
+            entry.edges[pos] = true
+            end
+            if area_edge(area, 4, position, name) then
+               entry.neighbors[4] = true
+            entry.edges[pos] = true
+            end
+            if area_edge(area, 2, position, name) then
+               entry.neighbors[2] = true
+            entry.edges[pos] = true
+            end
+         end
+         table.insert(adj, pos)
+         for dir, index in ipairs(adj) do
+            if entry.resources[index] ~= nil and entry.resources[index].group ~= new_group then
+               local old_group = entry.resources[index].group
+               table_concat(entry.groups[new_group], entry.groups[old_group])
+               for i, index in pairs(entry.groups[old_group]) do
+                  entry.resources[index].group = new_group
+               end
+               entry.groups[old_group] = nil
+            end
+         end
+
+      end
+   end
+   return islands
+end
 
 function breakup_string(str)
    result = {""}
@@ -733,7 +899,7 @@ function compile_building_network (ent, radius)
       end
       entry = table.remove(PQ)
    end
-   print(table_size(result))
+--   print(table_size(result))
    return result
 end   
 
@@ -1678,25 +1844,28 @@ function populate_categories(pindex)
    players[pindex].nearby.other = {}
 
    for i, ent in ipairs(players[pindex].nearby.ents) do
-      while #ent.ents > 0 and ent.ents[1].valid == false do
-         table.remove(ent.ents, 1)
-      end
-      if #ent.ents == 0 then
-         print("Empty ent")
-      elseif ent.name == "water" then
-         table.insert(players[pindex].nearby.resources, ent)      
-      elseif ent.ents[1].type == "resource" or ent.ents[1].type == "tree" or ent.ents[1].name == "sand-rock-big" or ent.ents[1].name == "rock-big" or ent.ents[1].name == "rock-huge" then --Note: There is no rock type, so they are specified by name.
-         table.insert(players[pindex].nearby.resources, ent)
-      elseif ent.ents[1].type == "container" then
-         table.insert(players[pindex].nearby.containers, ent)
-      elseif ent.ents[1].type == "simple-entity" or ent.ents[1].type == "simple-entity-with-owner" then
-         table.insert(players[pindex].nearby.other, ent)
-      elseif ent.ents[1].prototype.is_building then
-         table.insert(players[pindex].nearby.buildings, ent)
+      if ent.aggregate then
+         table.insert(players[pindex].nearby.resources, ent)               
+      else
+         while #ent.ents > 0 and ent.ents[1].valid == false do
+            table.remove(ent.ents, 1)
+         end
+         if #ent.ents == 0 then
+            print("Empty ent")
+         elseif ent.name == "water" then
+            table.insert(players[pindex].nearby.resources, ent)      
+         elseif ent.ents[1].type == "resource" or ent.ents[1].type == "tree" or ent.ents[1].name == "sand-rock-big" or ent.ents[1].name == "rock-big" or ent.ents[1].name == "rock-huge" then --Note: There is no rock type, so they are specified by name.
+            table.insert(players[pindex].nearby.resources, ent)
+         elseif ent.ents[1].type == "container" then
+            table.insert(players[pindex].nearby.containers, ent)
+         elseif ent.ents[1].type == "simple-entity" or ent.ents[1].type == "simple-entity-with-owner" then
+            table.insert(players[pindex].nearby.other, ent)
+         elseif ent.ents[1].prototype.is_building then
+            table.insert(players[pindex].nearby.buildings, ent)
+         end
       end
    end
 end
-
 function read_belt_slot(pindex, start_phrase)
    start_phrase = start_phrase or ""
    local stack = nil
@@ -2159,7 +2328,9 @@ function scan_index(pindex)
       local ent = nil
 
 --      if ents[players[pindex].nearby.index].name == "water" then
-      if true then
+--      if true then
+      if ents[players[pindex].nearby.index].aggregate == false then
+
          local i = 1
          while i <= #ents[players[pindex].nearby.index].ents do
             if ents[players[pindex].nearby.index].ents[i].valid then
@@ -2187,7 +2358,22 @@ function scan_index(pindex)
       end
 
          ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
+--      end
+      else
+      if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
+         players[pindex].selection = 1
       end
+         local name = ents[players[pindex].nearby.index].name
+         local entry = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
+         if table_size(entry) == 0 then
+            table.remove(ents[players[pindex].nearby.index].ents, players[pindex].nearby.selection)
+            players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+            scan_index(pindex)
+            return
+         end
+         ent = {name = name, position = table.deepcopy(entry.position)}
+      end
+      
       if players[pindex].nearby.count == false then
          if players[pindex].cursor then
             printout (ent.name .. " " .. ent_production(ent) .. players[pindex].nearby.selection .. " of " .. #ents[players[pindex].nearby.index].ents .. ", " .. math.floor(distance(players[pindex].cursor_pos, ent.position)) .. " " .. direction(players[pindex].cursor_pos, ent.position), pindex)
@@ -2341,23 +2527,23 @@ end
 function scan_area (x,y,w,h, pindex)
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
-   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, invert = true}
+   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}
    local result = {}
-   local waters = surf.find_tiles_filtered{area = {{x+(w/4), y+(h/4)},{x+(3*w)/4, y+(3*h)/4}}, name = "water"}
---local waters = {}
-   if next(waters) ~= nil then
-      table.insert(result, {name = waters[1].name, count = #waters, ents=waters})
-   end
+         local pos = players[pindex].cursor_pos
+   for name, resource in pairs(resources) do
 
-   while next(result) ~= nil and #result[1].ents > 100 do
-      table.remove(result[1].ents, math.random(#result[1].ents))
+      table.insert(result, {name = name, count = table_size(resources[name].patches), ents = {}, aggregate = true})         
+      local index = #result
+      for group, patch in pairs(resource.patches) do
+         table.insert(result[index].ents, {group = group, position = nearest_edge(patch.edges, pos, name)})
+      end
    end
 
    for i=1, #ents, 1 do
       local prod_info = ent_production(ents[i])
       local index = index_of_entity(result, ents[i].name .. prod_info)
       if index == nil then
-         table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}})
+         table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}, aggregate = false})
 
       elseif #result[index] >= 100 then
          table.remove(result[index].ents, math.random(100))
@@ -2377,7 +2563,7 @@ function scan_area (x,y,w,h, pindex)
          local pos = players[pindex].cursor_pos
          local ent1 = nil
          local ent2 = nil
-         if k1.name == "water" then
+         if k1.aggregate then
             table.sort( k1.ents , function(k3, k4) 
                return distance(pos, k3.position) < distance(pos, k4.position)
             end)
@@ -2385,7 +2571,7 @@ function scan_area (x,y,w,h, pindex)
          else
             ent1 = surf.get_closest(pos, k1.ents)
          end
-         if k2.name == "water" then
+         if k2.aggregate then
             table.sort( k2.ents , function(k3, k4) 
                return distance(pos, k3.position) < distance(pos, k4.position)
             end)
@@ -3390,7 +3576,6 @@ function menu_cursor_right(pindex)
                players[pindex].building.index = 1
             end
          end
-         print(players[pindex].building.index)
          read_building_slot(pindex)
       elseif players[pindex].building.recipe_list == nil then
          game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -3405,7 +3590,6 @@ function menu_cursor_right(pindex)
                game.get_player(pindex).play_sound{path = "Inventory-Move"}
 
                players[pindex].building.index = players[pindex].building.index + 1
-               print(players[pindex].building.category .. " " .. #players[pindex].building.recipe_list)
                if players[pindex].building.index > #players[pindex].building.recipe_list[players[pindex].building.category] then
                   players[pindex].building.index  = 1
                end
@@ -3886,7 +4070,7 @@ script.on_event("jump-to-scan", function(event)
             ents = players[pindex].nearby.other
          end
          local ent = nil
-      if true then
+      if ents.aggregate == false then
          local i = 1
          while i <= #ents[players[pindex].nearby.index].ents do
             if ents[players[pindex].nearby.index].ents[i].valid then
@@ -3914,6 +4098,13 @@ script.on_event("jump-to-scan", function(event)
       end
 
          ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
+      else
+      if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
+         players[pindex].selection = 1
+      end
+         local name = ents[players[pindex].nearby.index].name
+         local entry = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
+         ent = {name = name, position = table.deepcopy(entry.position)}
       end
       if players[pindex].cursor then
          players[pindex].cursor_pos = center_of_tile(ent.position)
@@ -4237,8 +4428,6 @@ script.on_event(set_quickbar_names,function(event)
    end
    if players[pindex].menu == "inventory" then
       local num=tonumber(string.sub(event.input_name,-1))
-      print(event.input_name)
-      print(num)
       if num == 0 then
          num = 10
       end
@@ -4947,7 +5136,6 @@ function build_item_in_hand(pindex, offset_val)
          else
             printout("Cannot place that there.", pindex)
          end
-         print(players[pindex].player_direction .. " " .. game.get_player(pindex).character.position.x .. " " .. game.get_player(pindex).character.position.y .. " " .. players[pindex].cursor_pos.x .. " " .. players[pindex].cursor_pos.y .. " " .. position.x .. " " .. position.y)
       end
    else
       if players[pindex].build_lock == true and 1 == 1 then --This check may become a toggle-able game setting
@@ -5878,3 +6066,190 @@ script.on_event("scan-selection-down", function(event)
 	  printout(result, pindex)
    end
 end)
+
+script.on_event(defines.events.on_chunk_charted,function(event)
+   if mapped[pos2str(event.position)] ~= nil then
+      return
+   end
+   mapped[pos2str(event.position)] = true
+   local islands = find_islands(game.surfaces[event.surface_index], event.area)
+   if table_size(islands) > 0 then
+      for i, v in pairs(islands) do
+         if resources[i] == nil then
+            resources[i] = {
+               patches = {},
+               queue = {},
+               index = 1,
+               positions = {}
+            }
+         end
+         local merged_groups = {}
+--         for pos, resource in pairs(v.resources) do
+--            if resources[i].positions[pos] ~= nil then
+--               local island_group = resource.group
+--               if merged_groups[island_group] == nil then
+--                  merged_groups[island_group] = {}
+--               end
+--               merged_groups[island_group][resources[i].positions[pos]] = true
+
+--            end
+--         end
+         if resources[i].queue[pos2str(event.position)] ~= nil then
+            for dir, positions in pairs(resources[i].queue[pos2str(event.position)]) do
+--               islands[i].neighbors[dir] = nil
+               for i3, pos in pairs(positions) do
+                  local dirs = {dir - 1, dir, dir + 1}
+                  if dir == 0 then dirs[1] = 7 end
+                  local new_edges = {}
+                  for i1, d in ipairs(dirs) do
+                     new_edges[pos2str(offset_position(str2pos(pos), d, -1))] = true
+                  end
+                  local adj = {}
+                  for d = 0, 7 do
+                     adj[d] = pos2str(offset_position(str2pos(pos), d, 1))         
+                  end
+                  local edge = false
+                  for d, p in ipairs(adj) do
+                     if new_edges[p] then
+                        if islands[i].resources[p] ~= nil then
+                           local island_group = islands[i].resources[p].group
+                           if merged_groups[island_group] == nil then
+                              merged_groups[island_group] = {}
+                           end
+                           merged_groups[island_group][resources[i].positions[pos]] = true
+                        else
+                           edge = true
+                        end
+                     else
+                        if resources[i].positions[p] == nil then
+                           edge = true
+                        end
+                     end
+                  
+                  end
+                  if edge == false then
+                     local group = resources[i].positions[pos]
+                     resources[i].patches[group].edges[pos] = nil
+                  end
+                  for p, b in pairs(new_edges) do
+                     if islands[i].resources[p] ~= nil then
+                        local adj = {}
+                        for d = 0, 7 do
+                           adj[d] = pos2str(offset_position(str2pos(pos), d, 1))         
+                        end
+                        local edge = false
+                        for d, p1 in ipairs(adj) do
+                           if islands[i].resources[p1] == nil and resources[i].positions[p1] == nil then
+                              edge = true
+                           end
+                        end
+                        if edge == false then
+                           islands[i].resources[p].edge = false
+                           islands[i].edges[p]= nil
+                        else
+                           islands[i].edges[p]= false
+                        end
+                     end
+   
+                  end
+               
+               end
+            end
+         end
+         for island_group, resource_groups in pairs(merged_groups) do
+            local new_group = math.huge
+            for resource_group, b in pairs(resource_groups) do
+               new_group = math.min(new_group, resource_group)
+            end
+            for resource_group, b in pairs(resource_groups) do
+               if new_group < resource_group and resources[i].patches[resource_group] ~= nil then
+                  for i1, pos in pairs(resources[i].patches[resource_group].positions) do
+                     resources[i].positions[pos] = new_group
+                  end
+                  table_concat(resources[i].patches[new_group].positions, resources[i].patches[resource_group].positions)
+                  for pos, val in pairs(resources[i].patches[resource_group].edges) do
+                     resources[i].patches[new_group].edges[pos] = val
+                  end
+                  resources[i].patches[resource_group] = nil
+               end
+            end
+            for pos, val in pairs(islands[i].groups[island_group]) do
+               resources[i].positions[pos] = new_group
+if 'number' == type(resources[i].patches[new_group]) then new_group = resources[i].patches[new_group] end
+               table.insert(resources[i].patches[new_group].positions, pos)
+               if islands[i].edges[pos] ~= nil then
+                  resources[i].patches[new_group].edges[pos] = islands[i].edges[pos]
+               end
+               islands[i].groups[island_group] = nil
+            end
+         end
+
+         for dir, v1 in pairs(islands[i].neighbors) do
+            local chunk_pos = pos2str(offset_position(event.position, dir, 1))
+         if resources[i].queue[chunk_pos] == nil then
+            resources[i].queue[chunk_pos] = {}
+         end
+            resources[i].queue[chunk_pos][dir] =  {}
+         end
+         for old_index , group in pairs(v.groups) do
+            if true then
+               local new_index = resources[i].index
+               resources[i].patches[new_index] = {
+                  positions = {},
+                  edges = {}
+               }
+               resources[i].index = resources[i].index + 1
+               for i2, pos in pairs(group) do
+                  resources[i].positions[pos] = new_index
+                  table.insert(resources[i].patches[new_index].positions, pos)
+                  if islands[i].edges[pos] ~= nil then
+                     resources[i].patches[new_index].edges[pos] = islands[i].edges[pos]
+                     if islands[i].edges[pos] then
+                        local position = str2pos(pos)
+   --                     if math.floor(position.y) == event.area.left_top.y then
+                        if area_edge(event.area, 0, position, i) then
+   
+                           local chunk_pos = pos2str(offset_position(event.position, 0, 1))
+                           if resources[i].queue[chunk_pos][4] == nil then 
+                              resources[i].queue[chunk_pos][4] = {}
+                           end
+                           table.insert(resources[i].queue[chunk_pos][4], pos)
+                        end
+                        if area_edge(event.area, 6, position, i) then
+                           local chunk_pos = pos2str(offset_position(event.position, 6, 1))
+                           if resources[i].queue[chunk_pos][2] == nil then 
+                              resources[i].queue[chunk_pos][2] = {}
+                           end
+                           table.insert(resources[i].queue[chunk_pos][2], pos)
+                        end
+                        if area_edge(event.area, 4, position, i) then
+                           local chunk_pos = pos2str(offset_position(event.position, 4, 1))
+                           if resources[i].queue[chunk_pos][0] == nil then 
+                              resources[i].queue[chunk_pos][0] = {}
+                           end
+                           table.insert(resources[i].queue[chunk_pos][0], pos)
+                        end
+                        if area_edge(event.area, 2, position, i) then
+                           local chunk_pos = pos2str(offset_position(event.position, 2, 1))
+                           if resources[i].queue[chunk_pos][6] == nil then 
+                              resources[i].queue[chunk_pos][6] = {}
+                           end
+                           table.insert(resources[i].queue[chunk_pos][6], pos)
+                        end
+                        
+                     end
+
+                        
+                  end
+               end
+            end
+         end
+      end
+--      print(event.area.left_top.x .. " " .. event.area.left_top.y)
+--      print(event.area.right_bottom.x .. " " .. event.area.right_bottom.y)
+--      for name, obj in pairs(resources) do
+--         print(name .. ": " .. table_size(obj.patches))
+--      end
+   end
+end)
+

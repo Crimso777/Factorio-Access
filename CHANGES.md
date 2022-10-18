@@ -1,6 +1,6 @@
 # Version 0.3.1
 
-Updated 10/11/2022
+Updated 10/19/2022
 
 ## New Features
 
@@ -13,6 +13,8 @@ Updated 10/11/2022
 -Getting slot coordinates with the K key now works inside chests and most/all building menus.
 
 -In cursor mode, pressing J will announce that the cursor is returned to the player in addition to doing it.
+
+-Transport belt parts such as corners, junctions, and ends will now be specified when encountered.
 
 # Version 0.3.0
 

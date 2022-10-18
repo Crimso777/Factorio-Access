@@ -5120,6 +5120,24 @@ function build_item_in_hand(pindex, offset_val)
          end
          position = offset_position(adjusted_position, players[pindex].player_direction, adjusted_offset)
       end
+      if stack.name == "small-electric-pole" and players[pindex].build_lock == true then
+         --Place a small electric pole in this position only if it is within 6.5 to 7.5 tiles of another small electric pole
+         local surf = game.get_player(pindex).surface
+         local small_poles = surf.find_entities_filtered{position = position, radius = 7.5, name = "small-electric-pole"}
+         local all_beyond_6_5 = true
+         local any_connects = false
+         for i,pole in ipairs(small_poles) do
+            if util.distance(position, pole.position) < 6.5 then
+               all_beyond_6_5 = false
+            elseif util.distance(position, pole.position) >= 6.5 then
+               any_connects = true
+            end
+         end
+         if not (all_beyond_6_5 and any_connects) then
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            return
+         end
+      end
       local building = {
          position = position,
          direction = players[pindex].building_direction * 2,
@@ -5131,9 +5149,9 @@ function build_item_in_hand(pindex, offset_val)
 --         read_tile(pindex)
       else
          if players[pindex].build_lock == true then
-            printout("Can't place.", pindex) 
-            --note: we want to mute this message entirely if build lock is on and the entity preventing the placement is the same as the item in hand
+            game.get_player(pindex).play_sound{path = "utility/cannot_build"}
          else
+            game.get_player(pindex).play_sound{path = "utility/cannot_build"}
             printout("Cannot place that there.", pindex)
          end
       end

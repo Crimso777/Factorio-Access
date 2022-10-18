@@ -6,6 +6,8 @@ Updated 10/19/2022
 
 -Build lock. When enabled, the game will continuously try to build behind the player as they walk, or under the cursor in cursor mode. Useful for tasks like building long transport belts. Press CONTROL + B to enable or disable. It also automatically gets disabled when you switch into or out of cursor mode or empty your hand and take a step.
 
+-Build lock has a special case for electric poles where it places an electric pole only if it is within 6.5 to 7.5 tiles of the nearest electric pole, allowing you to build lines of fully spaced out small electric poles by just walking.
+
 ## Changes
 
 -Getting item or entity information with the L key now works for entities on the surface and inside chests and most building menus.

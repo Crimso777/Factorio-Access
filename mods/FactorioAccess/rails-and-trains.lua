@@ -1033,7 +1033,7 @@ end
 
 
 --Places a train stop facing the direction of the end rail.
-function build_end_train_stop(anchor_rail, pindex)
+function build_train_stop(anchor_rail, pindex)
    local build_comment = ""
    local surf = game.get_player(pindex).surface
    local stack = game.get_player(pindex).cursor_stack
@@ -1050,12 +1050,29 @@ function build_end_train_stop(anchor_rail, pindex)
       return
    end
    
-   --2. Secondly, verify the end rail and find its direction
-   is_end_rail, dir, build_comment = check_end_rail(anchor_rail,pindex)
-   if not is_end_rail then
+   --2. Secondly, find the direction based on end rail or player direction
+   is_end_rail, end_rail_dir, build_comment = check_end_rail(anchor_rail,pindex)
+   if is_end_rail then
+      dir = end_rail_dir
+   elseif end_rail_dir < 0 then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout(build_comment, pindex)
       return
+   else
+      --Choose the dir based on player direction **todo verify
+      if anchor_rail.direction == 0 or anchor_rail.direction == 4 then
+         if players[pindex].player_direction == 0 or players[pindex].player_direction == 2 then
+            dir = 0
+         elseif players[pindex].player_direction == 4 or players[pindex].player_direction == 6 then
+            dir = 4
+         end
+      elseif anchor_rail.direction == 2 or anchor_rail.direction == 6 then
+         if players[pindex].player_direction == 0 or players[pindex].player_direction == 2 then
+            dir = 2
+         elseif players[pindex].player_direction == 4 or players[pindex].player_direction == 6 then
+            dir = 6
+         end
+      end
    end
    pos = anchor_rail.position
    if dir == 1 or dir == 3 or dir == 5 or dir == 7 then
@@ -1141,3 +1158,149 @@ function get_heading(ent)
    return heading
 end
 
+
+function rail_builder_open(pindex, rail)
+   --Set the player menu tracker to this menu
+   players[pindex].menu = "rail_builder"
+   players[pindex].in_menu = true
+   
+   --Set the menu line counter to 0
+   players[pindex].rail_builder.index = 0
+   
+   --Play sound
+   game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
+   
+   --Load menu 
+   players[pindex].rail_builder.rail = rail
+   rail_builder(pindex, players[pindex].rail_builder.index, true)
+end
+
+
+function rail_builder_close(pindex, mute_in)
+   local mute = mute_in or false
+   --Set the player menu tracker to none
+   players[pindex].menu = "none"
+   players[pindex].in_menu = false
+
+   --Set the menu line counter to 0
+   players[pindex].rail_builder.index = 0
+   
+   --play sound
+   if not mute then
+      game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
+   end
+end
+
+
+function rail_builder_up(pindex)
+   --Decrement the index
+   players[pindex].rail_builder.index = players[pindex].rail_builder.index - 1
+
+   --Check the index against the limit
+   if players[pindex].rail_builder.index < 0 then
+      players[pindex].rail_builder.index = 0
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   
+   --Load menu 
+   rail_builder(pindex, players[pindex].rail_builder.index, true)
+end
+
+
+function rail_builder_down(pindex)
+   --Increment the index
+   players[pindex].rail_builder.index = players[pindex].rail_builder.index + 1
+
+   --Check the index against the limit
+   if players[pindex].rail_builder.index > 6 then
+      players[pindex].rail_builder.index = 6
+   else
+      --Play sound
+      game.get_player(pindex).play_sound{path = "Inventory-Move"}
+   end
+   
+   --Load menu 
+   rail_builder(pindex, players[pindex].rail_builder.index, true)
+end
+
+
+--Build menu to build rail structures **todo test
+function rail_builder(pindex, menu_line_in, reading_in)
+   local comment = ""
+   local menu_line = menu_line_in
+   local reading = reading_in or true--**
+   local rail = players[pindex].rail_builder.rail
+   local is_end_rail, end_rail_dir, e_comment = check_end_rail(rail, pindex)
+   
+   if end_rail_dir < 0 then
+      comment = " Rail error " .. end_rail_dir
+      printout(comment,pindex)
+      return
+   end
+   
+   if menu_line == 0 then
+      comment = comment .. "Select a structure to build by going up or down this menu. Attempt to build it via LEFT BRACKET. "
+      if not is_end_rail then
+         comment = comment .. "Note that end rails have more options available. "
+      end
+      printout(comment,pindex)
+      return
+   end
+   if not is_end_rail then
+      --End rails have more options than mid rails. For mid rails we skip these options
+      menu_line = menu_line + 4
+   end
+   
+   if menu_line == 1 then
+      if reading then
+         comment = comment .. "Left turn 90 degrees"
+         printout(comment,pindex)
+      else
+         --Build it here
+         build_rail_turn_left_90_degrees(rail, pindex)
+      end
+   elseif menu_line == 2 then
+      if reading then
+         comment = comment .. "Left turn 45 degrees"
+         printout(comment,pindex)
+      else
+         --Build it here
+         printout("This feature is not yet supported.",pindex)
+      end
+   elseif menu_line == 3 then
+      if reading then
+         comment = comment .. "Right turn 90 degrees"
+         printout(comment,pindex)
+      else
+         --Build it here
+         build_rail_turn_right_90_degrees(rail, pindex)
+      end
+   elseif menu_line == 4 then
+      if reading then
+         comment = comment .. "Right turn 45 degrees"
+         printout(comment,pindex)
+      else
+         --Build it here
+         printout("This feature is not yet supported.",pindex)
+      end
+   elseif menu_line == 5 then
+      if reading then
+         comment = comment .. "Train stop"
+         printout(comment,pindex)
+      else
+         --Build it here
+         build_train_stop(rail, pindex)
+      end
+   elseif menu_line == 6 then
+      if reading then
+         comment = comment .. "Plus intersection"
+         printout(comment,pindex)
+      else
+         --Build it here
+         build_small_plus_intersection(rail, pindex)
+      end
+   end
+   return
+end

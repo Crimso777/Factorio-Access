@@ -2791,6 +2791,11 @@ function initialize(player)
       index = 0,
       direction = "none"
    }
+   
+   faplayer.rail_builder = faplayer.rail_builder or {
+      index = 0
+      rail = nil
+   }
 
 end
 
@@ -3020,6 +3025,8 @@ function menu_cursor_up(pindex)
       read_travel_slot(pindex)
    elseif players[pindex].menu == "structure-travel" then
       move_cursor_structure(pindex, 0)
+   elseif players[pindex].menu == "rail_builder" then
+      rail_builder_up(pindex)
    end
 end
 
@@ -3222,6 +3229,8 @@ function menu_cursor_down(pindex)
       read_travel_slot(pindex)
    elseif players[pindex].menu == "structure-travel" then
       move_cursor_structure(pindex, 4)
+   elseif players[pindex].menu == "rail_builder" then
+      rail_builder_down(pindex)
    end
 end
 
@@ -4166,6 +4175,9 @@ script.on_event("open-inventory", function(event)
       if players[pindex].menu == "structure-travel" then
          game.get_player(pindex).gui.screen["structure-travel"].destroy()
       end
+      if players[pindex].menu == "rail_builer" then
+         rail_builder_close(pindex)
+      end
 
       players[pindex].menu = "none"
       players[pindex].item_selection = false
@@ -4818,7 +4830,10 @@ input.select(1, 0)
             return
          end
          target(pindex)
-  
+      
+      elseif players[pindex].menu == "rail_builder" then
+         rail_builder(pindex, players[pindex].rail_builder.index, false)
+         rail_builder_close(pindex,true)
       end
    else
       local stack = game.get_player(pindex).cursor_stack
@@ -5162,9 +5177,14 @@ script.on_event("control-click", function(event)
          do_multi_stack_transfer(1,pindex)
       end
    else
-      --Straight rail free placement
-      local stack = game.get_player(pindex).cursor_stack 
-      if stack.valid and stack.valid_for_read and stack.name == "rail" then
+      local stack = game.get_player(pindex).cursor_stack
+      local ent = game.get_player(pindex).tile.ents[1]
+      
+      if ent ~= nil and ent.name == "straight-rail" then
+         --Open rail builder
+         rail_builder_open(pindex, ent)
+      elseif stack.valid and stack.valid_for_read and stack.name == "rail" then
+         --Straight rail free placement
          build_item_in_hand(pindex, 1.337)--Uses sentinel value
       end
    end
@@ -6037,7 +6057,7 @@ script.on_event("control-g-key", function(event)
    end
    --Build a train stop on an end rail
    if ent ~= nil and ent.name == "straight-rail" then
-      build_end_train_stop(ent, pindex)
+      build_train_stop(ent, pindex)
    end
    if ent.name == "locomotive" then
       set_train_name(ent.train, "Jerry")
@@ -6045,6 +6065,5 @@ script.on_event("control-g-key", function(event)
       set_trainstop_name(ent, "El Dorado")
    end
 end)
-
 
 

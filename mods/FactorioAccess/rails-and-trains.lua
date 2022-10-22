@@ -251,10 +251,34 @@ function check_end_rail(check_rail, pindex)
       is_end_rail = true
       comment = "End rail confirmed."
       if check_rail.name == "straight-rail" then
-         local next_rail,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.front,  
+         local next_rail_straight,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.front, 
                rail_connection_direction = defines.rail_connection_direction.straight}
-         local prev_rail,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.back,   
+         local next_rail_left,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.front,
+               rail_connection_direction = defines.rail_connection_direction.left}
+         local next_rail_right,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.front,
+               rail_connection_direction = defines.rail_connection_direction.right}
+         local next_rail = nil
+         if next_rail_straight ~= nil then
+            next_rail = next_rail_straight
+         elseif next_rail_left ~= nil then
+            next_rail = next_rail_left
+         elseif next_rail_right ~= nil then
+            next_rail = next_rail_right
+         end
+         local prev_rail_straight,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.back,   
                rail_connection_direction = defines.rail_connection_direction.straight}
+         local prev_rail_left,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.back,   
+               rail_connection_direction = defines.rail_connection_direction.left}
+         local prev_rail_right,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.back,   
+               rail_connection_direction = defines.rail_connection_direction.right}
+         local prev_rail = nil
+         if prev_rail_straight ~= nil then
+            prev_rail = prev_rail_straight
+         elseif prev_rail_left ~= nil then
+            prev_rail = prev_rail_left
+         elseif prev_rail_right ~= nil then
+            prev_rail = prev_rail_right
+         end
          if check_rail.direction == 0 and next_rail == nil then
             dir = 0
          elseif check_rail.direction == 0 and prev_rail == nil then
@@ -571,7 +595,7 @@ function build_rail_turn_right_90_degrees(anchor_rail, pindex)
    local can_place_all = true
    local is_end_rail
    
-   --1. Firstly, check if the player has enough rails to place this (10 units)
+   --1. Firstly, check if the player has enough rails to place this (10 units) **todo extend all 4 of these to check inventory if the hand is not right
    if not (stack.valid and stack.valid_for_read and stack.name == "rail" and stack.count > 10) then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("You need at least 10 rails in hand to build this turn.", pindex)
@@ -662,7 +686,7 @@ function build_rail_turn_right_90_degrees(anchor_rail, pindex)
    --7. Sounds and results
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
    game.get_player(pindex).play_sound{path = "entity-build/curved-rail"}
-   printout("Built a right rail turn of 90 degrees, " .. build_comment, pindex)
+   printout("Rail turn built, " .. build_comment, pindex)
    return
    
 end
@@ -770,7 +794,7 @@ function build_rail_turn_left_90_degrees(anchor_rail, pindex)
    --7. Sounds and results
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
    game.get_player(pindex).play_sound{path = "entity-build/curved-rail"}
-   printout("Built a left rail turn of 90 degrees" .. build_comment, pindex)
+   printout("Rail turn built, " .. build_comment, pindex)
    return
 end
 
@@ -884,7 +908,7 @@ function build_small_plus_intersection(anchor_rail, pindex)
    --7. Sounds and results
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
-   printout("Built a straight intersection." .. build_comment, pindex)
+   printout("Intersection built." .. build_comment, pindex)
    return
 end
 
@@ -1125,7 +1149,7 @@ function build_train_stop(anchor_rail, pindex)
    
    --7. Sounds and results
    game.get_player(pindex).play_sound{path = "entity-build/train-stop"}
-   printout("Built a train stop." .. build_comment, pindex)
+   printout("Train stop built." .. build_comment, pindex)
    return
 end
 
@@ -1230,7 +1254,7 @@ end
 function rail_builder(pindex, menu_line_in, reading_in)
    local comment = ""
    local menu_line = menu_line_in
-   local reading = reading_in or true--**
+   local reading = reading_in
    local rail = players[pindex].rail_builder.rail
    local is_end_rail, end_rail_dir, e_comment = check_end_rail(rail, pindex)
    

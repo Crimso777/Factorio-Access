@@ -2793,7 +2793,7 @@ function initialize(player)
    }
    
    faplayer.rail_builder = faplayer.rail_builder or {
-      index = 0
+      index = 0,
       rail = nil
    }
 
@@ -4178,7 +4178,10 @@ script.on_event("open-inventory", function(event)
       if players[pindex].menu == "rail_builer" then
          rail_builder_close(pindex)
       end
-
+      
+      --game.get_player(pindex).opened = nil
+      --players[pindex].opened = nil
+      
       players[pindex].menu = "none"
       players[pindex].item_selection = false
       players[pindex].item_cache = {}
@@ -4833,7 +4836,7 @@ input.select(1, 0)
       
       elseif players[pindex].menu == "rail_builder" then
          rail_builder(pindex, players[pindex].rail_builder.index, false)
-         rail_builder_close(pindex,true)
+         rail_builder_close(pindex,false)
       end
    else
       local stack = game.get_player(pindex).cursor_stack
@@ -5178,7 +5181,7 @@ script.on_event("control-click", function(event)
       end
    else
       local stack = game.get_player(pindex).cursor_stack
-      local ent = game.get_player(pindex).tile.ents[1]
+      local ent = players[pindex].tile.ents[1]
       
       if ent ~= nil and ent.name == "straight-rail" then
          --Open rail builder
@@ -6036,10 +6039,7 @@ script.on_event("shift-g-key", function(event)
    if not check_for_player(pindex) then
       return
    end
-   --Build small_plus_intersection on end rails
-   if ent ~= nil and ent.name == "straight-rail" then
-      build_small_plus_intersection(ent, pindex)
-   end
+
    if ent.name == "locomotive" then
       set_train_name(ent.train, "Tom")
    elseif ent.name == "train-stop" then
@@ -6055,10 +6055,7 @@ script.on_event("control-g-key", function(event)
    if not check_for_player(pindex) then
       return
    end
-   --Build a train stop on an end rail
-   if ent ~= nil and ent.name == "straight-rail" then
-      build_train_stop(ent, pindex)
-   end
+
    if ent.name == "locomotive" then
       set_train_name(ent.train, "Jerry")
    elseif ent.name == "train-stop" then

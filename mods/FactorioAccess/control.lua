@@ -6039,7 +6039,11 @@ script.on_event("shift-g-key", function(event)
    if not check_for_player(pindex) then
       return
    end
-
+   
+   if ent ~= nil and ent.name == "straight-rail" then
+      build_train_stop(ent, pindex)
+   end
+   
    if ent.name == "locomotive" then
       set_train_name(ent.train, "Tom")
    elseif ent.name == "train-stop" then
@@ -6054,6 +6058,10 @@ script.on_event("control-g-key", function(event)
    local ent = players[pindex].tile.ents[1]
    if not check_for_player(pindex) then
       return
+   end
+   
+   if ent ~= nil and ent.name == "straight-rail" then
+      build_small_plus_intersection(ent, pindex)
    end
 
    if ent.name == "locomotive" then

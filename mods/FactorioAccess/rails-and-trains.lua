@@ -486,7 +486,7 @@ function read_structure_ahead(vehicle, back_instead)
       entity_ahead      = entity_ahead
       other_enity_ahead = entity_ahead
       result = result .. "In reverse "
-      return---***temp
+      return---**temp
    end
      
    --Check the distance ahead
@@ -584,22 +584,32 @@ function read_structure_ahead(vehicle, back_instead)
 end
 
 
---Builds a 90 degree rail turn to the right as a 14x12 object. Enter the start tile position and the direction to face when starting to turn right. 0 for North, 2 for East, etc.  Must be standing on the end of a straight rail with rails in hand.
+--Builds a 90 degree rail turn to the right from a horizontal or vertical end rail that is the anchor rail. 
 function build_rail_turn_right_90_degrees(anchor_rail, pindex)
    local build_comment = ""
    local surf = game.get_player(pindex).surface
    local stack = game.get_player(pindex).cursor_stack
+   local stack2 = nil
    local pos = nil
    local dir = -1
    local build_area = nil
    local can_place_all = true
    local is_end_rail
    
-   --1. Firstly, check if the player has enough rails to place this (10 units) **todo extend all 4 of these to check inventory if the hand is not right
-   if not (stack.valid and stack.valid_for_read and stack.name == "rail" and stack.count > 10) then
-      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-      printout("You need at least 10 rails in hand to build this turn.", pindex)
-      return
+   --1. Firstly, check if the player has enough rails to place this (10 units) 
+   if not (stack.valid and stack.valid_for_read and stack.name == "rail" and stack.count >= 10) then
+      --Check if the inventory has enough
+      if players[pindex].inventory.lua_inventory.get_item_count("rail") < 10 then
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         printout("You need at least 10 rails in your inventory to build this turn.", pindex)
+         return
+      else
+         --Take from the inventory.
+         stack2 = players[pindex].inventory.lua_inventory.find_item_stack("rail")
+         game.get_player(pindex).cursor_stack.swap_stack(stack2)
+         stack = game.get_player(pindex).cursor_stack
+         players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+      end
    end
    
    --2. Secondly, verify the end rail and find its direction
@@ -607,12 +617,14 @@ function build_rail_turn_right_90_degrees(anchor_rail, pindex)
    if not is_end_rail then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout(build_comment, pindex)
+      game.get_player(pindex).clear_cursor()
       return
    end
    pos = anchor_rail.position
    if dir == 1 or dir == 3 or dir == 5 or dir == 7 then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("This structure is for horizontal or vertical end rails only.", pindex)
+      game.get_player(pindex).clear_cursor()
       return
    end
    
@@ -654,6 +666,7 @@ function build_rail_turn_right_90_degrees(anchor_rail, pindex)
    if not can_place_all then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("Building area occupied.", pindex)
+      game.get_player(pindex).clear_cursor()
       return
    end
    
@@ -682,6 +695,7 @@ function build_rail_turn_right_90_degrees(anchor_rail, pindex)
    
    --6 Remove 10 rail units from the player's hand
    game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 10
+   game.get_player(pindex).clear_cursor()
    
    --7. Sounds and results
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
@@ -692,11 +706,12 @@ function build_rail_turn_right_90_degrees(anchor_rail, pindex)
 end
 
 
---Builds a 90 degree rail turn to the left from a horizontal or vertical end rail that is the anchor rail. The player needs to have at least 10 rails in hand.
+--Builds a 90 degree rail turn to the left from a horizontal or vertical end rail that is the anchor rail. 
 function build_rail_turn_left_90_degrees(anchor_rail, pindex)
    local build_comment = ""
    local surf = game.get_player(pindex).surface
    local stack = game.get_player(pindex).cursor_stack
+   local stack2 = nil
    local pos = nil
    local dir = -1
    local build_area = nil
@@ -705,9 +720,18 @@ function build_rail_turn_left_90_degrees(anchor_rail, pindex)
    
    --1. Firstly, check if the player has enough rails to place this (10 units)
    if not (stack.valid and stack.valid_for_read and stack.name == "rail" and stack.count > 10) then
-      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-      printout("You need at least 10 rails in hand to build this turn.", pindex)
-      return
+      --Check if the inventory has enough
+      if players[pindex].inventory.lua_inventory.get_item_count("rail") < 10 then
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         printout("You need at least 10 rails in your inventory to build this turn.", pindex)
+         return
+      else
+         --Take from the inventory.
+         stack2 = players[pindex].inventory.lua_inventory.find_item_stack("rail")
+         game.get_player(pindex).cursor_stack.swap_stack(stack2)
+         stack = game.get_player(pindex).cursor_stack
+         players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+      end
    end
    
    --2. Secondly, verify the end rail and find its direction
@@ -715,12 +739,14 @@ function build_rail_turn_left_90_degrees(anchor_rail, pindex)
    if not is_end_rail then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout(build_comment, pindex)
+      game.get_player(pindex).clear_cursor()
       return
    end
    pos = anchor_rail.position
    if dir == 1 or dir == 3 or dir == 5 or dir == 7 then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("This structure is for horizontal or vertical end rails only.", pindex)
+      game.get_player(pindex).clear_cursor()
       return
    end
    
@@ -762,6 +788,7 @@ function build_rail_turn_left_90_degrees(anchor_rail, pindex)
    if not can_place_all then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("Building area occupied.", pindex)
+      game.get_player(pindex).clear_cursor()
       return
    end
    
@@ -790,6 +817,7 @@ function build_rail_turn_left_90_degrees(anchor_rail, pindex)
    
    --6 Remove 10 rail units from the player's hand
    game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 10
+   game.get_player(pindex).clear_cursor()
    
    --7. Sounds and results
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
@@ -804,6 +832,7 @@ function build_small_plus_intersection(anchor_rail, pindex)
    local build_comment = ""
    local surf = game.get_player(pindex).surface
    local stack = game.get_player(pindex).cursor_stack
+   local stack2 = nil
    local pos = nil
    local dir = -1
    local build_area = nil
@@ -812,9 +841,18 @@ function build_small_plus_intersection(anchor_rail, pindex)
    
    --1. Firstly, check if the player has enough rails to place this (5 units)
    if not (stack.valid and stack.valid_for_read and stack.name == "rail" and stack.count > 5) then
-      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-      printout("You need at least 5 rails in hand to build this structure.", pindex)
-      return
+      --Check if the inventory has enough
+      if players[pindex].inventory.lua_inventory.get_item_count("rail") < 5 then
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         printout("You need at least 5 rails in your inventory to build this turn.", pindex)
+         return
+      else
+         --Take from the inventory.
+         stack2 = players[pindex].inventory.lua_inventory.find_item_stack("rail")
+         game.get_player(pindex).cursor_stack.swap_stack(stack2)
+         stack = game.get_player(pindex).cursor_stack
+         players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+      end
    end
    
    --2. Secondly, verify the end rail and find its direction
@@ -822,12 +860,14 @@ function build_small_plus_intersection(anchor_rail, pindex)
    if not is_end_rail then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout(build_comment, pindex)
+      game.get_player(pindex).clear_cursor()
       return
    end
    pos = anchor_rail.position
    if dir == 1 or dir == 3 or dir == 5 or dir == 7 then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("This structure is for horizontal or vertical end rails only.", pindex)
+      game.get_player(pindex).clear_cursor()
       return
    end
    
@@ -868,16 +908,27 @@ function build_small_plus_intersection(anchor_rail, pindex)
    if not can_place_all then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("Building area occupied.", pindex)
+      game.get_player(pindex).clear_cursor()
       return
    end
    
-   --5. Build the five rail entities to create the structure
+   --5. Build the five rail entities to create the structure. Also add signals for free
    if dir == 0 then 
       surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y-2}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y-4}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y-2}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y-2}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y-2}, direction = 2, force = game.forces.player}
+      
+      surf.create_entity{name = "rail-signal"  , position = {pos.x-2, pos.y-0}, direction = 0, force = game.forces.player}
+      surf.create_entity{name = "rail-signal"  , position = {pos.x+1, pos.y-5}, direction = 4, force = game.forces.player}
+      surf.create_entity{name = "rail-signal"  , position = {pos.x-3, pos.y-4}, direction = 2, force = game.forces.player}
+      surf.create_entity{name = "rail-signal"  , position = {pos.x+2, pos.y-1}, direction = 6, force = game.forces.player}
+      
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x+1, pos.y-0}, direction = 4, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-2, pos.y-5}, direction = 0, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-3, pos.y-1}, direction = 6, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x+2, pos.y-4}, direction = 2, force = game.forces.player}
       
    elseif dir == 2 then
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+0}, direction = 2, force = game.forces.player}
@@ -886,12 +937,34 @@ function build_small_plus_intersection(anchor_rail, pindex)
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+0}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+2}, direction = 0, force = game.forces.player}
       
+      surf.create_entity{name = "rail-signal"  , position = {pos.x-1, pos.y-2}, direction = 2, force = game.forces.player}
+      surf.create_entity{name = "rail-signal"  , position = {pos.x+4, pos.y+1}, direction = 6, force = game.forces.player}
+      surf.create_entity{name = "rail-signal"  , position = {pos.x+3, pos.y-3}, direction = 4, force = game.forces.player}
+      surf.create_entity{name = "rail-signal"  , position = {pos.x-0, pos.y+2}, direction = 0, force = game.forces.player}
+      
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-1, pos.y+1}, direction = 6, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x+4, pos.y-2}, direction = 2, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-0, pos.y-3}, direction = 0, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x+3, pos.y+2}, direction = 4, force = game.forces.player}
+      
+      
+      
    elseif dir == 4 then
       surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y+2}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y+4}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y+2}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y+2}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+2}, direction = 2, force = game.forces.player}
+      
+      surf.create_entity{name = "rail-signal"  , position = {pos.x+1, pos.y-1}, direction = 4, force = game.forces.player}
+      surf.create_entity{name = "rail-signal"  , position = {pos.x-2, pos.y+4}, direction = 0, force = game.forces.player}
+      surf.create_entity{name = "rail-signal"  , position = {pos.x-3, pos.y+0}, direction = 2, force = game.forces.player}
+      surf.create_entity{name = "rail-signal"  , position = {pos.x+2, pos.y+3}, direction = 6, force = game.forces.player}
+      
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-2, pos.y-1}, direction = 0, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x+1, pos.y+4}, direction = 4, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-3, pos.y+3}, direction = 6, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x+2, pos.y+0}, direction = 2, force = game.forces.player}
       
    elseif dir == 6 then
       surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y+0}, direction = 2, force = game.forces.player}
@@ -900,10 +973,21 @@ function build_small_plus_intersection(anchor_rail, pindex)
       surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y+0}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y+2}, direction = 0, force = game.forces.player}
       
+      surf.create_entity{name = "rail-signal"  , position = {pos.x-0, pos.y+1}, direction = 6, force = game.forces.player}
+      surf.create_entity{name = "rail-signal"  , position = {pos.x-5, pos.y-2}, direction = 2, force = game.forces.player}
+      surf.create_entity{name = "rail-signal"  , position = {pos.x-4, pos.y+2}, direction = 0, force = game.forces.player}
+      surf.create_entity{name = "rail-signal"  , position = {pos.x-1, pos.y-3}, direction = 4, force = game.forces.player}
+      
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-0, pos.y-2}, direction = 2, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-5, pos.y+1}, direction = 6, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-1, pos.y+2}, direction = 4, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-4, pos.y-3}, direction = 0, force = game.forces.player}
+      
    end
    
    --6 Remove 5 rail units from the player's hand
    game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 5
+   game.get_player(pindex).clear_cursor()
    
    --7. Sounds and results
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
@@ -1061,6 +1145,7 @@ function build_train_stop(anchor_rail, pindex)
    local build_comment = ""
    local surf = game.get_player(pindex).surface
    local stack = game.get_player(pindex).cursor_stack
+   local stack2 = nil
    local pos = nil
    local dir = -1
    local build_area = nil
@@ -1069,21 +1154,26 @@ function build_train_stop(anchor_rail, pindex)
    
    --1. Firstly, check if the player has a train stop in hand
    if not (stack.valid and stack.valid_for_read and stack.name == "train-stop" and stack.count > 0) then
-      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-      printout("You need at least 1 train stop in hand to build this structure.", pindex)
-      return
+      --Check if the inventory has enough
+      if players[pindex].inventory.lua_inventory.get_item_count("train-stop") < 1 then
+         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+         printout("You need at least 1 train stop in your inventory to build this turn.", pindex)
+         return
+      else
+         --Take from the inventory.
+         stack2 = players[pindex].inventory.lua_inventory.find_item_stack("train-stop")
+         game.get_player(pindex).cursor_stack.swap_stack(stack2)
+         stack = game.get_player(pindex).cursor_stack
+         players[pindex].inventory.max = #players[pindex].inventory.lua_inventory
+      end
    end
    
    --2. Secondly, find the direction based on end rail or player direction
    is_end_rail, end_rail_dir, build_comment = check_end_rail(anchor_rail,pindex)
    if is_end_rail then
       dir = end_rail_dir
-   elseif end_rail_dir < 0 then
-      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-      printout(build_comment, pindex)
-      return
    else
-      --Choose the dir based on player direction **todo verify
+      --Choose the dir based on player direction 
       if anchor_rail.direction == 0 or anchor_rail.direction == 4 then
          if players[pindex].player_direction == 0 or players[pindex].player_direction == 2 then
             dir = 0
@@ -1102,6 +1192,7 @@ function build_train_stop(anchor_rail, pindex)
    if dir == 1 or dir == 3 or dir == 5 or dir == 7 then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("This structure is for horizontal or vertical end rails only.", pindex)
+      game.get_player(pindex).clear_cursor()
       return
    end
    
@@ -1126,6 +1217,7 @@ function build_train_stop(anchor_rail, pindex)
    if not can_place_all then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("Building area occupied, possibly by the player. Cursor mode recommended.", pindex)
+      game.get_player(pindex).clear_cursor()
       return
    end
    
@@ -1146,10 +1238,11 @@ function build_train_stop(anchor_rail, pindex)
    
    --6 Remove 5 rail units from the player's hand
    game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 1
+   game.get_player(pindex).clear_cursor()
    
    --7. Sounds and results
    game.get_player(pindex).play_sound{path = "entity-build/train-stop"}
-   printout("Train stop built." .. build_comment, pindex)
+   printout("Train stop built facing" .. read_dir(dir) .. ", " .. build_comment, pindex)
    return
 end
 
@@ -1180,6 +1273,35 @@ function get_heading(ent)
       heading = "North"
    end      
    return heading
+end
+
+--Directions lookup table
+function read_dir(dir)
+   local reading = "unknown"
+   if dir < 0 then
+      return "direction error 1"
+   end
+   
+   if dir == 0 then
+      reading = "North"
+   elseif dir == 1 then
+      reading = "Northeast"
+   elseif dir == 2 then
+      reading = "East"
+   elseif dir == 3 then
+      reading = "Southeast"
+   elseif dir == 4 then
+      reading = "South"
+   elseif dir == 5 then
+      reading = "Southwest"
+   elseif dir == 6 then
+      reading = "West"
+   elseif dir == 7 then
+      reading = "Northwest"
+   else
+      reading = "direction error 2"
+   end      
+   return reading
 end
 
 
@@ -1250,7 +1372,7 @@ function rail_builder_down(pindex)
 end
 
 
---Build menu to build rail structures **todo test
+--Build menu to build rail structures
 function rail_builder(pindex, menu_line_in, reading_in)
    local comment = ""
    local menu_line = menu_line_in
@@ -1258,8 +1380,8 @@ function rail_builder(pindex, menu_line_in, reading_in)
    local rail = players[pindex].rail_builder.rail
    local is_end_rail, end_rail_dir, e_comment = check_end_rail(rail, pindex)
    
-   if end_rail_dir < 0 then
-      comment = " Rail error " .. end_rail_dir
+   if rail == nil then
+      comment = " Rail nil error "
       printout(comment,pindex)
       return
    end
@@ -1274,7 +1396,10 @@ function rail_builder(pindex, menu_line_in, reading_in)
    end
    if not is_end_rail then
       --End rails have more options than mid rails. For mid rails we skip these options
-      menu_line = menu_line + 4
+      menu_line = menu_line + 5
+      if menu_line > 6 then
+         menu_line = 6 --todo** debug up/down for mid-rails
+      end
    end
    
    if menu_line == 1 then
@@ -1311,19 +1436,19 @@ function rail_builder(pindex, menu_line_in, reading_in)
       end
    elseif menu_line == 5 then
       if reading then
-         comment = comment .. "Train stop"
-         printout(comment,pindex)
-      else
-         --Build it here
-         build_train_stop(rail, pindex)
-      end
-   elseif menu_line == 6 then
-      if reading then
          comment = comment .. "Plus intersection"
          printout(comment,pindex)
       else
          --Build it here
          build_small_plus_intersection(rail, pindex)
+      end
+   elseif menu_line == 6 then
+      if reading then
+         comment = comment .. "Train stop"
+         printout(comment,pindex)
+      else
+         --Build it here
+         build_train_stop(rail, pindex)
       end
    end
    return

@@ -2796,6 +2796,16 @@ function initialize(player)
       index = 0,
       rail = nil
    }
+   
+   faplayer.train_menu = faplayer.train_menu or {
+      index = 0,
+      renaming = false
+   }
+   
+   faplayer.train_stop_menu = faplayer.train_stop_menu or {
+      index = 0,
+      renaming = false
+   }
 
 end
 
@@ -3027,6 +3037,10 @@ function menu_cursor_up(pindex)
       move_cursor_structure(pindex, 0)
    elseif players[pindex].menu == "rail_builder" then
       rail_builder_up(pindex)
+   elseif players[pindex].menu == "train_menu" then
+      train_menu_up(pindex)
+   elseif players[pindex].menu == "train_stop_menu" then
+      train_stop_menu_up(pindex)
    end
 end
 
@@ -3231,6 +3245,10 @@ function menu_cursor_down(pindex)
       move_cursor_structure(pindex, 4)
    elseif players[pindex].menu == "rail_builder" then
       rail_builder_down(pindex)
+   elseif players[pindex].menu == "train_menu" then
+      train_menu_down(pindex)
+   elseif players[pindex].menu == "train_stop_menu" then
+      train_stop_menu_down(pindex)
    end
 end
 
@@ -4176,11 +4194,12 @@ script.on_event("open-inventory", function(event)
          game.get_player(pindex).gui.screen["structure-travel"].destroy()
       end
       if players[pindex].menu == "rail_builer" then
-         rail_builder_close(pindex)
+         rail_builder_close(pindex, false)
+      elseif players[pindex].menu == "train_menu" then
+         train_menu_close(pindex, false)
+      elseif players[pindex].menu == "train_stop_menu" then
+         train_stop_menu_close(pindex, false)
       end
-      
-      --game.get_player(pindex).opened = nil
-      --players[pindex].opened = nil
       
       players[pindex].menu = "none"
       players[pindex].item_selection = false
@@ -4849,7 +4868,7 @@ input.select(1, 0)
       elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
          build_offshore_pump_in_hand(pindex)
       elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
-         local ent = players[pindex].tile.ents[1]
+         local ent = players[pindex].tile.ents[1] --**todo somewhere around here add the train stop opening function
          if ent.operable and ent.prototype.is_building then
             if ent.prototype.subgroup.name == "belt" then
                players[pindex].in_menu = true
@@ -6071,4 +6090,11 @@ script.on_event("control-g-key", function(event)
    end
 end)
 
+--This event handler patches the unwanted opening of the inventory screen when closing a factorio access menu
+script.on_event(defines.events.on_gui_opened, function(event)
+   if event.gui_type == defines.gui_type.controller and players[event.player_index].menu == "none" then
+      game.get_player(event.player_index).opened = nil
+      --printout("Banana",event.player_index)
+   end
+end)
 

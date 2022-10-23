@@ -5876,8 +5876,30 @@ script.on_event("open-fast-travel", function(event)
       game.get_player(pindex).opened = frame      
 
    end
-   if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
-      --todo may need to force reconnecting the rolling stock here, needs testing**
+   
+   --The V key normally disconnects rolling stock if driving! **todo change that setting because forcing a reconnect does not seem to work
+   --local ent = players[pindex].tile.ents[1]
+   local vehicle = nil
+   if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
+      vehicle = game.get_player(pindex).vehicle
+   --elseif ent ~= nil and ent.train ~= nil then
+   --   vehicle = ent
+   end
+   
+   if vehicle ~= nil then
+      local connected = 0
+         if vehicle.get_connected_rolling_stock(defines.rail_direction.front) ~= nil then
+            connected = connected + 1
+         end
+         if vehicle.get_connected_rolling_stock(defines.rail_direction.back) ~= nil then
+            connected = connected + 1
+         end
+         if connected == 0 then
+            printout("Warning, disconnected this vehicle.", pindex)
+            --Attempt to reconnect (does not work)
+            vehicle.connect_rolling_stock(defines.rail_direction.front)
+            vehicle.connect_rolling_stock(defines.rail_direction.back)
+         end
    end
 
 end)
@@ -6076,32 +6098,90 @@ script.on_event("control-right", function(event)
 end)
 
 
---**Use this unassigned key binding to test stuff
-script.on_event("shift-g-key", function(event)
+-- G is used to connect rolling stock
+script.on_event("g-key", function(event)
    local pindex = event.player_index
    local ent = players[pindex].tile.ents[1]
+   local vehicle = nil
    if not check_for_player(pindex) then
       return
    end
    
-   if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.name == "locomotive" then
-      --Disconnect rolling stock todo test**
+   if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
+      vehicle = game.get_player(pindex).vehicle
+   elseif ent ~= nil and ent.train ~= nil then
+      vehicle = ent
+   end
+   
+   if vehicle ~= nil then
+      --Connect rolling stock (or check if the default key bindings make the connection)
+      local connected = 0
+      if vehicle.connect_rolling_stock(defines.rail_direction.front) then
+         connected = connected + 1
+      end
+      if  vehicle.connect_rolling_stock(defines.rail_direction.back) then
+         connected = connected + 1
+      end
+      if connected > 0 then
+         printout("Connected this vehicle.", pindex)
+      else
+         connected = 0
+         if vehicle.get_connected_rolling_stock(defines.rail_direction.front) ~= nil then
+            connected = connected + 1
+         end
+         if vehicle.get_connected_rolling_stock(defines.rail_direction.back) ~= nil then
+            connected = connected + 1
+         end
+         if connected > 0 then
+            printout("Connected this vehicle.", pindex)
+         else
+            printout("Nothing was connected.", pindex)
+         end
+      end
+   end  
+end)
+
+
+--SHIFT + G is used to disconnect rolling stock
+script.on_event("shift-g-key", function(event)
+   local pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
+   local vehicle = nil
+   if not check_for_player(pindex) then
+      return
+   end
+   
+   if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
+      vehicle = game.get_player(pindex).vehicle
+   elseif ent ~= nil and ent.train ~= nil then
+      vehicle = ent
+   end
+   
+   if vehicle ~= nil then
+      --Disconnect rolling stock
       local disconnected = 0
-      if game.get_player.vehicle.disconnect_rolling_stock(defines.rail_direction.front) then
+      if vehicle.disconnect_rolling_stock(defines.rail_direction.front) then
          disconnected = disconnected + 1
       end
-      if game.get_player.vehicle.disconnect_rolling_stock(defines.rail_direction.back) then
+      if vehicle.disconnect_rolling_stock(defines.rail_direction.back) then
          disconnected = disconnected + 1
       end
       if disconnected > 0 then
-         printout("Disconnected this locomotive.", pindex)
+         printout("Disconnected this vehicle.", pindex)
       else
-         printout("Nothing disconnected.", pindex)
+         local connected = 0
+         if vehicle.get_connected_rolling_stock(defines.rail_direction.front) ~= nil then
+            connected = connected + 1
+         end
+         if vehicle.get_connected_rolling_stock(defines.rail_direction.back) ~= nil then
+            connected = connected + 1
+         end
+         if connected > 0 then
+            printout("Disconnection error.", pindex)
+         else
+            printout("Disconnected this vehicle.", pindex)
+         end
       end
-   end
-   
-   if ent ~= nil and ent.name == "straight-rail" then
-      build_train_stop(ent, pindex)
    end
    
 end)

@@ -359,7 +359,7 @@ function ent_info(pindex, ent, description)
       result = result .. " " .. ent.backer_name .. " "
    --State the ID number of a train
    elseif ent.name == "locomotive" or ent.name == "cargo-wagon" or ent.name == "fluid-wagon" then
-      result = result .. " with train ID " .. ent.train.id
+      result = result .. " of train " .. get_train_name(ent.train)
    end
 
    --Explain the entity facing direction
@@ -2799,12 +2799,14 @@ function initialize(player)
    
    faplayer.train_menu = faplayer.train_menu or {
       index = 0,
-      renaming = false
+      renaming = false,
+      locomotive = nil
    }
    
    faplayer.train_stop_menu = faplayer.train_stop_menu or {
       index = 0,
-      renaming = false
+      renaming = false,
+      stop = nil
    }
 
 end
@@ -2881,7 +2883,7 @@ function menu_cursor_up(pindex)
             read_inventory_slot(pindex)
          else --Border setting: Undo change and play error sound
             players[pindex].inventory.index = players[pindex].inventory.index +10
-            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
          end
       else
@@ -3072,7 +3074,7 @@ function menu_cursor_down(pindex)
             read_inventory_slot(pindex)
          else --Border setting: Undo change and play error sound
             players[pindex].inventory.index = players[pindex].inventory.index -10
-            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
          end
       else
@@ -3266,7 +3268,7 @@ function menu_cursor_left(pindex)
             read_inventory_slot(pindex)
          else --Border setting: Undo change and play error sound
             players[pindex].inventory.index = players[pindex].inventory.index +1
-            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
          end
       else
@@ -3393,7 +3395,7 @@ function menu_cursor_right(pindex)
             read_inventory_slot(pindex)
          else --Border setting: Undo change and play error sound
             players[pindex].inventory.index = players[pindex].inventory.index -1
-            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
          end
       else
@@ -4856,6 +4858,10 @@ input.select(1, 0)
       elseif players[pindex].menu == "rail_builder" then
          rail_builder(pindex, players[pindex].rail_builder.index, false)
          rail_builder_close(pindex,false)
+      elseif players[pindex].menu == "train_menu" then
+         train_menu(players[pindex].train_menu.index, pindex, true)
+      elseif players[pindex].menu == "train_stop_menu" then
+         train_stop_menu(players[pindex].train_stop_menu.index, pindex, true)
       end
    else
       local stack = game.get_player(pindex).cursor_stack
@@ -4868,8 +4874,12 @@ input.select(1, 0)
       elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
          build_offshore_pump_in_hand(pindex)
       elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
-         local ent = players[pindex].tile.ents[1] --**todo somewhere around here add the train stop opening function
-         if ent.operable and ent.prototype.is_building then
+         local ent = players[pindex].tile.ents[1] 
+         if ent.name == "train-stop" then
+            train_stop_menu_open(pindex)
+         elseif ent.name == "locomotive" then
+            train_menu_open(pindex)
+         elseif ent.operable and ent.prototype.is_building then
             if ent.prototype.subgroup.name == "belt" then
                players[pindex].in_menu = true
                players[pindex].menu = "belt"
@@ -5849,7 +5859,7 @@ script.on_event("open-fast-travel", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].in_menu == false then
+   if players[pindex].in_menu == false and game.get_player(pindex).driving == false then
       game.get_player(pindex).game_view_settings.update_entity_selection = false
       game.get_player(pindex).selected = nil
 
@@ -5866,10 +5876,13 @@ script.on_event("open-fast-travel", function(event)
       game.get_player(pindex).opened = frame      
 
    end
+   if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
+      --todo may need to force reconnecting the rolling stock here, needs testing**
+   end
 
 end)
 
-
+--GUI action confirmed, such as by pressing ENTER
 script.on_event(defines.events.on_gui_confirmed,function(event)
    local pindex = event.player_index
    if players[pindex].menu == "travel" then
@@ -5887,6 +5900,18 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       end
       players[pindex].travel.index.x = 1
       event.element.destroy()
+   elseif players[pindex].train_menu.renaming == true then
+      players[pindex].train_menu.renaming = false
+      set_train_name(global.players[pindex].train_menu.locomotive.train,event.element.text)
+      printout("Train renamed to " .. event.element.text, pindex)
+      event.element.destroy()
+      train_menu_close(pindex, false)
+   elseif players[pindex].train_stop_menu.renaming == true then
+      players[pindex].train_stop_menu.renaming = false
+      global.players[pindex].train_stop_menu.stop.backer_name = event.element.text
+      printout("Train stop renamed to " .. event.element.text, pindex)
+      event.element.destroy()
+      train_stop_menu_close(pindex, false)
    end
 end)   
 
@@ -6059,15 +6084,26 @@ script.on_event("shift-g-key", function(event)
       return
    end
    
+   if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.name == "locomotive" then
+      --Disconnect rolling stock todo test**
+      local disconnected = 0
+      if game.get_player.vehicle.disconnect_rolling_stock(defines.rail_direction.front) then
+         disconnected = disconnected + 1
+      end
+      if game.get_player.vehicle.disconnect_rolling_stock(defines.rail_direction.back) then
+         disconnected = disconnected + 1
+      end
+      if disconnected > 0 then
+         printout("Disconnected this locomotive.", pindex)
+      else
+         printout("Nothing disconnected.", pindex)
+      end
+   end
+   
    if ent ~= nil and ent.name == "straight-rail" then
       build_train_stop(ent, pindex)
    end
    
-   if ent.name == "locomotive" then
-      set_train_name(ent.train, "Tom")
-   elseif ent.name == "train-stop" then
-      set_trainstop_name(ent, "Platform nine and four fifths")
-   end
 end)
 
 
@@ -6083,11 +6119,6 @@ script.on_event("control-g-key", function(event)
       build_small_plus_intersection(ent, pindex)
    end
 
-   if ent.name == "locomotive" then
-      set_train_name(ent.train, "Jerry")
-   elseif ent.name == "train-stop" then
-      set_trainstop_name(ent, "El Dorado")
-   end
 end)
 
 --This event handler patches the unwanted opening of the inventory screen when closing a factorio access menu

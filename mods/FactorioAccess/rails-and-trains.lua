@@ -460,12 +460,6 @@ function set_train_name(train,new_name)
 end
 
 
---Sets a trainstop name
-function set_trainstop_name(ent, new_name)
-   ent.backer_name = new_name
-end
-
-
 --For a train, reports the name and distance of the nearest rail structure such as train stop. Reporting junctions will require having the structure log.
 function read_structure_ahead(vehicle, back_instead)
    local back_instead = back_instead or false
@@ -1467,41 +1461,51 @@ function train_menu(menu_index, pindex, clicked, other_input)
    local locomotive = nil
    if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.name == "locomotive" then
       locomotive = game.get_player(pindex).vehicle
+      players[pindex].train_menu.locomotive = locomotive
    elseif players[pindex].tile.ents[1]  ~= nil and players[pindex].tile.ents[1].name == "locomotive" then
       locomotive = players[pindex].tile.ents[1]
+      players[pindex].train_menu.locomotive = locomotive
    else
+      players[pindex].train_menu.locomotive = nil
       printout("Train menu error", pindex)
       return
    end
    
-   --[[ Stuff to include
+   if index == 0 then
+      --Give basic info about this train, such as its name and ID. Instructions.
+      printout("Train ".. get_train_name(locomotive.train) .. " with ID " .. locomotive.train.id .. ", Press W and S to navigate options, press LEFT BRACKET to select an option or press E to exit this menu.", pindex)
+   elseif index == 1 then
+      if not clicked then
+         printout("Rename this train.", pindex)
+      else
+         printout("Enter a new name for this train, then press ENTER to confirm.", pindex)
+         players[pindex].train_menu.renaming = true
+         local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "train-rename"}
+         frame.bring_to_front()
+         frame.force_auto_center()
+         frame.focus()
+         game.get_player(pindex).opened = frame
+         local input = frame.add{type="textfield", name = "input"}
+         input.focus()
+      end
+   elseif index == 2 then
+      printout("Train menu 2", pindex)
+   elseif index == 3 then  
+      printout("Train menu 3", pindex)
+   end
+   --[[ Train menu options ideas
    name, id, menu instructions
-   name, id, click to rename
+   click to rename
    train status + destination if any + parked trainstop if any
    fuel info, click to add fuel
    vehicle counts
    cargo counts
    schedule
-   
    ]]
-   
-   if index == 0 then
-      --Give basic info about this train, such as its name and ID. Instructions.
-      printout("Train menu", pindex)
-   elseif index == 1 then
-      --Click here to rename this train
-      printout("Train menu", pindex)
-   elseif index == 2 then
-      --Give explain train status **todo decide what to do with the L key
-      printout("Train menu", pindex)
-   elseif index == 3 then
-      --Give explain train status **todo decide what to do with the L key
-      printout("Train menu", pindex)
-   end
 end
 
 
-function train_menu_open(pindex)-
+function train_menu_open(pindex)
    --Set the player menu tracker to this menu
    players[pindex].menu = "train_menu"
    players[pindex].in_menu = true
@@ -1513,7 +1517,7 @@ function train_menu_open(pindex)-
    game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
    
    --Load menu 
-   --**call train_menu(players[pindex].train_menu.index, pindex, false)
+   train_menu(players[pindex].train_menu.index, pindex, false)
 end
 
 
@@ -1530,6 +1534,11 @@ function train_menu_close(pindex, mute_in)
    if not mute then
       game.get_player(pindex).play_sound{path="Close-Inventory-Sound"}
    end
+   
+   --Destroy GUI
+   if game.get_player(pindex).gui.screen["train-rename"] ~= nil then
+      game.get_player(pindex).gui.screen["train-rename"].destroy()
+   end
 end
 
 
@@ -1541,47 +1550,56 @@ function train_menu_up(pindex)
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
    end
+   --Load menu
+   train_menu(players[pindex].train_menu.index, pindex, false)
 end
 
 
 function train_menu_down(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index + 1
-   if players[pindex].train_menu.index > 3 then
-      players[pindex].train_menu.index = 3
+   if players[pindex].train_menu.index > 1 then
+      players[pindex].train_menu.index = 1
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
    end
+   --Load menu
+   train_menu(players[pindex].train_menu.index, pindex, false)
 end
 
 
---This menu opens when the player presses LEFT BRACKET on a train stop.
+--This menu opens when the cursor presses LEFT BRACKET on a train stop.
 function train_stop_menu(menu_index, pindex, clicked, other_input)
    local index = menu_index
    local other = other_input or -1
    local train_stop = nil
-   if players[pindex].tile.ents[1]  ~= nil and players[pindex].tile.ents[1].name == "train-stop" then --todo check if it works with the cursor**
+   if players[pindex].tile.ents[1]  ~= nil and players[pindex].tile.ents[1].name == "train-stop" then 
       train_stop = players[pindex].tile.ents[1]
+      players[pindex].train_stop_menu.stop = train_stop
    else
       printout("Train stop menu error", pindex)
+      players[pindex].train_stop_menu.stop = nil
       return
    end
    
    if index == 0 then
-      printout("Train stop " .. train_stop.backer_name .. ". Press W and S to navigate options, press LEFT BRACKET to select an option or press E to exit this menu.", pindex)
+      printout("Train stop " .. train_stop.backer_name .. ", Press W and S to navigate options, press LEFT BRACKET to select an option or press E to exit this menu.", pindex)
    elseif index == 1 then
       if not clicked then
-         printout("Rename this stop.")
+         printout("Rename this stop.", pindex)
       else
          printout("Enter a new name for this train stop, then press ENTER to confirm.", pindex)
-         players[pindex].train_stop_menu.renaming = true--**
-         local frame = game.get_player(pindex).gui.screen["train-stop-rename"]
+         players[pindex].train_stop_menu.renaming = true
+         local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "train-stop-rename"}
+         frame.bring_to_front()
+         frame.force_auto_center()
+         frame.focus()
+         game.get_player(pindex).opened = frame
          local input = frame.add{type="textfield", name = "input"}
          input.focus()
-         input.select(1, 0)
       end
    elseif index == 2 then
-      printout("Note. You are recommended to set up a fast travel point near this stop.",pindex)--todo later: add clickable option to add/remove this stop to the list.
+      printout("Note, you are recommended to set up a fast travel point near this stop.",pindex)--todo later: add clickable option to add/remove this stop to the list.
    end
 end
 
@@ -1595,7 +1613,7 @@ function train_stop_menu_open(pindex)
    players[pindex].train_stop_menu.index = 0
    
    --Play sound
-   game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
+   game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}  
    
    --Load menu 
    train_stop_menu(players[pindex].train_stop_menu.index, pindex, false)
@@ -1612,7 +1630,9 @@ function train_stop_menu_close(pindex, mute_in)
    players[pindex].train_stop_menu.index = 0
    
    --Destroy GUI
-   game.get_player(pindex).gui.screen["train-stop-rename"].destroy()
+   if game.get_player(pindex).gui.screen["train-stop-rename"] ~= nil then
+      game.get_player(pindex).gui.screen["train-stop-rename"].destroy()
+   end
    
    --play sound
    if not mute then
@@ -1629,6 +1649,8 @@ function train_stop_menu_up(pindex)
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
    end
+   --Load menu 
+   train_stop_menu(players[pindex].train_stop_menu.index, pindex, false)
 end
 
 
@@ -1640,4 +1662,7 @@ function train_stop_menu_down(pindex)
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
    end
+   --Load menu 
+   train_stop_menu(players[pindex].train_stop_menu.index, pindex, false)
 end
+

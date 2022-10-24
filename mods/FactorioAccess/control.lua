@@ -272,7 +272,9 @@ function ent_info(pindex, ent, description)
    if ent.type == "resource" then
       result = result .. ", x " .. ent.amount
    end
-   if ent.name == "straight-rail" or ent.name == "curved-rail" then
+   if ent.name == "entity-ghost" then
+      result = result .. " for a " .. ent.ghost_name .. ", "
+   elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
       return rail_ent_info(pindex, ent, description)
    end
 

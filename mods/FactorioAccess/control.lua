@@ -6080,7 +6080,7 @@ script.on_event("control-left", function(event)
    end
    --Build left turns on end rails
    if ent ~= nil and ent.name == "straight-rail" then
-      build_rail_turn_left_90_degrees(ent, pindex)
+      build_rail_turn_left_45_degrees(ent, pindex)
    end
 end)
 
@@ -6093,7 +6093,7 @@ script.on_event("control-right", function(event)
    end
    --Build right turns on end rails
    if ent ~= nil and ent.name == "straight-rail" then
-      build_rail_turn_right_90_degrees(ent, pindex)
+      build_rail_turn_right_45_degrees(ent, pindex)
    end
 end)
 

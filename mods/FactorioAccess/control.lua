@@ -1715,7 +1715,7 @@ function scan_sort(pindex)
          local ent2 = nil
          if k1.name == "water" then
             table.sort( k1.ents , function(k3, k4) 
-               return distance(pos, k3.position) < distance(pos, k4.position)
+               return squared_distance(pos, k3.position) < squared_distance(pos, k4.position)
             end)
             ent1 = k1.ents[1]
          else
@@ -1723,13 +1723,13 @@ function scan_sort(pindex)
          end
          if k2.name == "water" then
             table.sort( k2.ents , function(k3, k4) 
-               return distance(pos, k3.position) < distance(pos, k4.position)
+               return squared_distance(pos, k3.position) < squared_distance(pos, k4.position)
             end)
             ent2 = k2.ents[1]
          else
          ent2 = game.get_player(pindex).surface.get_closest(pos, k2.ents)
          end
-         return distance(pos, ent1.position) < distance(pos, ent2.position)
+         return squared_distance(pos, ent1.position) < squared_distance(pos, ent2.position)
       end)
             
    else
@@ -2224,7 +2224,7 @@ end
 for cluster, pos in pairs(players[pindex].tree_groups) do
    if table_size(pos) == 0 then
       players[pindex].tree_groups[cluster] = nil
-      players[pindex].tree_clusters[cluster.group] = nil
+      players[pindex].tree_clusters[cluster] = nil
    end
 end
 
@@ -2413,7 +2413,7 @@ function scan_index(pindex)
 
          table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
             local pos = players[pindex].cursor_pos
-            return distance(pos, k1.position) < distance(pos, k2.position)
+            return squared_distance(pos, k1.position) < squared_distance(pos, k2.position)
          end)
       if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
          players[pindex].selection = 1
@@ -2442,7 +2442,7 @@ function scan_index(pindex)
             local nearest_chunk = nil
             local min = math.huge
             for index, pos in pairs(players[pindex].tree_groups[ent.group]) do
-               local dist = distance(current_pos, str2pos(pos))
+               local dist = squared_distance(current_pos, str2pos(pos))
                if dist < min then
                   min = dist
                   nearest_chunk = pos
@@ -2669,7 +2669,7 @@ function scan_area (x,y,w,h, pindex)
                   local nearest_chunk = nil
                   local min = math.huge
                   for index, p in pairs(players[pindex].tree_groups[k3.group]) do
-                     local dist = distance(current_pos, str2pos(p))
+                     local dist = squared_distance(current_pos, str2pos(p))
                      if dist < min then
                         min = dist
                         nearest_chunk = table.deepcopy(p)
@@ -2683,7 +2683,7 @@ function scan_area (x,y,w,h, pindex)
                   local nearest_chunk = nil
                   local min = math.huge
                   for index, p in pairs(players[pindex].tree_groups[k4.group]) do
-                     local dist = distance(current_pos, str2pos(p))
+                     local dist = squared_distance(current_pos, str2pos(p))
                      if dist < min then
                         min = dist
                         nearest_chunk = table.deepcopy(p)
@@ -2693,7 +2693,7 @@ function scan_area (x,y,w,h, pindex)
                   ent4.position = str2pos(nearest_chunk)
                   ent4.position.x = ent4.position.x * 32 + 16
                   ent4.position.y = ent4.position.y * 32 + 16
-                  return distance(pos, ent3.position) < distance(pos, ent4.position)
+                  return squared_distance(pos, ent3.position) < squared_distance(pos, ent4.position)
 
                end)
                local current_pos = table.deepcopy(players[pindex].cursor_pos)
@@ -2702,7 +2702,7 @@ function scan_area (x,y,w,h, pindex)
                local nearest_chunk = nil
                local min = math.huge
                for index, p in pairs(players[pindex].tree_groups[k1.ents[1].group]) do
-                  local dist = distance(current_pos, str2pos(p))
+                  local dist = squared_distance(current_pos, str2pos(p))
                   if dist < min then
                      min = dist
                      nearest_chunk = table.deepcopy(p)
@@ -2718,7 +2718,7 @@ function scan_area (x,y,w,h, pindex)
                end
             else
                table.sort( k1.ents , function(k3, k4) 
-                  return distance(pos, k3.position) < distance(pos, k4.position)
+                  return squared_distance(pos, k3.position) < squared_distance(pos, k4.position)
                end)
                ent1 = k1.ents[1]
             end
@@ -2735,7 +2735,7 @@ function scan_area (x,y,w,h, pindex)
                   local nearest_chunk = nil
                   local min = math.huge
                   for index, p in pairs(players[pindex].tree_groups[k3.group]) do
-                     local dist = distance(current_pos, str2pos(p))
+                     local dist = squared_distance(current_pos, str2pos(p))
                      if dist < min then
                         min = dist
                         nearest_chunk = table.deepcopy(p)
@@ -2749,7 +2749,7 @@ function scan_area (x,y,w,h, pindex)
                   local nearest_chunk = nil
                   local min = math.huge
                   for index, p in pairs(players[pindex].tree_groups[k4.group]) do
-                     local dist = distance(current_pos, str2pos(p))
+                     local dist = squared_distance(current_pos, str2pos(p))
                      if dist < min then
                         min = dist
                         nearest_chunk = table.deepcopy(p)
@@ -2759,7 +2759,7 @@ function scan_area (x,y,w,h, pindex)
                   ent4.position = str2pos(nearest_chunk)
                   ent4.position.x = ent4.position.x * 32 + 16
                   ent4.position.y = ent4.position.y * 32 + 16
-                  return distance(pos, ent3.position) < distance(pos, ent4.position)
+                  return squared_distance(pos, ent3.position) < squared_distance(pos, ent4.position)
 
                end)
                local current_pos = table.deepcopy(players[pindex].cursor_pos)
@@ -2768,7 +2768,7 @@ function scan_area (x,y,w,h, pindex)
                local nearest_chunk = nil
                local min = math.huge
                for index, p in pairs(players[pindex].tree_groups[k2.ents[1].group]) do
-                  local dist = distance(current_pos, str2pos(p))
+                  local dist = squared_distance(current_pos, str2pos(p))
                   if dist < min then
                      min = dist
                      nearest_chunk  = table.deepcopy(p)
@@ -2784,7 +2784,7 @@ function scan_area (x,y,w,h, pindex)
                end
             else
                table.sort( k2.ents , function(k3, k4) 
-                  return distance(pos, k3.position) < distance(pos, k4.position)
+                  return squared_distance(pos, k3.position) < squared_distance(pos, k4.position)
                end)
                ent2 = k2.ents[1]
             end
@@ -6324,11 +6324,11 @@ end)
 
 script.on_event(defines.events.on_chunk_charted,function(event)
    local pindex = 0
-   if table_size(event.force.players) > 0 then
+--   if table_size(event.force.players) > 0 then
       pindex = event.force.players[1].index
-   else
-      return
-   end
+--   else
+--      return
+--   end
    if not check_for_player(pindex) then
    end
    if players[pindex].mapped[pos2str(event.position)] ~= nil then

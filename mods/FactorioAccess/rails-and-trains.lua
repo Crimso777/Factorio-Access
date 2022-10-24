@@ -241,6 +241,11 @@ function check_end_rail(check_rail, pindex)
       comment = "Nil."
       return is_end_rail, -1, comment
    end
+   if not (check_rail.name == "straight-rail" or check_rail.name == "curved-rail") then
+      is_end_rail = false
+      comment = "Not a rail."
+      return is_end_rail, -1, comment
+   end
    
    --Check if end rail: The rail is at the end of its segment and has only 1 connection.
    end_rail_1, end_dir_1 = check_rail.get_rail_segment_end(defines.rail_direction.front)
@@ -1357,6 +1362,12 @@ function append_rail(pos, pindex)
    local is_end_rail = false
    local end_found = nil
    local end_dir = nil
+   local end_dir_1 = nil
+   local end_dir_2 = nil
+   local rail_api_dir = nil
+   local is_end_rail = nil
+   local end_rail_dir = nil
+   local comment = ""
    
    --0 Check if there is at least 1 rail in hand, else return
    if not (stack.valid and stack.valid_for_read and stack.name == "rail" and stack.count > 10) then
@@ -1365,7 +1376,7 @@ function append_rail(pos, pindex)
       return
    end
    
-   --1 Check the cursor entity. If it is end rail, use this instead of scanning to extend the rail you want.
+   --1 Check the cursor entity. If it is an end rail, use this instead of scanning to extend the rail you want.
    local ent = players[pindex].tile.ents[1]
    is_end_rail, end_rail_dir, comment = check_end_rail(ent,pindex)
    if is_end_rail then
@@ -1381,13 +1392,17 @@ function append_rail(pos, pindex)
       --2 Scan the area around within a X tile radius of pos
       local ents = surf.find_entities_filtered{position = pos, radius = 3, name = "straight-rail"}
       if #ents == 0 then
-         game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-         if players[pindex].build_lock == false then
-            printout("No rails found nearby.",pindex)
+         ents = surf.find_entities_filtered{position = pos, radius = 3, name = "curved-rail"}
+         if #ents == 0 then
+            game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+            if players[pindex].build_lock == false then
+               printout("No rails found nearby.",pindex)
+               return
+            end
          end
       end
 
-      --3 For the first straight rail found, check if it is at the end of its segment and if the rail is not within X tiles of pos, try the other end
+      --3 For the first rail found, check if it is at the end of its segment and if the rail is not within X tiles of pos, try the other end
       for i,rail in ipairs(ents) do
          end_rail_1, end_dir_1 = rail.get_rail_segment_end(defines.rail_direction.front)
          end_rail_2, end_dir_2 = rail.get_rail_segment_end(defines.rail_direction.back)
@@ -1411,7 +1426,8 @@ function append_rail(pos, pindex)
       is_end_rail, end_rail_dir, comment = check_end_rail(end_found,pindex)
       if not is_end_rail then
          game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-         printout(comment, pindex)
+         --printout(comment, pindex)
+         printout("No end rails found nearby", pindex)
          return
       end
    end
@@ -1420,7 +1436,8 @@ function append_rail(pos, pindex)
    end_rail_pos = end_found.position
    end_rail_dir = end_found.direction
    append_rail_dir = -1
-   append_rail_pos = end_rail_pos
+   append_rail_pos = nil
+   rail_api_dir = end_found.direction
    
    --printout(" Rail end found at " .. end_found.position.x .. " , " .. end_found.position.y .. " , facing " .. end_found.direction, pindex)--Checks
 
@@ -1473,11 +1490,81 @@ function append_rail(pos, pindex)
       end
       
    elseif end_found.name == "curved-rail" then
-         printout("Cannot append to curved end rails.",pindex)
-         return
+      --Make sure to use the reported end direction for curved rails
+      is_end_rail, end_rail_dir, comment = check_end_rail(ent,pindex)
+      if end_rail_dir == 0 then
+         if rail_api_dir == 4 then
+            append_rail_pos = {end_rail_pos.x-2, end_rail_pos.y-6}
+            append_rail_dir = 0
+         elseif rail_api_dir == 5 then
+            append_rail_pos = {end_rail_pos.x-0, end_rail_pos.y-6}
+            append_rail_dir = 0
+         end
+      elseif end_rail_dir == 1 then
+         if rail_api_dir == 1 then
+            append_rail_pos = {end_rail_pos.x+2, end_rail_pos.y-4}
+            append_rail_dir = 7
+         elseif rail_api_dir == 2 then
+            append_rail_pos = {end_rail_pos.x+2, end_rail_pos.y-4}
+            append_rail_dir = 3
+         end
+      elseif end_rail_dir == 2 then
+         if rail_api_dir == 6 then
+            append_rail_pos = {end_rail_pos.x+4, end_rail_pos.y-2}
+            append_rail_dir = 2
+         elseif rail_api_dir == 7 then
+            append_rail_pos = {end_rail_pos.x+4, end_rail_pos.y-0}
+            append_rail_dir = 2
+         end         
+      elseif end_rail_dir == 3 then
+         if rail_api_dir == 3 then
+            append_rail_pos = {end_rail_pos.x+2, end_rail_pos.y+2}
+            append_rail_dir = 1
+         elseif rail_api_dir == 4 then
+            append_rail_pos = {end_rail_pos.x+2, end_rail_pos.y+2}
+            append_rail_dir = 5
+         end
+      elseif end_rail_dir == 4 then
+         if rail_api_dir == 0 then
+            append_rail_pos = {end_rail_pos.x-0, end_rail_pos.y+4}
+            append_rail_dir = 0
+         elseif rail_api_dir == 1 then
+            append_rail_pos = {end_rail_pos.x-2, end_rail_pos.y+4}
+            append_rail_dir = 0
+         end
+      elseif end_rail_dir == 5 then
+         if rail_api_dir == 5 then
+            append_rail_pos = {end_rail_pos.x-4, end_rail_pos.y+2}
+            append_rail_dir = 3
+         elseif rail_api_dir == 6 then
+            append_rail_pos = {end_rail_pos.x-4, end_rail_pos.y+2}
+            append_rail_dir = 7
+         end
+      elseif end_rail_dir == 6 then
+         if rail_api_dir == 2 then
+            append_rail_pos = {end_rail_pos.x-6, end_rail_pos.y-0}
+            append_rail_dir = 2
+         elseif rail_api_dir == 3 then
+            append_rail_pos = {end_rail_pos.x-6, end_rail_pos.y-2}
+            append_rail_dir = 2
+         end 
+      elseif end_rail_dir == 7 then
+         if rail_api_dir == 0 then
+            append_rail_pos = {end_rail_pos.x-4, end_rail_pos.y-4}
+            append_rail_dir = 1
+         elseif rail_api_dir == 7 then
+            append_rail_pos = {end_rail_pos.x-4, end_rail_pos.y-4}
+            append_rail_dir = 5
+         end 
+      end
    end
 
    --6. Check if the selected 2x2 space is free for building, else return
+   if append_rail_pos == nil then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      printout(end_rail_dir .. " and " .. rail_api_dir .. ", rail appending direction error.",pindex)
+      return
+   end
    if not surf.can_place_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir} then 
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("Cannot place here to extend the rail.",pindex)
@@ -1736,6 +1823,7 @@ function rail_builder(pindex, menu_line_in, clicked_in)
    if rail == nil then
       comment = " Rail nil error "
       printout(comment,pindex)
+      rail_builder_close(pindex, false)
       return
    end
    

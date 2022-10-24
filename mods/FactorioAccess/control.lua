@@ -4856,7 +4856,7 @@ input.select(1, 0)
          target(pindex)
       
       elseif players[pindex].menu == "rail_builder" then
-         rail_builder(pindex, players[pindex].rail_builder.index, false)
+         rail_builder(pindex, players[pindex].rail_builder.index, true)
          rail_builder_close(pindex,false)
       elseif players[pindex].menu == "train_menu" then
          train_menu(players[pindex].train_menu.index, pindex, true)

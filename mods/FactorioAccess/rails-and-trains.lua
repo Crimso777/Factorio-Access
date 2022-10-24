@@ -76,21 +76,21 @@ function rail_ent_info(pindex, ent, description)
    elseif ent.name == "curved-rail" and is_end_rail == false then
       result = result .. " curved in direction "
       if ent.direction == 0 then 
-         result = result ..  "0 with north and falling ends"
+         result = result ..  "0 with ends facing south and falling diagonal "
       elseif ent.direction == 1 then
-         result = result ..  "1 with north and rising ends"
+         result = result ..  "1 with ends facing south and rising diagonal "
       elseif ent.direction == 2 then
-         result = result ..  "2 with east  and rising ends"
+         result = result ..  "2 with ends facing west  and rising diagonal "
       elseif ent.direction == 3 then
-         result = result ..  "3 with east  and falling ends"
+         result = result ..  "3 with ends facing west  and falling diagonal "
       elseif ent.direction == 4 then
-         result = result ..  "4 with south and falling ends"
+         result = result ..  "4 with ends facing north and falling diagonal "
       elseif ent.direction == 5 then
-         result = result ..  "5 with south and rising ends"
+         result = result ..  "5 with ends facing north and rising diagonal "
       elseif ent.direction == 6 then
-         result = result ..  "6 with west  and rising ends"
+         result = result ..  "6 with ends facing east  and rising diagonal "
       elseif ent.direction == 7 then
-         result = result ..  "7 west and falling ends"
+         result = result ..  "7 with ends facing east  and falling diagonal "
       end
    end
    
@@ -754,7 +754,7 @@ function build_rail_turn_right_45_degrees(anchor_rail, pindex)
    --7. Sounds and results
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
    game.get_player(pindex).play_sound{path = "entity-build/curved-rail"}
-   printout("Rail turn built, " .. build_comment, pindex)
+   printout("Rail turn built 45 degrees right, " .. build_comment, pindex)
    return
    
 end
@@ -876,7 +876,7 @@ function build_rail_turn_right_90_degrees(anchor_rail, pindex)
    --7. Sounds and results
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
    game.get_player(pindex).play_sound{path = "entity-build/curved-rail"}
-   printout("Rail turn built, " .. build_comment, pindex)
+   printout("Rail turn built 90 degrees right, " .. build_comment, pindex)
    return
    
 end
@@ -933,10 +933,55 @@ function build_rail_turn_left_45_degrees(anchor_rail, pindex)
    end 
    temp1, build_comment = mine_trees_and_rocks_in_area(build_area, pindex)
    
-   --4. Check if every object can be placed --todo** copy
+   --4. Check if every object can be placed
    if dir == 0 then 
-      can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+2, pos.y-4}, direction = 1, force = game.forces.player}
-      can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+4, pos.y-8}, direction = 7, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+0, pos.y-4}, direction = 0, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-4, pos.y-8}, direction = 1, force = game.forces.player}
+   elseif dir == 2 then
+      can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+6, pos.y+0}, direction = 2, force = game.forces.player} 
+      can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+8, pos.y-4}, direction = 3, force = game.forces.player}
+   elseif dir == 4 then
+      can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+2, pos.y+6}, direction = 4, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+4, pos.y+8}, direction = 5, force = game.forces.player}
+   elseif dir == 6 then
+      can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-4, pos.y+2}, direction = 6, force = game.forces.player}
+      can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-8, pos.y+4}, direction = 7, force = game.forces.player}
+   elseif dir == 1 then
+      if anchor_dir == 3 then--2
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+4, pos.y-2}, direction = 5, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+4, pos.y-8}, direction = 0, force = game.forces.player}
+      elseif anchor_dir == 7 then--3
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+0, pos.y-2}, direction = 3, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entityy{name = "curved-rail", position = {pos.x+4, pos.y-4}, direction = 5, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+4, pos.y-10}, direction = 0, force = game.forces.player}
+      end
+   elseif dir == 5 then
+      if anchor_dir == 7 then--2
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-2, pos.y+4}, direction = 1, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-4, pos.y+8}, direction = 0, force = game.forces.player}
+      elseif anchor_dir == 3 then--3
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-0, pos.y+2}, direction = 7, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-2, pos.y+6}, direction = 1, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-4, pos.y+10}, direction = 0, force = game.forces.player}
+      end
+   elseif dir == 3 then
+      if anchor_dir == 5 then--2
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+4, pos.y+4}, direction = 7, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+8, pos.y+4}, direction = 2, force = game.forces.player}
+      elseif anchor_dir == 1 then--3
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+2, pos.y+0}, direction = 5, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+6, pos.y+4}, direction = 7, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+10, pos.y+4}, direction = 2, force = game.forces.player}
+      end
+   elseif dir == 7 then
+      if anchor_dir == 1 then--2
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-2, pos.y-2}, direction = 3, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-8, pos.y-4}, direction = 2, force = game.forces.player}
+      elseif anchor_dir == 5 then--3
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-2, pos.y-0}, direction = 1, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x-4, pos.y-2}, direction = 3, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x-10, pos.y-4}, direction = 2, force = game.forces.player}
+      end
    end
   
    if not can_place_all then
@@ -961,46 +1006,46 @@ function build_rail_turn_left_45_degrees(anchor_rail, pindex)
       surf.create_entity{name = "straight-rail", position = {pos.x-8, pos.y+4}, direction = 7, force = game.forces.player}
    elseif dir == 1 then
       if anchor_dir == 3 then--2
-         --surf.create_entity{name = "curved-rail", position = {pos.x+4, pos.y-2}, direction = 6, force = game.forces.player}
-         --surf.create_entity{name = "straight-rail", position = {pos.x+8, pos.y-4}, direction = 2, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x+4, pos.y-2}, direction = 5, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y-8}, direction = 0, force = game.forces.player}
       elseif anchor_dir == 7 then--3
-         --surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y-0}, direction = 7, force = game.forces.player}
-         --surf.create_entity{name = "curved-rail", position = {pos.x+6, pos.y-2}, direction = 6, force = game.forces.player}
-         --surf.create_entity{name = "straight-rail", position = {pos.x+10, pos.y-4}, direction = 2, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+0, pos.y-2}, direction = 3, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x+4, pos.y-4}, direction = 5, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y-10}, direction = 0, force = game.forces.player}
       end
    elseif dir == 5 then
       if anchor_dir == 7 then--2
-         --surf.create_entity{name = "curved-rail", position = {pos.x-2, pos.y+4}, direction = 2, force = game.forces.player}
-         --surf.create_entity{name = "straight-rail", position = {pos.x-8, pos.y+4}, direction = 2, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x-2, pos.y+4}, direction = 1, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y+8}, direction = 0, force = game.forces.player}
       elseif anchor_dir == 3 then--3
-         --surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y+0}, direction = 3, force = game.forces.player}
-         --surf.create_entity{name = "curved-rail", position = {pos.x-4, pos.y+4}, direction = 2, force = game.forces.player}
-         --surf.create_entity{name = "straight-rail", position = {pos.x-10, pos.y+4}, direction = 2, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y+2}, direction = 7, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x-2, pos.y+6}, direction = 1, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y+10}, direction = 0, force = game.forces.player}
       end
    elseif dir == 3 then
       if anchor_dir == 5 then--2
-         --surf.create_entity{name = "curved-rail", position = {pos.x+4, pos.y+4}, direction = 0, force = game.forces.player}
-         --surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y+8}, direction = 0, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x+4, pos.y+4}, direction = 7, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+8, pos.y+4}, direction = 2, force = game.forces.player}
       elseif anchor_dir == 1 then--3
-         --surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y+2}, direction = 1, force = game.forces.player}
-         --surf.create_entity{name = "curved-rail", position = {pos.x+4, pos.y+6}, direction = 0, force = game.forces.player}
-         --surf.create_entity{name = "straight-rail", position = {pos.x+4, pos.y+10}, direction = 0, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+0}, direction = 5, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x+6, pos.y+4}, direction = 7, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x+10, pos.y+4}, direction = 2, force = game.forces.player}
       end
    elseif dir == 7 then
       if anchor_dir == 1 then--2
-         --surf.create_entity{name = "curved-rail", position = {pos.x-2, pos.y-2}, direction = 4, force = game.forces.player}
-         --surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y-8}, direction = 0, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x-2, pos.y-2}, direction = 3, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-8, pos.y-4}, direction = 2, force = game.forces.player}
       elseif anchor_dir == 5 then--3
-         --surf.create_entity{name = "straight-rail", position = {pos.x-0, pos.y-2}, direction = 5, force = game.forces.player}
-         --surf.create_entity{name = "curved-rail", position = {pos.x-2, pos.y-4}, direction = 4, force = game.forces.player}
-         --surf.create_entity{name = "straight-rail", position = {pos.x-4, pos.y-10}, direction = 0, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y-0}, direction = 1, force = game.forces.player}
+         surf.create_entity{name = "curved-rail", position = {pos.x-4, pos.y-2}, direction = 3, force = game.forces.player}
+         surf.create_entity{name = "straight-rail", position = {pos.x-10, pos.y-4}, direction = 2, force = game.forces.player}
       end
    end
    
    
    --6 Remove rail units from the player's hand
    game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 2
-   if (dir == 1 and anchor_dir == 3) or (dir == 5 and anchor_dir == 7) or (dir == 3 and anchor_dir == 5) or (dir == 7 and anchor_dir == 1) then--**
+   if (dir == 1 and anchor_dir == 7) or (dir == 5 and anchor_dir == 3) or (dir == 3 and anchor_dir == 1) or (dir == 7 and anchor_dir == 5) then
       game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 1
    end
    game.get_player(pindex).clear_cursor()
@@ -1008,7 +1053,7 @@ function build_rail_turn_left_45_degrees(anchor_rail, pindex)
    --7. Sounds and results
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
    game.get_player(pindex).play_sound{path = "entity-build/curved-rail"}
-   printout("Rail turn built, " .. build_comment, pindex)
+   printout("Rail turn built 45 degrees left, " .. build_comment, pindex)
    return
    
 end
@@ -1130,7 +1175,7 @@ function build_rail_turn_left_90_degrees(anchor_rail, pindex)
    --7. Sounds and results
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
    game.get_player(pindex).play_sound{path = "entity-build/curved-rail"}
-   printout("Rail turn built, " .. build_comment, pindex)
+   printout("Rail turn built 90 degrees left, " .. build_comment, pindex)
    return
 end
 
@@ -1626,7 +1671,7 @@ function rail_builder_open(pindex, rail)
    
    --Load menu 
    players[pindex].rail_builder.rail = rail
-   rail_builder(pindex, players[pindex].rail_builder.index, true)
+   rail_builder(pindex, players[pindex].rail_builder.index, false)
 end
 
 
@@ -1659,7 +1704,7 @@ function rail_builder_up(pindex)
    end
    
    --Load menu 
-   rail_builder(pindex, players[pindex].rail_builder.index, true)
+   rail_builder(pindex, players[pindex].rail_builder.index, false)
 end
 
 
@@ -1676,15 +1721,15 @@ function rail_builder_down(pindex)
    end
    
    --Load menu 
-   rail_builder(pindex, players[pindex].rail_builder.index, true)
+   rail_builder(pindex, players[pindex].rail_builder.index, false)
 end
 
 
 --Builder menu to build rail structures
-function rail_builder(pindex, menu_line_in, reading_in)
+function rail_builder(pindex, menu_line_in, clicked_in)
    local comment = ""
    local menu_line = menu_line_in
-   local reading = reading_in
+   local clicked = clicked_in
    local rail = players[pindex].rail_builder.rail
    local is_end_rail, end_rail_dir, e_comment = check_end_rail(rail, pindex)
    
@@ -1712,7 +1757,7 @@ function rail_builder(pindex, menu_line_in, reading_in)
    end
    
    if menu_line == 1 then
-      if reading then
+      if not clicked then
          comment = comment .. "Left turn 90 degrees"
          printout(comment,pindex)
       else
@@ -1720,15 +1765,15 @@ function rail_builder(pindex, menu_line_in, reading_in)
          build_rail_turn_left_90_degrees(rail, pindex)
       end
    elseif menu_line == 2 then
-      if reading then
+      if not clicked then
          comment = comment .. "Left turn 45 degrees"
          printout(comment,pindex)
       else
          --Build it here
-         printout("This feature is not yet supported.",pindex)
+         build_rail_turn_left_45_degrees(rail, pindex)
       end
    elseif menu_line == 3 then
-      if reading then
+      if not clicked then
          comment = comment .. "Right turn 90 degrees"
          printout(comment,pindex)
       else
@@ -1736,15 +1781,15 @@ function rail_builder(pindex, menu_line_in, reading_in)
          build_rail_turn_right_90_degrees(rail, pindex)
       end
    elseif menu_line == 4 then
-      if reading then
+      if not clicked then
          comment = comment .. "Right turn 45 degrees"
          printout(comment,pindex)
       else
          --Build it here
-         printout("This feature is not yet supported.",pindex)
+         build_rail_turn_right_45_degrees(rail, pindex)
       end
    elseif menu_line == 5 then
-      if reading then
+      if not clicked then
          comment = comment .. "Plus intersection"
          printout(comment,pindex)
       else
@@ -1752,7 +1797,7 @@ function rail_builder(pindex, menu_line_in, reading_in)
          build_small_plus_intersection(rail, pindex)
       end
    elseif menu_line == 6 then
-      if reading then
+      if not clicked then
          comment = comment .. "Train stop"
          printout(comment,pindex)
       else

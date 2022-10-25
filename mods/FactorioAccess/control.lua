@@ -489,6 +489,39 @@ function ent_info(pindex, ent, description)
    end
    
    if ent.type == "transport-belt" then
+      --Check if corner or junction or end
+      local sideload_count = 0
+      local backload_count = 0
+      local outload_count = 0
+      local inputs = ent.belt_neighbours["inputs"]
+      local outputs = ent.belt_neighbours["outputs"]
+      for i, belt in pairs(inputs) do
+         if ent.direction ~= belt.direction then
+            sideload_count = sideload_count + 1
+         else
+            backload_count = backload_count + 1
+         end
+      end
+      for i, belt in pairs(outputs) do
+         outload_count = outload_count + 1
+      end
+      if sideload_count == 0 and backload_count == 1 and outload_count == 1 then
+         result = result --middle (no need to specify)
+      elseif sideload_count == 0 and backload_count == 0 and outload_count == 0 then
+         result = result .. " unit "
+      elseif sideload_count == 0 and backload_count == 0 and outload_count == 1 then
+         result = result .. " start "
+      elseif sideload_count == 0 and backload_count == 1 and outload_count == 0 then
+         result = result .. " end "
+      elseif sideload_count == 1 and backload_count == 0 and outload_count == 0 then
+         result = result .. " end corner "
+      elseif sideload_count == 1 and backload_count == 0 and outload_count == 1 then
+         result = result .. " corner "
+      elseif sideload_count + backload_count > 1 then
+         result = result .. " junction " --maybe different junction types will be worth specifying in the future
+      end
+      
+      --Check contents
       local left = ent.get_transport_line(1).get_contents()
       local right = ent.get_transport_line(2).get_contents()
 
@@ -5375,6 +5408,24 @@ function build_item_in_hand(pindex, offset_val)
          end
          position = offset_position(adjusted_position, players[pindex].player_direction, adjusted_offset)
       end
+      if stack.name == "small-electric-pole" and players[pindex].build_lock == true then
+         --Place a small electric pole in this position only if it is within 6.5 to 7.5 tiles of another small electric pole
+         local surf = game.get_player(pindex).surface
+         local small_poles = surf.find_entities_filtered{position = position, radius = 7.5, name = "small-electric-pole"}
+         local all_beyond_6_5 = true
+         local any_connects = false
+         for i,pole in ipairs(small_poles) do
+            if util.distance(position, pole.position) < 6.5 then
+               all_beyond_6_5 = false
+            elseif util.distance(position, pole.position) >= 6.5 then
+               any_connects = true
+            end
+         end
+         if not (all_beyond_6_5 and any_connects) then
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            return
+         end
+      end
       local building = {
          position = position,
          direction = players[pindex].building_direction * 2,
@@ -5386,9 +5437,9 @@ function build_item_in_hand(pindex, offset_val)
 --         read_tile(pindex)
       else
          if players[pindex].build_lock == true then
-            printout("Can't place.", pindex) 
-            --note: we want to mute this message entirely if build lock is on and the entity preventing the placement is the same as the item in hand
+            game.get_player(pindex).play_sound{path = "utility/cannot_build"}
          else
+            game.get_player(pindex).play_sound{path = "utility/cannot_build"}
             printout("Cannot place that there.", pindex)
          end
       end

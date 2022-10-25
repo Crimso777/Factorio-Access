@@ -5,10 +5,14 @@ entity_types = {}
 production_types = {}
 building_types = {}
 
-resources = {}
-mapped = {}
 
 local util = require('util')
+
+function squared_distance(pos1, pos2)
+   local offset = {x = pos1.x - pos2.x, y = pos1.y - pos2.y}
+   local result = offset.x * offset.x + offset.y * offset.y
+   return result
+end
 
 function nearest_edge(edges, pos, name)
    local result = {}
@@ -84,14 +88,15 @@ function str2pos(str)
    end
       return {x = t[1], y = t[2]}
 end
-function find_islands(surf, area)
+function find_islands(surf, area, pindex)
    local islands = {}
    local ents = surf.find_entities_filtered{area = area, type = "resource"}
    local waters = surf.find_tiles_filtered{area = area, name = "water"}
-
    if #ents == 0 and #waters == 0then return {} end
 
    for i, ent in ipairs(ents) do
+      local destroy_id = script.register_on_entity_destroyed(ent)
+      players[pindex].destroyed[destroy_id] = {name = ent.name, position = ent.position, type = ent.type, area = ent.bounding_box}
       if islands[ent.name] == nil then
          islands[ent.name] = {
             name = ent.name,
@@ -235,6 +240,15 @@ end
 
 function ent_production(ent)
    local result = ""
+   if ent.name == "forest" then
+      local total = 0
+         for i, chunk in pairs(players[pindex].tree_groups[ent.group]) do
+         total = total + players[pindex].tree_chunks[chunk].count
+      end
+--         result = " x" ..  table_size(tree_groups[ent.group]) .. ", "
+         result = " x" .. total .. ", "
+
+   end
    if ent.name ~= "water" and ent.type == "mining-drill"  then
       local pos = ent.position
       local radius = ent.prototype.mining_drill_radius
@@ -1734,7 +1748,7 @@ function scan_sort(pindex)
          local ent2 = nil
          if k1.name == "water" then
             table.sort( k1.ents , function(k3, k4) 
-               return distance(pos, k3.position) < distance(pos, k4.position)
+               return squared_distance(pos, k3.position) < squared_distance(pos, k4.position)
             end)
             ent1 = k1.ents[1]
          else
@@ -1742,13 +1756,13 @@ function scan_sort(pindex)
          end
          if k2.name == "water" then
             table.sort( k2.ents , function(k3, k4) 
-               return distance(pos, k3.position) < distance(pos, k4.position)
+               return squared_distance(pos, k3.position) < squared_distance(pos, k4.position)
             end)
             ent2 = k2.ents[1]
          else
          ent2 = game.get_player(pindex).surface.get_closest(pos, k2.ents)
          end
-         return distance(pos, ent1.position) < distance(pos, ent2.position)
+         return squared_distance(pos, ent1.position) < squared_distance(pos, ent2.position)
       end)
             
    else
@@ -2166,6 +2180,87 @@ function set_quick_bar(index, pindex)
 end
 
 function read_hand(pindex)
+local sorted_chunks = {}
+for pos, num in pairs(players[pindex].tree_chunks) do
+   table.insert(sorted_chunks, pos)
+end
+table.sort(sorted_chunks, function (T1, T2)
+   return players[pindex].tree_chunks[T1].count > players[pindex].tree_chunks[T2].count
+end)
+local random_trees = {}
+for i = 1, 3+math.ceil(math.sqrt(table_size(players[pindex].tree_chunks)/2)) do
+   table.insert(random_trees, math.random(table_size(players[pindex].tree_chunks)))
+end
+players[pindex].tree_clusters = {}
+local index = 1
+for pos, total in pairs(players[pindex].tree_chunks) do
+   for i, rand in pairs(random_trees) do
+      if index == rand then
+         local position = str2pos(pos)
+         position.x = position.x +  math.random()
+         position.y = position.y + math.random()
+         table.insert(players[pindex].tree_clusters, table.deepcopy(position))
+         random_trees[i] = nil
+         i = 0
+
+      end
+   end
+   index = index + 1
+end
+for max = 1, 50 do
+   players[pindex].tree_groups = {}
+   for i, val in pairs(players[pindex].tree_clusters) do
+      players[pindex].tree_groups[i] = {}
+   end
+   for pos, current in pairs(players[pindex].tree_chunks) do
+      local closest = 0
+      local min = math.huge
+      for new, pos2 in pairs(players[pindex].tree_clusters) do
+         local delta = squared_distance(str2pos(pos), pos2)
+--         print(pos2str(pos2))
+--print(delta)
+         if delta < min then
+            min = delta
+            closest = new
+         end
+      end
+--      tree_positions[pos] = closest
+players[pindex].tree_chunks[pos].group = closest
+--print(pos)
+--print(closest)
+      table.insert(players[pindex].tree_groups[closest], pos)
+   end
+   for cluster, trees in pairs(players[pindex].tree_groups) do
+
+      local total = 0
+      for i, chunk in pairs(trees) do
+         total = total + players[pindex].tree_chunks[chunk].count
+      end
+      local sum = table.deepcopy(players[pindex].tree_clusters[cluster])
+      for i, pos in pairs(trees) do
+         local position = str2pos(pos)
+         sum.x = sum.x + position.x * players[pindex].tree_chunks[pos].count
+         sum.y = sum.y + position.y * players[pindex].tree_chunks[pos].count
+      end
+      sum.x = sum.x / total
+      sum.y = sum.y / total
+      players[pindex].tree_clusters[cluster] = table.deepcopy(sum)
+   end   
+end
+for i, val in pairs(players[pindex].tree_clusters) do
+   players[pindex].tree_groups[i] = {}
+end
+
+for pos, cluster in pairs(players[pindex].tree_chunks) do
+   table.insert(players[pindex].tree_groups[cluster.group], pos)
+end
+for cluster, pos in pairs(players[pindex].tree_groups) do
+   if table_size(pos) == 0 then
+      players[pindex].tree_groups[cluster] = nil
+      players[pindex].tree_clusters[cluster] = nil
+   end
+end
+
    local cursor_stack=game.get_player(pindex).cursor_stack
    if cursor_stack and cursor_stack.valid and cursor_stack.valid_for_read then
       local out={"access.cursor-description"}
@@ -2351,7 +2446,7 @@ function scan_index(pindex)
 
          table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
             local pos = players[pindex].cursor_pos
-            return distance(pos, k1.position) < distance(pos, k2.position)
+            return squared_distance(pos, k1.position) < squared_distance(pos, k2.position)
          end)
       if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
          players[pindex].selection = 1
@@ -2371,7 +2466,31 @@ function scan_index(pindex)
             scan_index(pindex)
             return
          end
-         ent = {name = name, position = table.deepcopy(entry.position)}
+         ent = {name = name, position = table.deepcopy(entry.position), group = entry.group}
+         if name == "forest" then
+            local group = players[pindex].tree_groups[entry.group]
+            local current_pos = table.deepcopy(players[pindex].cursor_pos)
+            current_pos.x = math.floor(current_pos.x/32)
+            current_pos.y = math.floor(current_pos.y/32)
+            local nearest_chunk = nil
+            local min = math.huge
+            for index, pos in pairs(players[pindex].tree_groups[ent.group]) do
+               local dist = squared_distance(current_pos, str2pos(pos))
+               if dist < min then
+                  min = dist
+                  nearest_chunk = pos
+               end
+            end
+            if nearest_chunk ~= nil then
+               ent.position = str2pos(nearest_chunk)
+               ent.position.x = ent.position.x * 32
+               ent.position.y = ent.position.y * 32
+               local treants = game.get_player(pindex).surface.find_entities_filtered{area = {left_top = ent.position, right_bottom = {ent.position.x + 32, ent.position.y + 32}}, type = "tree"}
+               if #treants > 0 then
+                  ent.position = game.get_player(pindex).surface.get_closest(players[pindex].cursor_pos, treants).position
+               end
+            end
+         end
       end
       
       if players[pindex].nearby.count == false then
@@ -2416,23 +2535,23 @@ function scan_up(pindex)
       players[pindex].nearby.index = players[pindex].nearby.index - 1
       players[pindex].nearby.selection = 1
    end
-   if not(pcall(function()
+--   if not(pcall(function()
 scan_index(pindex)
-end)) then
-      if players[pindex].nearby.category == 1 then
-         table.remove(players[pindex].nearby.ents, players[pindex].nearby.index)
-      elseif players[pindex].nearby.category == 2 then
-         table.remove(players[pindex].nearby.resources, players[pindex].nearby.index)
-      elseif players[pindex].nearby.category == 3 then
-         table.remove(players[pindex].nearby.containers, players[pindex].nearby.index)
-      elseif players[pindex].nearby.category == 4 then
-         table.remove(players[pindex].nearby.buildings, players[pindex].nearby.index)
-      elseif players[pindex].nearby.category == 5 then
-         table.remove(players[pindex].nearby.other, players[pindex].nearby.index)
-      end
-      scan_down(pindex)
-      scan_up(pindex)
-   end
+--end)) then
+--      if players[pindex].nearby.category == 1 then
+--         table.remove(players[pindex].nearby.ents, players[pindex].nearby.index)
+--      elseif players[pindex].nearby.category == 2 then
+--         table.remove(players[pindex].nearby.resources, players[pindex].nearby.index)
+--      elseif players[pindex].nearby.category == 3 then
+--         table.remove(players[pindex].nearby.containers, players[pindex].nearby.index)
+--      elseif players[pindex].nearby.category == 4 then
+--         table.remove(players[pindex].nearby.buildings, players[pindex].nearby.index)
+--      elseif players[pindex].nearby.category == 5 then
+--         table.remove(players[pindex].nearby.other, players[pindex].nearby.index)
+--      end
+--      scan_down(pindex)
+--      scan_up(pindex)
+--   end
  end
 
 function scan_middle(pindex)
@@ -2469,7 +2588,7 @@ function rescan(pindex)
    players[pindex].nearby.index = 1
    players[pindex].nearby.selection = 1
    first_player = game.get_player(pindex)
-   players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-500, math.floor(players[pindex].cursor_pos.y)-500, 1000, 1000, pindex)
+   players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-2500, math.floor(players[pindex].cursor_pos.y)-2500, 5000, 5000, pindex)
    populate_categories(pindex)
 end
 
@@ -2530,15 +2649,25 @@ function scan_area (x,y,w,h, pindex)
    local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}
    local result = {}
          local pos = players[pindex].cursor_pos
-   for name, resource in pairs(resources) do
+   for name, resource in pairs(players[pindex].resources) do
 
-      table.insert(result, {name = name, count = table_size(resources[name].patches), ents = {}, aggregate = true})         
+      table.insert(result, {name = name, count = table_size(players[pindex].resources[name].patches), ents = {}, aggregate = true})         
       local index = #result
       for group, patch in pairs(resource.patches) do
          table.insert(result[index].ents, {group = group, position = nearest_edge(patch.edges, pos, name)})
       end
    end
-
+   if table_size(players[pindex].tree_clusters) > 0 then
+      table.insert(result, {
+         name = "forest",
+         count = table_size(players[pindex].tree_clusters),
+         ents = {},
+         aggregate = true
+      })
+      for cluster, p in pairs(players[pindex].tree_clusters) do
+        table.insert(result[#result].ents, {position = {x = p.x*32, y = p.y*32}, group = cluster})
+      end
+   end
    for i=1, #ents, 1 do
       local prod_info = ent_production(ents[i])
       local index = index_of_entity(result, ents[i].name .. prod_info)
@@ -2564,18 +2693,134 @@ function scan_area (x,y,w,h, pindex)
          local ent1 = nil
          local ent2 = nil
          if k1.aggregate then
-            table.sort( k1.ents , function(k3, k4) 
-               return distance(pos, k3.position) < distance(pos, k4.position)
-            end)
-            ent1 = k1.ents[1]
+            if k1.name == "forest" then
+               table.sort( k1.ents , function(k3, k4) 
+
+                  local current_pos = table.deepcopy(players[pindex].cursor_pos)
+                  current_pos.x = math.floor(current_pos.x/32)
+                  current_pos.y = math.floor(current_pos.y/32)  
+                  local nearest_chunk = nil
+                  local min = math.huge
+                  for index, p in pairs(players[pindex].tree_groups[k3.group]) do
+                     local dist = squared_distance(current_pos, str2pos(p))
+                     if dist < min then
+                        min = dist
+                        nearest_chunk = table.deepcopy(p)
+                     end
+                  end
+                  local ent3 = {position = {}}
+                  ent3.position = str2pos(nearest_chunk)
+                  ent3.position.x = ent3.position.x * 32 + 16
+                  ent3.position.y = ent3.position.y * 32 + 16
+
+                  local nearest_chunk = nil
+                  local min = math.huge
+                  for index, p in pairs(players[pindex].tree_groups[k4.group]) do
+                     local dist = squared_distance(current_pos, str2pos(p))
+                     if dist < min then
+                        min = dist
+                        nearest_chunk = table.deepcopy(p)
+                     end
+                  end
+                  local ent4 = {position = {}}
+                  ent4.position = str2pos(nearest_chunk)
+                  ent4.position.x = ent4.position.x * 32 + 16
+                  ent4.position.y = ent4.position.y * 32 + 16
+                  return squared_distance(pos, ent3.position) < squared_distance(pos, ent4.position)
+
+               end)
+               local current_pos = table.deepcopy(players[pindex].cursor_pos)
+               current_pos.x = math.floor(current_pos.x/32)
+               current_pos.y = math.floor(current_pos.y/32) 
+               local nearest_chunk = nil
+               local min = math.huge
+               for index, p in pairs(players[pindex].tree_groups[k1.ents[1].group]) do
+                  local dist = squared_distance(current_pos, str2pos(p))
+                  if dist < min then
+                     min = dist
+                     nearest_chunk = table.deepcopy(p)
+                  end
+               end
+               ent1 = {position = {}}
+               ent1.position = str2pos(nearest_chunk)
+               ent1.position.x = ent1.position.x * 32
+               ent1.position.y = ent1.position.y * 32
+               local treants = game.get_player(pindex).surface.find_entities_filtered{area = {left_top = ent1.position, right_bottom = {ent1.position.x + 32, ent1.position.y + 32}}, type = "tree"}
+               if #treants > 0 then
+                  ent1.position = game.get_player(pindex).surface.get_closest(pos, treants).position
+               end
+            else
+               table.sort( k1.ents , function(k3, k4) 
+                  return squared_distance(pos, k3.position) < squared_distance(pos, k4.position)
+               end)
+               ent1 = k1.ents[1]
+            end
          else
             ent1 = surf.get_closest(pos, k1.ents)
          end
          if k2.aggregate then
-            table.sort( k2.ents , function(k3, k4) 
-               return distance(pos, k3.position) < distance(pos, k4.position)
-            end)
-            ent2 = k2.ents[1]
+            if k2.name == "forest" then
+               table.sort( k2.ents , function(k3, k4) 
+
+                  local current_pos = table.deepcopy(players[pindex].cursor_pos)
+                  current_pos.x = math.floor(current_pos.x/32)
+                  current_pos.y = math.floor(current_pos.y/32)
+                  local nearest_chunk = nil
+                  local min = math.huge
+                  for index, p in pairs(players[pindex].tree_groups[k3.group]) do
+                     local dist = squared_distance(current_pos, str2pos(p))
+                     if dist < min then
+                        min = dist
+                        nearest_chunk = table.deepcopy(p)
+                     end
+                  end
+                  local ent3 = {position = {}}
+                  ent3.position = str2pos(nearest_chunk)
+                  ent3.position.x = ent3.position.x * 32 + 16
+                  ent3.position.y = ent3.position.y * 32 + 16
+
+                  local nearest_chunk = nil
+                  local min = math.huge
+                  for index, p in pairs(players[pindex].tree_groups[k4.group]) do
+                     local dist = squared_distance(current_pos, str2pos(p))
+                     if dist < min then
+                        min = dist
+                        nearest_chunk = table.deepcopy(p)
+                     end
+                  end
+                  local ent4 = {position = {}}
+                  ent4.position = str2pos(nearest_chunk)
+                  ent4.position.x = ent4.position.x * 32 + 16
+                  ent4.position.y = ent4.position.y * 32 + 16
+                  return squared_distance(pos, ent3.position) < squared_distance(pos, ent4.position)
+
+               end)
+               local current_pos = table.deepcopy(players[pindex].cursor_pos)
+               current_pos.x = math.floor(current_pos.x/32)
+               current_pos.y = math.floor(current_pos.y/32) 
+               local nearest_chunk = nil
+               local min = math.huge
+               for index, p in pairs(players[pindex].tree_groups[k2.ents[1].group]) do
+                  local dist = squared_distance(current_pos, str2pos(p))
+                  if dist < min then
+                     min = dist
+                     nearest_chunk  = table.deepcopy(p)
+                  end
+               end
+               ent2 = {position = {}}
+               ent2.position = str2pos(nearest_chunk)
+               ent2.position.x = ent2.position.x * 32
+               ent2.position.y = ent2.position.y * 32
+               local treants = game.get_player(pindex).surface.find_entities_filtered{area = {left_top = ent2.position, right_bottom = {ent2.position.x + 32, ent2.position.y + 32}}, type = "tree"}
+               if #treants > 0 then
+                  ent2.position = game.get_player(pindex).surface.get_closest(pos, treants).position
+               end
+            else
+               table.sort( k2.ents , function(k3, k4) 
+                  return squared_distance(pos, k3.position) < squared_distance(pos, k4.position)
+               end)
+               ent2 = k2.ents[1]
+            end
          else
          ent2 = surf.get_closest(pos, k2.ents)
          end
@@ -2859,6 +3104,13 @@ function initialize(player)
    faplayer.zoom = faplayer.zoom or 1
    faplayer.build_lock = faplayer.build_lock or false
    faplayer.setting_inventory_wraps_around = faplayer.setting_inventory_wraps_around or true
+   faplayer.resources = faplayer.resources or {}
+   faplayer.mapped = faplayer.mapped or {}
+   faplayer.tree_chunks = faplayer.tree_chunks or {}
+   faplayer.tree_positions = faplayer.tree_positions or {}
+   faplayer.tree_groups = faplayer.tree_groups or {}
+   faplayer.tree_clusters = faplayer.tree_clusters or {}
+   faplayer.destroyed = faplayer.destroyed or {}
 
    faplayer.nearby = faplayer.nearby or {
       index = 0,
@@ -2959,7 +3211,9 @@ function initialize(player)
       index = 0,
       direction = "none"
    }
-
+   if table_size(faplayer.mapped) == 0 then
+      player.force.rechart()
+   end
 end
 
 script.on_event(defines.events.on_player_changed_position,function(event)
@@ -3719,7 +3973,11 @@ player.force.research_all_technologies()
 --   player.insert{name="solar-panel", count=100}
 --   player.insert{name="pipe-to-ground", count=100}
 --   player.insert{name="underground-belt", count=100}
---   game.get_player(index).surface.create_entity{name = "biter-spawner", position = {5.5, 5.5}}
+   for i = 0, 10 do
+      for j = 0, 10 do
+         player.surface.create_entity{name = "iron-ore", position = {i + .5, j + .5}}
+      end
+   end
 --   player.force.research_all_technologies()
    end
    
@@ -4104,7 +4362,37 @@ script.on_event("jump-to-scan", function(event)
       end
          local name = ents[players[pindex].nearby.index].name
          local entry = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
-         ent = {name = name, position = table.deepcopy(entry.position)}
+         if table_size(entry) == 0 then
+            table.remove(ents[players[pindex].nearby.index].ents, players[pindex].nearby.selection)
+            players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+            scan_index(pindex)
+            return
+         end
+         ent = {name = name, position = table.deepcopy(entry.position), group = entry.group}
+         if name == "forest" then
+            local group = players[pindex].tree_groups[entry.group]
+            local current_pos = table.deepcopy(players[pindex].cursor_pos)
+            current_pos.x = math.floor(current_pos.x/32)
+            current_pos.y = math.floor(current_pos.y/32) 
+            local nearest_chunk = nil
+            local min = math.huge
+            for index, pos in pairs(players[pindex].tree_groups[ent.group]) do
+               local dist = distance(current_pos, str2pos(pos))
+               if dist < min then
+                  min = dist
+                  nearest_chunk = pos
+               end
+            end
+            if nearest_chunk ~= nil then
+               ent.position = str2pos(nearest_chunk)
+               ent.position.x = ent.position.x * 32
+               ent.position.y = ent.position.y * 32
+               local treants = game.get_player(pindex).surface.find_entities_filtered{area = {left_top = ent.position, right_bottom = {ent.position.x + 32, ent.position.y + 32}}, type = "tree"}
+               if #treants > 0 then
+                  ent.position = game.get_player(pindex).surface.get_closest(players[pindex].cursor_pos, treants).position
+               end
+            end
+         end
       end
       if players[pindex].cursor then
          players[pindex].cursor_pos = center_of_tile(ent.position)
@@ -6086,15 +6374,36 @@ script.on_event("scan-selection-down", function(event)
 end)
 
 script.on_event(defines.events.on_chunk_charted,function(event)
-   if mapped[pos2str(event.position)] ~= nil then
+   local pindex = 0
+--   if table_size(event.force.players) > 0 then
+      pindex = event.force.players[1].index
+--   else
+--      return
+--   end
+   if not check_for_player(pindex) then
+   end
+   if players[pindex].mapped[pos2str(event.position)] ~= nil then
       return
    end
-   mapped[pos2str(event.position)] = true
-   local islands = find_islands(game.surfaces[event.surface_index], event.area)
+   players[pindex].mapped[pos2str(event.position)] = true
+   local islands = find_islands(game.surfaces[event.surface_index], event.area, pindex)
+   local trees = game.surfaces[event.surface_index].find_entities_filtered{area = event.area, type="tree"}
+   if #trees > 0 then 
+      players[pindex].tree_chunks[pos2str(event.position)] = {count = #trees, group = 0} 
+      if event.area.left_top.x - event.area.right_bottom.x > 32 then
+         print("Oops")
+      end
+   end
+   for i, tree in pairs(trees) do
+      players[pindex].tree_positions[pos2str(tree.position)] = 0
+      local destroy_id = script.register_on_entity_destroyed(tree)
+      players[pindex].destroyed[destroy_id] = {name = tree.name, position = tree.position, type = tree.type, area = tree.bounding_box}
+   end
+
    if table_size(islands) > 0 then
       for i, v in pairs(islands) do
-         if resources[i] == nil then
-            resources[i] = {
+         if players[pindex].resources[i] == nil then
+            players[pindex].resources[i] = {
                patches = {},
                queue = {},
                index = 1,
@@ -6112,8 +6421,8 @@ script.on_event(defines.events.on_chunk_charted,function(event)
 
 --            end
 --         end
-         if resources[i].queue[pos2str(event.position)] ~= nil then
-            for dir, positions in pairs(resources[i].queue[pos2str(event.position)]) do
+         if players[pindex].resources[i].queue[pos2str(event.position)] ~= nil then
+            for dir, positions in pairs(players[pindex].resources[i].queue[pos2str(event.position)]) do
 --               islands[i].neighbors[dir] = nil
                for i3, pos in pairs(positions) do
                   local dirs = {dir - 1, dir, dir + 1}
@@ -6134,20 +6443,20 @@ script.on_event(defines.events.on_chunk_charted,function(event)
                            if merged_groups[island_group] == nil then
                               merged_groups[island_group] = {}
                            end
-                           merged_groups[island_group][resources[i].positions[pos]] = true
+                           merged_groups[island_group][players[pindex].resources[i].positions[pos]] = true
                         else
                            edge = true
                         end
                      else
-                        if resources[i].positions[p] == nil then
+                        if players[pindex].resources[i].positions[p] == nil then
                            edge = true
                         end
                      end
                   
                   end
                   if edge == false then
-                     local group = resources[i].positions[pos]
-                     resources[i].patches[group].edges[pos] = nil
+                     local group = players[pindex].resources[i].positions[pos]
+                     players[pindex].resources[i].patches[group].edges[pos] = nil
                   end
                   for p, b in pairs(new_edges) do
                      if islands[i].resources[p] ~= nil then
@@ -6157,7 +6466,7 @@ script.on_event(defines.events.on_chunk_charted,function(event)
                         end
                         local edge = false
                         for d, p1 in ipairs(adj) do
-                           if islands[i].resources[p1] == nil and resources[i].positions[p1] == nil then
+                           if islands[i].resources[p1] == nil and players[pindex].resources[i].positions[p1] == nil then
                               edge = true
                            end
                         end
@@ -6180,23 +6489,23 @@ script.on_event(defines.events.on_chunk_charted,function(event)
                new_group = math.min(new_group, resource_group)
             end
             for resource_group, b in pairs(resource_groups) do
-               if new_group < resource_group and resources[i].patches[resource_group] ~= nil then
-                  for i1, pos in pairs(resources[i].patches[resource_group].positions) do
-                     resources[i].positions[pos] = new_group
+               if new_group < resource_group and players[pindex].resources[i].patches[resource_group] ~= nil then
+                  for i1, pos in pairs(players[pindex].resources[i].patches[resource_group].positions) do
+                     players[pindex].resources[i].positions[pos] = new_group
                   end
-                  table_concat(resources[i].patches[new_group].positions, resources[i].patches[resource_group].positions)
-                  for pos, val in pairs(resources[i].patches[resource_group].edges) do
-                     resources[i].patches[new_group].edges[pos] = val
+                  table_concat(players[pindex].resources[i].patches[new_group].positions, players[pindex].resources[i].patches[resource_group].positions)
+                  for pos, val in pairs(players[pindex].resources[i].patches[resource_group].edges) do
+                     players[pindex].resources[i].patches[new_group].edges[pos] = val
                   end
-                  resources[i].patches[resource_group] = nil
+                  players[pindex].resources[i].patches[resource_group] = nil
                end
             end
             for pos, val in pairs(islands[i].groups[island_group]) do
-               resources[i].positions[pos] = new_group
-if 'number' == type(resources[i].patches[new_group]) then new_group = resources[i].patches[new_group] end
-               table.insert(resources[i].patches[new_group].positions, pos)
+               players[pindex].resources[i].positions[pos] = new_group
+if 'number' == type(players[pindex].resources[i].patches[new_group]) then new_group = players[pindex].resources[i].patches[new_group] end
+               table.insert(players[pindex].resources[i].patches[new_group].positions, pos)
                if islands[i].edges[pos] ~= nil then
-                  resources[i].patches[new_group].edges[pos] = islands[i].edges[pos]
+                  players[pindex].resources[i].patches[new_group].edges[pos] = islands[i].edges[pos]
                end
                islands[i].groups[island_group] = nil
             end
@@ -6204,55 +6513,55 @@ if 'number' == type(resources[i].patches[new_group]) then new_group = resources[
 
          for dir, v1 in pairs(islands[i].neighbors) do
             local chunk_pos = pos2str(offset_position(event.position, dir, 1))
-         if resources[i].queue[chunk_pos] == nil then
-            resources[i].queue[chunk_pos] = {}
+         if players[pindex].resources[i].queue[chunk_pos] == nil then
+            players[pindex].resources[i].queue[chunk_pos] = {}
          end
-            resources[i].queue[chunk_pos][dir] =  {}
+            players[pindex].resources[i].queue[chunk_pos][dir] =  {}
          end
          for old_index , group in pairs(v.groups) do
             if true then
-               local new_index = resources[i].index
-               resources[i].patches[new_index] = {
+               local new_index = players[pindex].resources[i].index
+               players[pindex].resources[i].patches[new_index] = {
                   positions = {},
                   edges = {}
                }
-               resources[i].index = resources[i].index + 1
+               players[pindex].resources[i].index = players[pindex].resources[i].index + 1
                for i2, pos in pairs(group) do
-                  resources[i].positions[pos] = new_index
-                  table.insert(resources[i].patches[new_index].positions, pos)
+                  players[pindex].resources[i].positions[pos] = new_index
+                  table.insert(players[pindex].resources[i].patches[new_index].positions, pos)
                   if islands[i].edges[pos] ~= nil then
-                     resources[i].patches[new_index].edges[pos] = islands[i].edges[pos]
+                     players[pindex].resources[i].patches[new_index].edges[pos] = islands[i].edges[pos]
                      if islands[i].edges[pos] then
                         local position = str2pos(pos)
    --                     if math.floor(position.y) == event.area.left_top.y then
                         if area_edge(event.area, 0, position, i) then
    
                            local chunk_pos = pos2str(offset_position(event.position, 0, 1))
-                           if resources[i].queue[chunk_pos][4] == nil then 
-                              resources[i].queue[chunk_pos][4] = {}
+                           if players[pindex].resources[i].queue[chunk_pos][4] == nil then 
+                              players[pindex].resources[i].queue[chunk_pos][4] = {}
                            end
-                           table.insert(resources[i].queue[chunk_pos][4], pos)
+                           table.insert(players[pindex].resources[i].queue[chunk_pos][4], pos)
                         end
                         if area_edge(event.area, 6, position, i) then
                            local chunk_pos = pos2str(offset_position(event.position, 6, 1))
-                           if resources[i].queue[chunk_pos][2] == nil then 
-                              resources[i].queue[chunk_pos][2] = {}
+                           if players[pindex].resources[i].queue[chunk_pos][2] == nil then 
+                              players[pindex].resources[i].queue[chunk_pos][2] = {}
                            end
-                           table.insert(resources[i].queue[chunk_pos][2], pos)
+                           table.insert(players[pindex].resources[i].queue[chunk_pos][2], pos)
                         end
                         if area_edge(event.area, 4, position, i) then
                            local chunk_pos = pos2str(offset_position(event.position, 4, 1))
-                           if resources[i].queue[chunk_pos][0] == nil then 
-                              resources[i].queue[chunk_pos][0] = {}
+                           if players[pindex].resources[i].queue[chunk_pos][0] == nil then 
+                              players[pindex].resources[i].queue[chunk_pos][0] = {}
                            end
-                           table.insert(resources[i].queue[chunk_pos][0], pos)
+                           table.insert(players[pindex].resources[i].queue[chunk_pos][0], pos)
                         end
                         if area_edge(event.area, 2, position, i) then
                            local chunk_pos = pos2str(offset_position(event.position, 2, 1))
-                           if resources[i].queue[chunk_pos][6] == nil then 
-                              resources[i].queue[chunk_pos][6] = {}
+                           if players[pindex].resources[i].queue[chunk_pos][6] == nil then 
+                              players[pindex].resources[i].queue[chunk_pos][6] = {}
                            end
-                           table.insert(resources[i].queue[chunk_pos][6], pos)
+                           table.insert(players[pindex].resources[i].queue[chunk_pos][6], pos)
                         end
                         
                      end
@@ -6271,3 +6580,46 @@ if 'number' == type(resources[i].patches[new_group]) then new_group = resources[
    end
 end)
 
+
+script.on_event(defines.events.on_entity_destroyed,function(event)
+   local ent = players[pindex].destroyed[event.registration_number]
+   
+   local str = pos2str(ent.position)
+   if ent.type == "resource" then
+      if ent.name ~= "crude-oil" then
+         local group = players[pindex].resources[ent.name].positions[str]
+         players[pindex].resources[ent.name].positions[str] = nil
+         players[pindex].resources[ent.name].patches[group].edges[str] = nil
+         for i = 1, #players[pindex].resources[ent.name].patches[group].positions do
+            if players[pindex].resources[ent.name].patches[group].positions[i] == str then
+               table.remove(players[pindex].resources[ent.name].patches[group].positions, i)
+               i = i - 1
+            end
+         end
+         if #players[pindex].resources[ent.name].patches[group].positions == 0 then
+            players[pindex].resources[ent.name].patches[group] = nil
+            if table_size(players[pindex].resources[ent.name].patches) == 0 then
+               players[pindex].resources[ent.name] = nil
+            end
+            return
+         end
+         for d = 0, 7 do
+            local adj = pos2str(offset_position(ent.position, d, 1))         
+            if players[pindex].resources[ent.name].positions[adj] == group then
+               players[pindex].resources[ent.name].patches[group].edges[adj] = false
+            end
+         end
+      end
+   elseif ent.type == "tree" then
+      local adj = {}
+      adj[pos2str({x = math.floor(ent.area.left_top.x/32),y = math.floor(ent.area.left_top.y/32)})] = true
+      adj[pos2str({x = math.floor(ent.area.right_bottom.x/32),y = math.floor(ent.area.left_top.y/32)})] = true
+      adj[pos2str({x = math.floor(ent.area.left_top.x/32),y = math.floor(ent.area.right_bottom.y/32)})] = true
+      adj[pos2str({x = math.floor(ent.area.right_bottom.x/32),y = math.floor(ent.area.right_bottom.y/32)})] = true
+      for pos, val in pairs(adj) do
+         players[pindex].tree_chunks[pos].count = players[pindex].tree_chunks[pos].count - 1
+      end
+         players[pindex].tree_positions[str] = nil
+   end
+   players[pindex].destroyed[event.registration_number] = nil
+end)

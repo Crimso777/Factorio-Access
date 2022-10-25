@@ -2796,7 +2796,9 @@ function initialize(player)
    
    faplayer.rail_builder = faplayer.rail_builder or {
       index = 0,
-      rail = nil
+      index_max = 1,
+      rail = nil,
+      rail_type = 0
    }
    
    faplayer.train_menu = faplayer.train_menu or {
@@ -4858,7 +4860,7 @@ input.select(1, 0)
          target(pindex)
       
       elseif players[pindex].menu == "rail_builder" then
-         rail_builder(pindex, players[pindex].rail_builder.index, true)
+         rail_builder(pindex, true)
          rail_builder_close(pindex,false)
       elseif players[pindex].menu == "train_menu" then
          train_menu(players[pindex].train_menu.index, pindex, true)

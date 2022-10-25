@@ -1753,12 +1753,37 @@ function rail_builder_open(pindex, rail)
    --Set the menu line counter to 0
    players[pindex].rail_builder.index = 0
    
+   --Determine rail type
+   local is_end_rail, end_dir, comment = check_end_rail(rail,pindex)
+   local dir = rail.direction
+   if is_end_rail then
+      if dir == 0 or dir == 2 or dir == 4 or dir == 6 then 
+         --Straight end rails
+         players[pindex].rail_builder.rail_type = 1
+         players[pindex].rail_builder.index_max = 6
+      else 
+         --Diagonal end rails
+         players[pindex].rail_builder.rail_type = 2
+         players[pindex].rail_builder.index_max = 2
+      end
+   else
+      if dir == 0 or dir == 2 or dir == 4 or dir == 6 then 
+         --Straight mid rails
+         players[pindex].rail_builder.rail_type = 3
+         players[pindex].rail_builder.index_max = 1
+      else
+         --Diagonal mid rails
+         players[pindex].rail_builder.rail_type = 4
+         players[pindex].rail_builder.index_max = 1
+      end
+   end
+   
    --Play sound
    game.get_player(pindex).play_sound{path = "Open-Inventory-Sound"}
    
    --Load menu 
    players[pindex].rail_builder.rail = rail
-   rail_builder(pindex, players[pindex].rail_builder.index, false)
+   rail_builder(pindex, false)
 end
 
 
@@ -1785,13 +1810,14 @@ function rail_builder_up(pindex)
    --Check the index against the limit
    if players[pindex].rail_builder.index < 0 then
       players[pindex].rail_builder.index = 0
+      game.get_player(pindex).play_sound{path = "Mine-Building"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
    end
    
    --Load menu 
-   rail_builder(pindex, players[pindex].rail_builder.index, false)
+   rail_builder(pindex, false)
 end
 
 
@@ -1800,25 +1826,26 @@ function rail_builder_down(pindex)
    players[pindex].rail_builder.index = players[pindex].rail_builder.index + 1
 
    --Check the index against the limit
-   if players[pindex].rail_builder.index > 6 then
-      players[pindex].rail_builder.index = 6
+   if players[pindex].rail_builder.index > players[pindex].rail_builder.index_max then
+      players[pindex].rail_builder.index = players[pindex].rail_builder.index_max
+      game.get_player(pindex).play_sound{path = "Mine-Building"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
    end
    
    --Load menu 
-   rail_builder(pindex, players[pindex].rail_builder.index, false)
+   rail_builder(pindex, false)
 end
 
 
 --Builder menu to build rail structures
-function rail_builder(pindex, menu_line_in, clicked_in)
-   local comment = ""
-   local menu_line = menu_line_in
+function rail_builder(pindex, clicked_in)
    local clicked = clicked_in
+   local comment = ""
+   local menu_line = players[pindex].rail_builder.index
+   local rail_type = players[pindex].rail_builder.rail_type
    local rail = players[pindex].rail_builder.rail
-   local is_end_rail, end_rail_dir, e_comment = check_end_rail(rail, pindex)
    
    if rail == nil then
       comment = " Rail nil error "
@@ -1828,69 +1855,105 @@ function rail_builder(pindex, menu_line_in, clicked_in)
    end
    
    if menu_line == 0 then
-      comment = comment .. "Select a structure to build by going up or down this menu. Attempt to build it via LEFT BRACKET. "
-      if not is_end_rail then
-         comment = comment .. "Note that end rails have more options available. "
+      comment = comment .. "Select a structure to build by going up or down this menu, attempt to build it via LEFT BRACKET, "
+      if rail_type > 2 then
+         comment = comment .. "Note that end rails and vertical or horizontal rails have more options available. "
       end
       printout(comment,pindex)
       return
    end
-   if not is_end_rail then
-      --End rails have more options than mid rails. For mid rails we skip these options
-      menu_line = menu_line + 5
-      if menu_line > 6 then
-         menu_line = 6
-         players[pindex].rail_builder.index = 6
-      end
-   end
    
-   if menu_line == 1 then
-      if not clicked then
-         comment = comment .. "Left turn 90 degrees"
-         printout(comment,pindex)
-      else
-         --Build it here
-         build_rail_turn_left_90_degrees(rail, pindex)
+   if rail_type == 1 then
+      --Straight end rails
+      if menu_line == 1 then
+         if not clicked then
+            comment = comment .. "Left turn 45 degrees"
+            printout(comment,pindex)
+         else
+            --Build it here
+            build_rail_turn_left_45_degrees(rail, pindex)
+         end
+      elseif menu_line == 2 then
+         if not clicked then
+            comment = comment .. "Right turn 45 degrees"
+            printout(comment,pindex)
+         else
+            --Build it here
+            build_rail_turn_right_45_degrees(rail, pindex)
+         end
+      elseif menu_line == 3 then
+         if not clicked then
+            comment = comment .. "Left turn 90 degrees"
+            printout(comment,pindex)
+         else
+            --Build it here
+            build_rail_turn_left_90_degrees(rail, pindex)
+         end
+      elseif menu_line == 4 then
+         if not clicked then
+            comment = comment .. "Right turn 90 degrees"
+            printout(comment,pindex)
+         else
+            --Build it here
+            build_rail_turn_right_90_degrees(rail, pindex)
+         end
+      elseif menu_line == 5 then
+         if not clicked then
+            comment = comment .. "Train stop"
+            printout(comment,pindex)
+         else
+            --Build it here
+            build_train_stop(rail, pindex)
+         end
+      elseif menu_line == 6 then
+         if not clicked then
+            comment = comment .. "Plus intersection"
+            printout(comment,pindex)
+         else
+            --Build it here
+            build_small_plus_intersection(rail, pindex)
+         end
       end
-   elseif menu_line == 2 then
-      if not clicked then
-         comment = comment .. "Left turn 45 degrees"
-         printout(comment,pindex)
-      else
-         --Build it here
-         build_rail_turn_left_45_degrees(rail, pindex)
+   elseif rail_type == 2 then
+      --Diagonal end rails
+      if menu_line == 1 then
+         if not clicked then
+            comment = comment .. "Left turn 45 degrees"
+            printout(comment,pindex)
+         else
+            --Build it here
+            build_rail_turn_left_45_degrees(rail, pindex)
+         end
+      elseif menu_line == 2 then
+         if not clicked then
+            comment = comment .. "Right turn 45 degrees"
+            printout(comment,pindex)
+         else
+            --Build it here
+            build_rail_turn_right_45_degrees(rail, pindex)
+         end
       end
-   elseif menu_line == 3 then
-      if not clicked then
-         comment = comment .. "Right turn 90 degrees"
-         printout(comment,pindex)
-      else
-         --Build it here
-         build_rail_turn_right_90_degrees(rail, pindex)
+   elseif rail_type == 3 then
+      --Straight mid rails
+      if menu_line == 1 then
+         if not clicked then
+            comment = comment .. "Train stop facing the player direction"
+            printout(comment,pindex)
+         else
+            --Build it here
+            build_train_stop(rail, pindex)
+         end
       end
-   elseif menu_line == 4 then
-      if not clicked then
-         comment = comment .. "Right turn 45 degrees"
-         printout(comment,pindex)
-      else
-         --Build it here
-         build_rail_turn_right_45_degrees(rail, pindex)
-      end
-   elseif menu_line == 5 then
-      if not clicked then
-         comment = comment .. "Plus intersection"
-         printout(comment,pindex)
-      else
-         --Build it here
-         build_small_plus_intersection(rail, pindex)
-      end
-   elseif menu_line == 6 then
-      if not clicked then
-         comment = comment .. "Train stop"
-         printout(comment,pindex)
-      else
-         --Build it here
-         build_train_stop(rail, pindex)
+   elseif rail_type == 4 then
+      --Diagonal mid rails
+      if menu_line == 1 then
+         if not clicked then
+            comment = comment .. "No options available"
+            printout(comment,pindex)
+         else
+            comment = comment .. "No options available"
+            printout(comment,pindex)
+         end
       end
    end
    return
@@ -1988,6 +2051,7 @@ function train_menu_up(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index - 1
    if players[pindex].train_menu.index < 0 then
       players[pindex].train_menu.index = 0
+      game.get_player(pindex).play_sound{path = "Mine-Building"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -2001,6 +2065,7 @@ function train_menu_down(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index + 1
    if players[pindex].train_menu.index > 1 then
       players[pindex].train_menu.index = 1
+      game.get_player(pindex).play_sound{path = "Mine-Building"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -2087,6 +2152,7 @@ function train_stop_menu_up(pindex)
    players[pindex].train_stop_menu.index = players[pindex].train_stop_menu.index - 1
    if players[pindex].train_stop_menu.index < 0 then
       players[pindex].train_stop_menu.index = 0
+      game.get_player(pindex).play_sound{path = "Mine-Building"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}
@@ -2100,6 +2166,7 @@ function train_stop_menu_down(pindex)
    players[pindex].train_stop_menu.index = players[pindex].train_stop_menu.index + 1
    if players[pindex].train_stop_menu.index > 2 then
       players[pindex].train_stop_menu.index = 2
+      game.get_player(pindex).play_sound{path = "Mine-Building"}
    else
       --Play sound
       game.get_player(pindex).play_sound{path = "Inventory-Move"}

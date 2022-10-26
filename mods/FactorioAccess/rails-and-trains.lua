@@ -100,7 +100,7 @@ function rail_ent_info(pindex, ent, description)
       result = result .. " junction, "
    end
    
-   --Check if there is a train stop nearby
+   --Check if there is a train stop nearby, to announce station spaces
    if is_horz_or_vert then
       local stop = nil
       local segment_ent_1 = ent.get_rail_segment_entity(defines.rail_direction.front, false)
@@ -114,7 +114,7 @@ function rail_ent_info(pindex, ent, description)
          return result
       end
       
-      --Check if this rail is in the direction of the trains stop
+      --Check if this rail is in the correct direction of the train stop
       local rail_dir_1 = segment_ent_1 == stop
       local rail_dir_2 = segment_ent_2 == stop
       local stop_dir = stop.connected_rail_direction
@@ -425,6 +425,7 @@ end
 
 
 --Gets a train's name. The idea is that every locomotive on a train has the same backer name and this is the train's name. If there are multiple names, a warning returned.
+--todo later, new function to auto-correct a train name by applying the most common name out of the first two found. Works for the third locomotive and after. If 2 locos, take the name of the distant one because the new one is likely to be the nearrby onw.
 function get_train_name(train)
    locos = train.locomotives
    local train_name = ""
@@ -461,6 +462,96 @@ function set_train_name(train,new_name)
    end
    for i,loco in ipairs(locos["back_movers"]) do
       loco.backer_name = new_name
+   end
+end
+
+
+--Returns the rail at the end of an input rail's segment. If the input rail is already one end of the segment then it returns the other end. todo
+function get_rail_segment_other_end(pindex, rail)
+   local end_rail_1, end_dir_1 = rail.get_rail_segment_end(defines.rail_direction.front) --Cannot be nil
+   local end_rail_2, end_dir_2 = rail.get_rail_segment_end(defines.rail_direction.back) --Cannot be nil
+   
+   if rail.unit_number == end_rail_1.unit_number and rail.unit_number ~= end_rail_2.unit_number then
+      return end_rail_2
+   elseif rail.unit_number ~= end_rail_1.unit_number and rail.unit_number == end_rail_2.unit_number then
+      return end_rail_1
+   else
+      --The other end is either both options or neither, so return any.
+      return end_rail_1
+   end
+end
+
+
+--For a rail at the end of its segment, returns the neighboring rail segment's end rail. Respects dir if it is given, else returns a random option.  todo
+function get_neighbor_rail_segment_end(pindex, rail, dir_in)
+   local dir = dir_in or nil
+   local neighbor_rail_set = nil
+   local requested_neighbor_rail_1 = nil
+   local requested_neighbor_rail_2 = nil
+   
+   --Check requested neighbor first
+   if dir ~= nil then
+      requested_neighbor_rail_1 = rail.get_connected_rail{ rail_direction = defines.rail_direction.front,rail_connection_direction = dir}
+      requested_neighbor_rail_2 = rail.get_connected_rail{ rail_direction = defines.rail_direction.back ,rail_connection_direction = dir}
+      if requested_neighbor_rail_1 ~= nil and not rail.is_rail_in_same_rail_segment_as(requested_neighbor_rail_1) then
+         return requested_neighbor_rail_1
+      elseif requested_neighbor_rail_2 ~= nil and not rail.is_rail_in_same_rail_segment_as(requested_neighbor_rail_2) then
+         return requested_neighbor_rail_2
+      else
+         return nil
+      end
+   end
+   
+   --Get neighbors
+   neighbor_rail_set = rail.get_connected_rails()
+   if #neighbor_rail_set == 0 then
+      return nil
+   end
+   
+   --Return first neighbor segment rail
+   for i,connected_rail in ipairs(neighbor_rail_set) do
+      if not rail.is_rail_in_same_rail_segment_as(connected_rail)
+         return connected_rail
+      end
+   end
+   
+   --If none found, return nil
+   return nil
+end
+
+--Analyzes the entity at the end of a rail segment. Returns the entity and the result type as an error or success code.
+function get_rail_segment_checked_entity(pindex, rail, dir_in)
+   local ent = nil
+   local ent_option_1 = ent.get_rail_segment_entity(dir_in, true)
+   local ent_option_2 = ent.get_rail_segment_entity(dir_in, false)
+   local distance_option_1 = nil
+   local distance_option_2 = nil
+   
+   if ent_option_1 == nil and ent_option_2 == nil then
+      return nil, 0
+   elseif ent_option_1 ~= nil and ent_option_2 == nil then
+      return ent_option_1, 1
+   elseif ent_option_1 == nil and ent_option_2 ~= nil then
+      return ent_option_2, 2
+   else
+      --When both exist, prefer the nearest
+      distance_option_1 = util.distance(rail.position, ent_option_1.position)
+      distance_option_2 = util.distance(rail.position, ent_option_2.position)
+      if distance_option_1 < distance_option_2 then
+         return ent_option_1, 3
+      else
+         return ent_option_2, 4
+      end
+   end
+end
+
+
+--Gets opposite rail direction
+function get_opposite_rail_direction(dir)
+   if dir = defines.rail_direction.front then
+      return defines.rail_direction.back
+   else
+      return defines.rail_direction.front
    end
 end
 

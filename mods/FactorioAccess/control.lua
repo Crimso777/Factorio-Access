@@ -2576,11 +2576,11 @@ function read_coords(pindex, start_phrase)
          local vehicle = game.get_player(pindex).vehicle
          result = result .. " in " .. vehicle.name .. " "
          if vehicle.speed > 0 then
-            result = result .. " heading " .. get_heading(vehicle) .. " at "
+            result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(vehicle.speed) .. " meters per second, past the location " --todo check speed unit
          elseif vehicle.speed < 0 then
-            result = result .. " reversing while facing" .. get_heading(vehicle) .. " at "
+            result = result .. " reversing while facing" .. get_heading(vehicle) .. " at "  .. math.floor(-vehicle.speed) .. " meters per second, past the location " --check speed unit
          else
-            result = result .. " parked facing " .. get_heading(vehicle) .. " at "
+            result = result .. " parked facing " .. get_heading(vehicle) .. " at location "
          end
          printout(result .. math.floor(vehicle.position.x) .. ", " .. math.floor(vehicle.position.y), pindex)
       else

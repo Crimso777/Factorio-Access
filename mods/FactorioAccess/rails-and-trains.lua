@@ -466,7 +466,7 @@ function set_train_name(train,new_name)
 end
 
 
---Returns the rail at the end of an input rail's segment. If the input rail is already one end of the segment then it returns the other end. todo
+--Returns the rail at the end of an input rail's segment. If the input rail is already one end of the segment then it returns the other end. todo test
 function get_rail_segment_other_end(pindex, rail)
    local end_rail_1, end_dir_1 = rail.get_rail_segment_end(defines.rail_direction.front) --Cannot be nil
    local end_rail_2, end_dir_2 = rail.get_rail_segment_end(defines.rail_direction.back) --Cannot be nil
@@ -482,7 +482,7 @@ function get_rail_segment_other_end(pindex, rail)
 end
 
 
---For a rail at the end of its segment, returns the neighboring rail segment's end rail. Respects dir if it is given, else returns a random option.  todo
+--For a rail at the end of its segment, returns the neighboring rail segment's end rail. Respects dir if it is given, else returns a random option.  todo test
 function get_neighbor_rail_segment_end(pindex, rail, dir_in)
    local dir = dir_in or nil
    local neighbor_rail_set = nil
@@ -519,7 +519,7 @@ function get_neighbor_rail_segment_end(pindex, rail, dir_in)
    return nil
 end
 
---Analyzes the entity at the end of a rail segment. Returns the entity and the result type as an error or success code.
+--Analyzes the entity at the end of a rail segment. Returns the entity and the result type as an error or success code. todo test
 function get_rail_segment_checked_entity(pindex, rail, dir_in)
    local ent = nil
    local ent_option_1 = ent.get_rail_segment_entity(dir_in, true)
@@ -530,7 +530,7 @@ function get_rail_segment_checked_entity(pindex, rail, dir_in)
    if ent_option_1 == nil and ent_option_2 == nil then
       return nil, 0
    elseif ent_option_1 ~= nil and ent_option_2 == nil then
-      return ent_option_1, 1
+      return ent_option_1, 1 --"same" dir?
    elseif ent_option_1 == nil and ent_option_2 ~= nil then
       return ent_option_2, 2
    else
@@ -540,7 +540,7 @@ function get_rail_segment_checked_entity(pindex, rail, dir_in)
       if distance_option_1 < distance_option_2 then
          return ent_option_1, 3
       else
-         return ent_option_2, 4
+         return ent_option_2, 4 --"same" dir?
       end
    end
 end
@@ -554,6 +554,65 @@ function get_opposite_rail_direction(dir)
       return defines.rail_direction.front
    end
 end
+
+--For testing: todo figure out what defines the "front" of a train
+--Note, as devs have said, the "front" of a train is determined when the ID is updated, as the side with more locomotives facing it, otherwise it is the westmost end...
+function report_front_rail_dir(pindex, locomotive)
+   local front_rail = locomotive.train.front_rail
+   local to_the_north = false
+   local to_the_east  = false
+   local to_the_south = false
+   local to_the_west  = false
+   local message = "Front rail is to the "
+   
+   if front_rail.position.y > locomotive.position.y > 1 then
+      to_the_south = true
+      message = message .. "south"
+   elseif front_rail.position.y > locomotive.position.y < -1 then
+      to_the_north = true
+      message = message .. "north"
+   end
+   if front_rail.position.x - locomotive.position.x > 1 then
+      to_the_east = true
+      message = message .. "east"
+   elseif front_rail.position.x - locomotive.position.x < -1 then
+      to_the_west = true
+      message = message .. "west"
+   end
+   
+   if not to_the_east and not to_the_north and not to_the_south and not to_the_west then
+      message = "Front rail is here."
+   end
+   printout(message,pindex)
+end
+
+
+--If an entity on the rail is beside a train, it is closer to the vehicle than the front rail or back rail is. It is also located "behind" the front rail and "in front of" the back rail (but check both directions for both anyway) todo later
+function get_rail_segment_entity_beside_train(pindex, vehicle)
+   return nil
+end
+
+--[[Returns the leading rail and the direction on it that is "ahead". This is the direction that the train is traveling to even if this locomotive is going in reverse.
+--Checks the velocity sign of any "front-facing" locomotive. 
+--Checks distances with respect to the front/back stocks of the train
+--Does not require any specific position or rotation for any of the stock!
+--If any "front" locomotive velocity is positive, the front stock is the one going ahead and its rail is the leading rail.
+--If any "front" locomotive velocity is negative, the back stock is the one going ahead and its rail is the leading rail.
+--For the leading rail, the connected rail that is farthest from the leading stock is in the "ahead" direction. 
+--]]
+function get_leading_rail_of_train(pindex, locomotive, trailing_instead_in)
+   local trailing_instead = trailing_instead_in or false
+   local train = locomotive.train
+   local ahead_dir = get_heading(locomotive)
+   
+   local front_rail = train.front_rail
+   local back_rail  = train.back_rail
+   
+   --todo***
+   
+   if 
+end
+
 
 
 --For a train, reports the name and distance of the nearest rail structure such as train stop. Reporting junctions will require having the structure log.

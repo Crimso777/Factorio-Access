@@ -4649,7 +4649,9 @@ script.on_event("left-click", function(event)
                elseif players[pindex].building.item_selection then
                   if players[pindex].item_selector.group == 0 then
                      players[pindex].item_selector.group = players[pindex].item_selector.index
-                     players[pindex].item_cache = get_iterable_array(players[pindex].item_cache[players[pindex].item_selector.index].subgroups)
+                     players[pindex].item_cache = get_iterable_array(players[pindex].item_cache[players[pindex].item_selector.group].subgroups)
+                     prune_item_groups(players[pindex].item_cache)
+
                      players[pindex].item_selector.index = 1
                      read_item_selector_slot(pindex)
                   elseif players[pindex].item_selector.subgroup == 0 then

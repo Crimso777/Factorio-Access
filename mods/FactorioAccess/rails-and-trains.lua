@@ -660,7 +660,7 @@ end
 --If any "front" locomotive velocity is negative, the back stock is the one going ahead and its rail is the leading rail.
 --For the leading rail, the connected rail that is farthest from the leading stock is in the "ahead" direction. 
 --]]
-function get_leading_rail_and_dir_of_train(pindex, train, is_trailing_instead)
+function get_leading_rail_and_dir_of_train_by_travel(pindex, train, is_trailing_instead)
    local trailing_instead = is_trailing_instead or false
    local leading_rail = nil
    local leading_stock = nil
@@ -679,6 +679,98 @@ function get_leading_rail_and_dir_of_train(pindex, train, is_trailing_instead)
       leading_stock = train.back_stock
    end
    
+   --Flip the "leading rail" to get the trailing rail
+   if trailing_instead then
+      if leading_rail.unit_number == back_rail.unit_number then
+         leading_rail = front_rail
+         leading_stock = train.front_stock
+      else
+         leading_rail = back_rail
+         leading_stock = train.back_stock
+      end
+   end
+   
+   --Error check
+   if leading_rail == nil then
+      return nil, nil
+   end
+   
+   --Find the ahead direction. For the leading rail, the connected rail that is farthest from the leading stock is in the "ahead" direction. 
+   --Repurpose the variables named front_rail and back_rail
+   front_rail = leading_rail.get_connected_rail{ rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.straight}
+   if front_rail == nil then
+      front_rail = leading_rail.get_connected_rail{ rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.left}
+   end
+   if front_rail == nil then
+      front_rail = leading_rail.get_connected_rail{ rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.right}
+   end
+   if front_rail == nil then
+      --The leading rail is an end rail at the front direction
+      return leading_rail, defines.rail_direction.front
+   end
+   
+   back_rail = leading_rail.get_connected_rail{ rail_direction = defines.rail_direction.back, rail_connection_direction = defines.rail_connection_direction.straight}
+   if back_rail == nil then
+      back_rail = leading_rail.get_connected_rail{ rail_direction = defines.rail_direction.back, rail_connection_direction = defines.rail_connection_direction.left}
+   end
+   if back_rail == nil then
+      back_rail = leading_rail.get_connected_rail{ rail_direction = defines.rail_direction.back, rail_connection_direction = defines.rail_connection_direction.right}
+   end
+   if back_rail == nil then
+      --The leading rail is an end rail at the back direction
+      return leading_rail, defines.rail_direction.back
+   end
+   
+   local front_dist = math.abs(util.distance(leading_stock.postion, front_rail.postion))
+   local back_dist = math.abs(util.distance(leading_stock.postion, back_rail.postion))
+   --The connected rail that is farther from the leading stock is in the ahead direction.
+   if front_dist > back_dist then
+      return leading_rail, defines.rail_direction.front
+   else
+      return leading_rail, defines.rail_direction.back
+   end
+end
+
+--[[Returns the leading rail and the direction on it that is "ahead". This is the direction that the currently boarded locomotive or wagon is facing.
+--Checks whether the current locomotive is one of the front or back locomotives and gives leading rail and leading stock accordingly.
+--If this is not a locomotive, takes the front as the leading side.
+--Checks distances with respect to the front/back stocks of the train
+--Does not require any specific position or rotation for any of the stock!
+--For the leading rail, the connected rail that is farthest from the leading stock is in the "ahead" direction. 
+--]]
+function get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex, train, is_trailing_instead)
+   local trailing_instead = is_trailing_instead or false
+   local leading_rail = nil
+   local leading_stock = nil
+   local ahead_rail_dir = nil
+
+   local vehicle = game.get_player(pindex).vehicle
+   local front_rail = train.front_rail
+   local back_rail  = train.back_rail
+   local locos = train.locomotives
+   local vehicle_is_front_loco = false
+   
+   --Find the leading rail. If any "front" locomotive velocity is positive, the front stock is the one going ahead and its rail is the leading rail. 
+   if vehicle.name == "locomotive" then
+      --Leading direction is the one this loconotive faces
+      for i,loco in ipairs(locos["front_movers"]) do
+         if vehicle.unit_number == loco.unit_number then
+            vehicle_is_front_loco = true
+         end
+      end
+      if vehicle_is_front_loco then
+         leading_rail = front_rail
+         leading_stock = train.front_stock
+      else
+         leading_rail = back_rail
+         leading_stock = train.back_stock
+      end
+   else
+      --Just assume the front is leading
+      leading_rail = front_rail
+      leading_stock = train.front_stock
+   end
+
    --Flip the "leading rail" to get the trailing rail
    if trailing_instead then
       if leading_rail.unit_number == back_rail.unit_number then
@@ -765,33 +857,35 @@ function get_rail_segment_end_object(rail, dir_ahead)
          result_extra = rail --A rail from the segment "entering" the junction
          return result_entity, result_entity_label, result_extra
       else
-         --There is an entity facing the other direction somewhere todo match**  
-         result_entity = nil
-         result_entity_label = "Segment End Error 1"
-         result_extra = 1
+         --There is an entity facing the other direction somewhere. This is expected.
+         --**todo use the reader function to find out what can be done, and maybe do it in the rail analyzer instead.  
+         result_entity = segment_last_rail
+         result_entity_label = "other rail"
+         result_extra = nil
          return result_entity, result_entity_label, result_extra
       end
    --When entity ahead
    else
       if entity_ahead.name == "rail-signal" then
          result_entity = entity_ahead
-         result_entity_label = "rail signal, state " .. entity_ahead.signal_state --todo later decode
+         result_entity_label = "rail signal"
          result_extra = entity_ahead.signal_state
          return result_entity, result_entity_label, result_extra
       elseif entity_ahead.name == "rail-chain-signal" then
          result_entity = entity_ahead
-         result_entity_label = "Chain signal, state " .. entity_ahead.chain_signal_state --todo later decode
+         result_entity_label = "chain signal"
          result_extra = entity_ahead.chain_signal_state
          return result_entity, result_entity_label, result_extra
       elseif entity_ahead.name == "train-stop" then
          result_entity = entity_ahead
-         result_entity_label = "Train stop " .. entity_ahead.backer_name
-         result_extra = nil
+         result_entity_label = "train stop"
+         result_extra = entity_ahead.backer_name
          return result_entity, result_entity_label, result_extra
       else
+         --This is NOT expected.
          result_entity = entity_ahead
-         result_entity_label = "Unidentified " .. entity_ahead.name
-         result_extra = nil
+         result_entity_label = "other entity"
+         result_extra = "Unidentified " .. entity_ahead.name
          return result_entity, result_entity_label, result_extra
       end
    end
@@ -802,9 +896,19 @@ end
      
      -will need to track current_step, last_step. Step 0 is the menu start. Step 1 and up is forward. Step -1 and down is backward
      -will need to track current_object, next_object, prev_object, last_read_object
-     -If current object 
+     
+     -track trains_in_block and fire an alert if too many
+     
+     -for a train, the origin rail is the leading rail
+     -for a static rail, the origin rail is the rail
+     
+     -for a train, press J to repeat. The menu is opened as soon as you enter a train and closed when you leave. ahead/behind is determined by direction faced by the vehicle you board.
+     -for a static rail, left click to open the menu. 
+     
+     -for both, use arrow keys to navigate up down left right. Can navigate while driving
 --]]
-function rail_analyzer_menu(pindex, start_rail)
+function rail_analyzer_menu(pindex, origin_rail,is_called_from_train)
+   local called_from_train = is_called_from_train
    local message = ""
    
    --Load in global vars
@@ -821,7 +925,11 @@ function rail_analyzer_menu(pindex, start_rail)
    local back_rail  = nil
    
    if current_step == 0 then --First line
-      message = "Rail analyzer menu. Press W to travel forward along this rail and S to travel backward."
+      if called_from_train then
+         message = "Rail analyzer menu. Press W to travel forward along this rail and S to travel backward."
+      else
+         message = "Rail analyzer menu. Press W to travel forward along this rail and S to travel backward."
+      end
       printout(message, pindex)
       return
    elseif current_step == last_step then

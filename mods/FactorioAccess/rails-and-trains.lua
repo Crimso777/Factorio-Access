@@ -427,7 +427,7 @@ end
 --Gets a train's name. The idea is that every locomotive on a train has the same backer name and this is the train's name. If there are multiple names, a warning returned.
 --todo later, new function to auto-correct a train name by applying the most common name out of the first two found. Works for the third locomotive and after. If 2 locos, take the name of the distant one because the new one is likely to be the nearrby onw.
 function get_train_name(train)
-   locos = train.locomotives
+   local locos = train.locomotives
    local train_name = ""
    local multiple_names = false
    
@@ -456,7 +456,7 @@ end
 
 --Sets a train's name. The idea is that every locomotive on a train has the same backer name and this is the train's name.
 function set_train_name(train,new_name)
-   locos = train.locomotives
+   local locos = train.locomotives
    for i,loco in ipairs(locos["front_movers"]) do
       loco.backer_name = new_name
    end
@@ -467,7 +467,7 @@ end
 
 
 --Returns the rail at the end of an input rail's segment. If the input rail is already one end of the segment then it returns the other end. todo test
-function get_rail_segment_other_end(pindex, rail)
+function get_rail_segment_other_end(rail)
    local end_rail_1, end_dir_1 = rail.get_rail_segment_end(defines.rail_direction.front) --Cannot be nil
    local end_rail_2, end_dir_2 = rail.get_rail_segment_end(defines.rail_direction.back) --Cannot be nil
    
@@ -483,7 +483,7 @@ end
 
 
 --For a rail at the end of its segment, returns the neighboring rail segment's end rail. Respects dir if it is given, else returns a random option.  todo test
-function get_neighbor_rail_segment_end(pindex, rail, dir_in)
+function get_neighbor_rail_segment_end(rail, dir_in)
    local dir = dir_in or nil
    local neighbor_rail_set = nil
    local requested_neighbor_rail_1 = nil
@@ -520,7 +520,7 @@ function get_neighbor_rail_segment_end(pindex, rail, dir_in)
 end
 
 --Analyzes the entity at the end of a rail segment. Returns the entity and the result type as an error or success code. todo test
-function get_rail_segment_checked_entity(pindex, rail, dir_in)
+function get_rail_segment_entity_analyzed(rail, dir_in)
    local ent = nil
    local ent_option_1 = ent.get_rail_segment_entity(dir_in, true)
    local ent_option_2 = ent.get_rail_segment_entity(dir_in, false)
@@ -546,6 +546,67 @@ function get_rail_segment_checked_entity(pindex, rail, dir_in)
 end
 
 
+--Reads all rail segment entities around a rail todo test***
+function read_all_rail_segment_entities(pindex, rail)
+   local message = ""
+   local ent_f1 = rail.get_rail_segment_entity(defines.rail_direction.front, true)
+   local ent_f2 = rail.get_rail_segment_entity(defines.rail_direction.front, false)
+   local ent_b1 = rail.get_rail_segment_entity(defines.rail_direction.back, true)
+   local ent_b2 = rail.get_rail_segment_entity(defines.rail_direction.back, false)
+   
+   if ent_f1 == nil then
+      message = message .. "forward 1 is nil, "
+   elseif ent_f1.name == "train-stop" then
+      message = message .. "forward 1 is train stop "               .. ent_f1.backer_name .. ", "
+   elseif ent_f1.name == "rail-signal" then 
+      message = message .. "forward 1 is rails signal with signal " .. ent_f1.signal_state .. ", "
+   elseif ent_f1.name == "rail-chain-signal" then 
+      message = message .. "forward 1 is chain signal with signal " .. ent_f1.chain_signal_state .. ", "
+   else
+      message = message .. "forward 1 is else, "                    .. ent_f1.name .. ", "
+   end
+   
+   if ent_f2 == nil then
+      message = message .. "forward 2 is nil, "
+   elseif ent_f2.name == "train-stop" then
+      message = message .. "forward 2 is train stop "               .. ent_f2.backer_name .. ", "
+   elseif ent_f2.name == "rail-signal" then 
+      message = message .. "forward 2 is rails signal with signal " .. ent_f2.signal_state .. ", "
+   elseif ent_f2.name == "rail-chain-signal" then 
+      message = message .. "forward 2 is chain signal with signal " .. ent_f2.chain_signal_state .. ", "
+   else
+      message = message .. "forward 2 is else, "                    .. ent_f2.name .. ", "
+   end
+   
+   if ent_b1 == nil then
+      message = message .. "back 1 is nil, "
+   elseif ent_b1.name == "train-stop" then
+      message = message .. "back 1 is train stop "               .. ent_b1.backer_name .. ", "
+   elseif ent_b1.name == "rail-signal" then 
+      message = message .. "back 1 is rails signal with signal " .. ent_b1.signal_state .. ", "
+   elseif ent_b1.name == "rail-chain-signal" then 
+      message = message .. "back 1 is chain signal with signal " .. ent_b1.chain_signal_state .. ", "
+   else
+      message = message .. "back 1 is else, "                    .. ent_b1.name .. ", "
+   end
+   
+   if ent_b2 == nil then
+      message = message .. "back 2 is nil, "
+   elseif ent_b2.name == "train-stop" then
+      message = message .. "back 2 is train stop "               .. ent_b2.backer_name .. ", "
+   elseif ent_b2.name == "rail-signal" then 
+      message = message .. "back 2 is rails signal with signal " .. ent_b2.signal_state .. ", "
+   elseif ent_b2.name == "rail-chain-signal" then 
+      message = message .. "back 2 is chain signal with signal " .. ent_b2.chain_signal_state .. ", "
+   else
+      message = message .. "back 2 is else, "                    .. ent_b2.name .. ", "
+   end
+   
+   printout(message,pindex)
+   return
+end
+
+
 --Gets opposite rail direction
 function get_opposite_rail_direction(dir)
    if dir = defines.rail_direction.front then
@@ -555,40 +616,39 @@ function get_opposite_rail_direction(dir)
    end
 end
 
---For testing: todo figure out what defines the "front" of a train
---Note, as devs have said, the "front" of a train is determined when the ID is updated, as the side with more locomotives facing it, otherwise it is the westmost end...
-function report_front_rail_dir(pindex, locomotive)
-   local front_rail = locomotive.train.front_rail
+--For testing: Report where object A is with respect to object B
+function where_is_a_for_b(a,b)
    local to_the_north = false
    local to_the_east  = false
    local to_the_south = false
    local to_the_west  = false
-   local message = "Front rail is to the "
+   local message = "It is to the "
    
-   if front_rail.position.y > locomotive.position.y > 1 then
+   if a.position.y > b.position.y > 1 then
       to_the_south = true
       message = message .. "south"
-   elseif front_rail.position.y > locomotive.position.y < -1 then
+   elseif a.position.y > b.position.y < -1 then
       to_the_north = true
       message = message .. "north"
    end
-   if front_rail.position.x - locomotive.position.x > 1 then
+   if a.position.x - b.position.x > 1 then
       to_the_east = true
       message = message .. "east"
-   elseif front_rail.position.x - locomotive.position.x < -1 then
+   elseif a.position.x - b.position.x < -1 then
       to_the_west = true
       message = message .. "west"
    end
    
    if not to_the_east and not to_the_north and not to_the_south and not to_the_west then
-      message = "Front rail is here."
+      message = "The entity is nearby "
    end
-   printout(message,pindex)
+   message = message .. ", " .. math.floor(math.abs(util.distance(a.position,b.position))) .. " tiles away."
+   return message
 end
 
 
 --If an entity on the rail is beside a train, it is closer to the vehicle than the front rail or back rail is. It is also located "behind" the front rail and "in front of" the back rail (but check both directions for both anyway) todo later
-function get_rail_segment_entity_beside_train(pindex, vehicle)
+function get_rail_segment_entity_beside_train(train)
    return nil
 end
 
@@ -600,19 +660,183 @@ end
 --If any "front" locomotive velocity is negative, the back stock is the one going ahead and its rail is the leading rail.
 --For the leading rail, the connected rail that is farthest from the leading stock is in the "ahead" direction. 
 --]]
-function get_leading_rail_of_train(pindex, locomotive, trailing_instead_in)
-   local trailing_instead = trailing_instead_in or false
-   local train = locomotive.train
-   local ahead_dir = get_heading(locomotive)
-   
+function get_leading_rail_and_dir_of_train(pindex, train, is_trailing_instead)
+   local trailing_instead = is_trailing_instead or false
+   local leading_rail = nil
+   local leading_stock = nil
+   local ahead_rail_dir = nil
+
    local front_rail = train.front_rail
    local back_rail  = train.back_rail
+   local front_facing_loco = train.locomotives["front_movers"][0]
    
-   --todo***
+   --Find the leading rail. If any "front" locomotive velocity is positive, the front stock is the one going ahead and its rail is the leading rail. 
+   if front_facing_loco.speed >= 0 then
+      leading_rail = front_rail
+      leading_stock = train.front_stock --asuming this is the frontmost vehicle, will need to verify todo**
+   else
+      leading_rail = back_rail
+      leading_stock = train.back_stock
+   end
    
-   if 
+   --Flip the "leading rail" to get the trailing rail
+   if trailing_instead then
+      if leading_rail.unit_number == back_rail.unit_number then
+         leading_rail = front_rail
+         leading_stock = train.front_stock
+      else
+         leading_rail = back_rail
+         leading_stock = train.back_stock
+      end
+   end
+   
+   --Error check
+   if leading_rail == nil then
+      return nil, nil
+   end
+   
+   --Find the ahead direction. For the leading rail, the connected rail that is farthest from the leading stock is in the "ahead" direction. 
+   --Repurpose the variables named front_rail and back_rail
+   front_rail = leading_rail.get_connected_rail{ rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.straight}
+   if front_rail == nil then
+      front_rail = leading_rail.get_connected_rail{ rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.left}
+   end
+   if front_rail == nil then
+      front_rail = leading_rail.get_connected_rail{ rail_direction = defines.rail_direction.front, rail_connection_direction = defines.rail_connection_direction.right}
+   end
+   if front_rail == nil then
+      --The leading rail is an end rail at the front direction
+      return leading_rail, defines.rail_direction.front
+   end
+   
+   back_rail = leading_rail.get_connected_rail{ rail_direction = defines.rail_direction.back, rail_connection_direction = defines.rail_connection_direction.straight}
+   if back_rail == nil then
+      back_rail = leading_rail.get_connected_rail{ rail_direction = defines.rail_direction.back, rail_connection_direction = defines.rail_connection_direction.left}
+   end
+   if back_rail == nil then
+      back_rail = leading_rail.get_connected_rail{ rail_direction = defines.rail_direction.back, rail_connection_direction = defines.rail_connection_direction.right}
+   end
+   if back_rail == nil then
+      --The leading rail is an end rail at the back direction
+      return leading_rail, defines.rail_direction.back
+   end
+   
+   local front_dist = math.abs(util.distance(leading_stock.postion, front_rail.postion))
+   local back_dist = math.abs(util.distance(leading_stock.postion, back_rail.postion))
+   --The connected rail that is farther from the leading stock is in the ahead direction.
+   if front_dist > back_dist then
+      return leading_rail, defines.rail_direction.front
+   else
+      return leading_rail, defines.rail_direction.back
+   end
 end
 
+
+function test_leading_rail(pindex, train)--todo run this test***
+   local leading_rail, dir = get_leading_rail_and_dir_of_train(pindex, train, false)
+   printout(where_is_a_for_b(leading_rail,players[pindex]),pindex)
+end
+
+
+--Return what is ahead at the end of this rail's segment in this given direction.
+--Return the entity, a label, and an extra value sometimes
+function get_rail_segment_end_object(rail, dir_ahead)
+   local result_entity = nil
+   local result_entity_label = ""
+   local result_extra = nil
+   local segment_last_rail = rail.get_rail_segment_end(dir_ahead)
+   local entity_ahead, entity_case = get_rail_segment_entity_analyzed(rail, dir_ahead)
+   
+   local segment_last_is_end_rail, end_rail_dir, comment = check_end_rail(segment_last_rail, pindex)
+   local segment_last_neighbor_count = count_rail_connections(segment_last_rail)
+   
+   --When no entity ahead
+   if entity_ahead == nil then
+      if segment_last_is_end_rail then
+         --End rail
+         result_entity = segment_last_rail
+         result_entity_label = "end rail"
+         result_extra = end_rail_dir
+         return result_entity, result_entity_label, result_extra
+      elseif segment_last_neighbor_count > 2 then
+         --Junction rail
+         result_entity = segment_last_rail
+         result_entity_label = "junction rail"
+         result_extra = rail --A rail from the segment "entering" the junction
+         return result_entity, result_entity_label, result_extra
+      else
+         --There is an entity facing the other direction somewhere todo match**  
+         result_entity = nil
+         result_entity_label = "Segment End Error 1"
+         result_extra = 1
+         return result_entity, result_entity_label, result_extra
+      end
+   --When entity ahead
+   else
+      if entity_ahead.name == "rail-signal" then
+         result_entity = entity_ahead
+         result_entity_label = "rail signal, state " .. entity_ahead.signal_state --todo later decode
+         result_extra = entity_ahead.signal_state
+         return result_entity, result_entity_label, result_extra
+      elseif entity_ahead.name == "rail-chain-signal" then
+         result_entity = entity_ahead
+         result_entity_label = "Chain signal, state " .. entity_ahead.chain_signal_state --todo later decode
+         result_extra = entity_ahead.chain_signal_state
+         return result_entity, result_entity_label, result_extra
+      elseif entity_ahead.name == "train-stop" then
+         result_entity = entity_ahead
+         result_entity_label = "Train stop " .. entity_ahead.backer_name
+         result_extra = nil
+         return result_entity, result_entity_label, result_extra
+      else
+         result_entity = entity_ahead
+         result_entity_label = "Unidentified " .. entity_ahead.name
+         result_extra = nil
+         return result_entity, result_entity_label, result_extra
+      end
+   end
+end
+
+--[[ -Reports objects of interest along a rail including distance from the start rail todo***
+     -Ideally opened by left clicking on a rail. Needs to track steps away from the start rail and save a lot of info in faplayer
+     
+     -will need to track current_step, last_step. Step 0 is the menu start. Step 1 and up is forward. Step -1 and down is backward
+     -will need to track current_object, next_object, prev_object, last_read_object
+     -If current object 
+--]]
+function rail_analyzer_menu(pindex, start_rail)
+   local message = ""
+   
+   --Load in global vars
+   local current_step = nil
+   local last_step = nil
+   local current_object = nil
+   local last_object  = nil
+   local front_object = nil
+   local back_object  = nil
+   
+   local current_rail = nil
+   local last_rail  = nil
+   local front_rail = nil
+   local back_rail  = nil
+   
+   if current_step == 0 then --First line
+      message = "Rail analyzer menu. Press W to travel forward along this rail and S to travel backward."
+      printout(message, pindex)
+      return
+   elseif current_step == last_step then
+      --We did not iterate forward or backward, like when pressing left/right at a junction
+   elseif current_step > last_step then
+      --We went forward
+      last_object = current_object
+      front_object = nil --
+   elseif current_step < last_step then
+      --We went backward
+   end
+   
+   
+   return
+end
 
 
 --For a train, reports the name and distance of the nearest rail structure such as train stop. Reporting junctions will require having the structure log.

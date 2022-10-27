@@ -3818,7 +3818,7 @@ script.on_event("jump-to-player", function(event)
       return
    end
    if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
-      read_structure_ahead(game.get_player(pindex).vehicle)
+      train_read_next_rail_entity_ahead(pindex)
    elseif not (players[pindex].in_menu) then
       if players[pindex].cursor then jump_to_player(pindex)
       end
@@ -3834,7 +3834,7 @@ script.on_event("shift-j", function(event)
       return
    end
    if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
-      read_structure_ahead(game.get_player(pindex).vehicle,true)
+      --Nothing
    end
 end
 )
@@ -6201,8 +6201,18 @@ script.on_event("control-g-key", function(event)
       return
    end
    
-   if ent ~= nil and ent.name == "straight-rail" then
-      build_small_plus_intersection(ent, pindex)
+   if ent ~= nil and (ent.name == "straight-rail" or ent.name == "curved-rail") then
+      --build_small_plus_intersection(ent, pindex)
+      read_all_rail_segment_entities(pindex, ent)
+   elseif game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
+      local leading_rail, dir, leading_stock = get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex, game.get_player(pindex).vehicle.train, false)
+      --Test locomotive leading rail
+      printout("Leading rail, " .. where_is_a_for_b(leading_rail,game.get_player(pindex).vehicle) .. " and leading stock is a " .. leading_stock.name 
+      .. " facing " .. get_heading(leading_stock) ,pindex)
+      --Test object ahead
+      --train_read_next_rail_entity_ahead(pindex)
+   elseif ent ~= nil then
+      printout(ent.name .. " " .. where_is_a_for_b(ent,players[pindex]),pindex)
    end
 
 end)

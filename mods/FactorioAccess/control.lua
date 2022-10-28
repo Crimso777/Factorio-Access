@@ -2576,9 +2576,9 @@ function read_coords(pindex, start_phrase)
          local vehicle = game.get_player(pindex).vehicle
          result = result .. " in " .. vehicle.name .. " "
          if vehicle.speed > 0 then
-            result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(vehicle.speed) .. " meters per second, past the location " --todo check speed unit
+            result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(vehicle.speed) .. " kilometers per hour, past the location " 
          elseif vehicle.speed < 0 then
-            result = result .. " reversing while facing" .. get_heading(vehicle) .. " at "  .. math.floor(-vehicle.speed) .. " meters per second, past the location " --check speed unit
+            result = result .. " reversing while facing" .. get_heading(vehicle) .. " at "  .. math.floor(-vehicle.speed) .. " kilometers per hour, past the location " 
          else
             result = result .. " parked facing " .. get_heading(vehicle) .. " at location "
          end
@@ -3043,8 +3043,6 @@ function menu_cursor_up(pindex)
       move_cursor_structure(pindex, 0)
    elseif players[pindex].menu == "rail_builder" then
       rail_builder_up(pindex)
-   elseif players[pindex].menu == "train_menu" then
-      train_menu_up(pindex)
    elseif players[pindex].menu == "train_stop_menu" then
       train_stop_menu_up(pindex)
    end
@@ -3251,8 +3249,6 @@ function menu_cursor_down(pindex)
       move_cursor_structure(pindex, 4)
    elseif players[pindex].menu == "rail_builder" then
       rail_builder_down(pindex)
-   elseif players[pindex].menu == "train_menu" then
-      train_menu_down(pindex)
    elseif players[pindex].menu == "train_stop_menu" then
       train_stop_menu_down(pindex)
    end
@@ -3780,6 +3776,9 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
    elseif players[pindex].last_vehicle ~= nil then
       printout("Exited " .. players[pindex].last_vehicle.name ,pindex)
       teleport_to_closest(pindex, players[pindex].last_vehicle.position, true)
+      if players[pindex].menu == "train_menu" then
+         train_menu_close(pindex, false)
+      end
    else
       printout("Driving state changed." ,pindex)
    end
@@ -4879,12 +4878,17 @@ input.select(1, 0)
          build_item_in_hand(pindex, offset)
       elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
          build_offshore_pump_in_hand(pindex)
+      elseif game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
+         train_menu_open(pindex)
       elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
          local ent = players[pindex].tile.ents[1] 
+         --Clicking on an entity in the world
          if ent.name == "train-stop" then
             train_stop_menu_open(pindex)
-         elseif ent.name == "locomotive" then
+         elseif ent.name == "locomotive" or ent.name == "cargo-wagon" or ent.name == "fluid-wagon" then
             train_menu_open(pindex)
+         elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
+            rail_read_next_rail_entity_ahead(pindex, ent, false)
          elseif ent.operable and ent.prototype.is_building then
             if ent.prototype.subgroup.name == "belt" then
                players[pindex].in_menu = true
@@ -5235,6 +5239,7 @@ end
 ]]
 script.on_event("control-right-click", function(event)
    pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
    if not check_for_player(pindex) then
       return
    end
@@ -5242,7 +5247,7 @@ script.on_event("control-right-click", function(event)
    if players[pindex].in_menu then
       if players[pindex].menu == "building" then
          do_multi_stack_transfer(0.5,pindex)
-      end
+      end      
    end
 end
 )
@@ -5419,7 +5424,11 @@ script.on_event("right-click", function(event)
       local ent_status_id = ent.status
       local ent_status_text = ""
       local status_lookup = into_lookup(defines.entity_status)
-      if ent_status_id ~= nil then
+      --Different behavior for rails: Report what is along the rail
+      if ent.name == "straight-rail" or ent.name == "curved-rail" then
+         rail_read_next_rail_entity_ahead(pindex, ent, true)
+      --Print status
+      elseif ent_status_id ~= nil then
          ent_status_text = status_lookup[ent_status_id]
          printout(" " .. ent_status_text ,pindex)
       else
@@ -5931,13 +5940,13 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
    elseif players[pindex].train_menu.renaming == true then
       players[pindex].train_menu.renaming = false
       set_train_name(global.players[pindex].train_menu.locomotive.train,event.element.text)
-      printout("Train renamed to " .. event.element.text, pindex)
+      printout("Train renamed to " .. event.element.text .. ", menu closed.", pindex)
       event.element.destroy()
       train_menu_close(pindex, false)
    elseif players[pindex].train_stop_menu.renaming == true then
       players[pindex].train_stop_menu.renaming = false
       global.players[pindex].train_stop_menu.stop.backer_name = event.element.text
-      printout("Train stop renamed to " .. event.element.text, pindex)
+      printout("Train stop renamed to " .. event.element.text .. ", menu closed.", pindex)
       event.element.destroy()
       train_stop_menu_close(pindex, false)
    end
@@ -6078,6 +6087,34 @@ function mine_trees_and_rocks_in_area(area, pindex)
 end
 
 
+script.on_event("up-arrow", function(event)
+   local pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "train_menu" then
+      train_menu_up(pindex)
+   else
+      printout("Up arrow pressed",pindex)
+   end
+end)
+
+
+script.on_event("down-arrow", function(event)
+   local pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "train_menu" then
+      train_menu_down(pindex)
+   else
+      printout("Down arrow pressed",pindex)
+   end
+end)
+
+
 script.on_event("control-left", function(event)
    local pindex = event.player_index
    local ent = players[pindex].tile.ents[1]
@@ -6203,7 +6240,7 @@ script.on_event("control-g-key", function(event)
    
    if ent ~= nil and (ent.name == "straight-rail" or ent.name == "curved-rail") then
       --build_small_plus_intersection(ent, pindex)
-      read_all_rail_segment_entities(pindex, ent)
+      --read_all_rail_segment_entities(pindex, ent)
    elseif game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
       local leading_rail, dir, leading_stock = get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex, game.get_player(pindex).vehicle.train, false)
       --Test locomotive leading rail
@@ -6212,7 +6249,7 @@ script.on_event("control-g-key", function(event)
       --Test object ahead
       --train_read_next_rail_entity_ahead(pindex)
    elseif ent ~= nil then
-      printout(ent.name .. " " .. where_is_a_for_b(ent,players[pindex]),pindex)
+      printout(ent.name .. " with unit number " .. ent.unit_number .. " " .. where_is_a_for_b(ent,players[pindex]),pindex)
    end
 
 end)

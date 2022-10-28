@@ -1,4 +1,4 @@
-
+--**todo cargo wagon ent info contents!!!
 
 --Key information about rail units. 
 function rail_ent_info(pindex, ent, description)  
@@ -425,11 +425,14 @@ end
 
 
 --Gets a train's name. The idea is that every locomotive on a train has the same backer name and this is the train's name. If there are multiple names, a warning returned.
---todo later, new function to auto-correct a train name by applying the most common name out of the first two found. Works for the third locomotive and after. If 2 locos, take the name of the distant one because the new one is likely to be the nearrby onw.
 function get_train_name(train)
    local locos = train.locomotives
    local train_name = ""
    local multiple_names = false
+   
+   if locos == nil then
+      return "without locomotives"
+   end
    
    for i,loco in ipairs(locos["front_movers"]) do
       if train_name ~= "" and train_name ~= loco.backer_name then
@@ -447,7 +450,9 @@ function get_train_name(train)
    if train_name == "" then
       return "without a name"
    elseif multiple_names then
-      return train_name .. ", and other names, "
+      local oldest_name = resolve_train_name(train)
+      set_train_name(train,oldest_name)
+      return oldest_name
    else
       return train_name
    end
@@ -457,11 +462,46 @@ end
 --Sets a train's name. The idea is that every locomotive on a train has the same backer name and this is the train's name.
 function set_train_name(train,new_name)
    local locos = train.locomotives
+   if locos == nil then
+      return false
+   end
    for i,loco in ipairs(locos["front_movers"]) do
       loco.backer_name = new_name
    end
    for i,loco in ipairs(locos["back_movers"]) do
       loco.backer_name = new_name
+   end
+   return true
+end
+
+--Finds the oldest locomotive and applies its name across the train. Any new loco will be newwer and so the older names will be kept.
+function resolve_train_name(train)
+   local locos = train.locomotives
+   local oldest_loco = nil
+   
+   if locos == nil then
+      return "without locomotives"
+   end
+   
+   for i,loco in ipairs(locos["front_movers"]) do
+      if oldest_loco == nil then
+         oldest_loco = loco
+      elseif oldest_loco.unit_number > loco.unit_number then
+         oldest_loco = loco
+      end
+   end
+   for i,loco in ipairs(locos["back_movers"]) do
+      if oldest_loco == nil then
+         oldest_loco = loco
+      elseif oldest_loco.unit_number > loco.unit_number then
+         oldest_loco = loco
+      end
+   end
+   
+   if oldest_loco ~= nil then
+      return oldest_loco.backer_name
+   else
+      return "error resolving train name"
    end
 end
 
@@ -761,7 +801,7 @@ end
 
 --Return what is ahead at the end of this rail's segment in this given direction.
 --Return the entity, a label, an extra value sometimes, and whether the entity faces the forward direction
-function get_rail_segment_end_object(rail, dir_ahead, force_forward)
+function get_rail_segment_end_object(rail, dir_ahead, force_forward, prefer_back)
    local result_entity = nil
    local result_entity_label = ""
    local result_extra = nil
@@ -778,6 +818,11 @@ function get_rail_segment_end_object(rail, dir_ahead, force_forward)
       entity_ahead = entity_ahead_forward
       result_is_forward = true
    elseif entity_ahead_reverse ~= nil and force_forward == false then
+      entity_ahead = entity_ahead_reverse
+      result_is_forward = false
+   end
+   
+   if prefer_back == true and entity_ahead_reverse ~= nil and force_forward == false then 
       entity_ahead = entity_ahead_reverse
       result_is_forward = false
    end
@@ -834,7 +879,7 @@ end
 --Reads out the nearest railway object ahead with relevant details. Skips to the next segment if needed. 
 --The output could be an end rail, junction rail, rail signal, chain signal, or train stop. 
 function get_next_rail_entity_ahead(origin_rail, dir_ahead, only_this_segment)
-   local next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(origin_rail, dir_ahead, false)
+   local next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(origin_rail, dir_ahead, false, false)
    local iteration_count = 1
    local segment_end_ahead, dir_se = origin_rail.get_rail_segment_end(dir_ahead)
    local prev_rail = segment_end_ahead
@@ -844,7 +889,7 @@ function get_next_rail_entity_ahead(origin_rail, dir_ahead, only_this_segment)
    
    --First correction for the train stop exception
    if next_entity_label == "train stop" and next_is_forward == false then
-      next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, true)--**
+      next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, true, false)
    end
    
    --Skip all "other rail" cases
@@ -853,38 +898,46 @@ function get_next_rail_entity_ahead(origin_rail, dir_ahead, only_this_segment)
          --Switch to neighboring segment
          current_rail, neighbor_r_dir, neighbor_c_dir = get_neighbor_rail_segment_end(prev_rail, nil)
          prev_rail = current_rail
-         next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, false)
+         next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, false, true)
+         --Correction for the train stop exception
+         if next_entity_label == "train stop" and next_is_forward == false then
+            next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, true, true)
+         end
+         --Correction for flipped direction
+         if next_is_forward ~= nil then
+            next_is_forward = not next_is_forward
+         end
          iteration_count = iteration_count + 1
       else
          --Check other end of the segment. NOTE: Never got more than 2 iterations in tests so far...
          neighbor_r_dir = get_opposite_rail_direction(neighbor_r_dir)
-         if next_is_forward ~= nil then
-            next_is_forward = not next_is_forward--**maybe remove... FIRST TEST WITH NO TRAIN STOPS, build new test track
+         next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, false, false)
+         --Correction for the train stop exception
+         if next_entity_label == "train stop" and next_is_forward == false then
+            next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, true, false)
          end
-         next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, false)
          iteration_count = iteration_count + 1
-      end
-      
-      --Correction for the train stop exception
-      if next_entity_label == "train stop" and next_is_forward == false then
-         next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, true)--**
       end
    end
       
    return next_entity, next_entity_label, result_extra, next_is_forward, iteration_count
 end
 
---**todo resolve next_is_forward error!
+
 --Takes all the output from the get_next_rail_entity_ahead and adds extra info before reading them out. Todo maybe also include train ahead warning if possible.
 function train_read_next_rail_entity_ahead(pindex)
    local message = ""
    local train = game.get_player(pindex).vehicle.train
    local leading_rail, dir_ahead, leading_stock = get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex,train, false)
    local next_entity, next_entity_label, result_extra, next_is_forward, iteration_count = get_next_rail_entity_ahead(leading_rail, dir_ahead, false)
+   if next_entity == nil then
+      printout("Nil error",pindex)
+      return
+   end
    local distance = math.floor(util.distance(leading_stock.position, next_entity.position))
       
    --Test message
-   message = message .. iteration_count .. " iterations, "
+   --message = message .. iteration_count .. " iterations, "
    
    --Maybe check for trains here, but there is no point because the checks use signal blocks...
    --local trains_in_origin_block = origin_rail.trains_in_block
@@ -916,7 +969,7 @@ function train_read_next_rail_entity_ahead(pindex)
       local stop_name = next_entity.backer_name
       --Add more specific distance info
       if math.abs(distance) > 25 or next_is_forward == false then
-         message = "Train stop " .. stop_name .. ", in " .. distance .. " meters. "
+         message = message .. "Train stop " .. stop_name .. ", in " .. distance .. " meters. "
       else
          distance = util.distance(leading_stock.position, next_entity.position) - 3.6
          if math.abs(distance) <= 0.2 then
@@ -938,13 +991,130 @@ function train_read_next_rail_entity_ahead(pindex)
    --Add general distance info
    if next_entity_label ~= "train stop" then
       message = message .. " in " .. distance .. " meters. "
+      if next_entity_label == "end rail" then
+         message = message .. " facing " .. direction_lookup(result_extra)
+      end
    end
-   
-   --If there is a train stop in the reverse direction from the leading rail, within 25 meters of the leading stock, AND in the forward direction, align with it instead.todo**
+   --Feature to notify passed train stops.
+   if leading_stock.name == "locomotive" and next_entity_label ~= "train stop" then
+      local heading = get_heading(leading_stock)
+      local pos = leading_stock.position
+      local scan_area = nil
+      local passed_stop = nil
+      local first_reset = false
+      --Scan behind the leading stock for 15m for passed train stops
+      if heading == "North" then --scan the south
+         scan_area = {{pos.x-4,pos.y-4},{pos.x+4,pos.y+15}}
+      elseif heading == "South" then
+         scan_area = {{pos.x-4,pos.y-15},{pos.x+4,pos.y+4}}
+      elseif heading == "East" then --scan the west
+         scan_area = {{pos.x-15,pos.y-4},{pos.x+4,pos.y+4}}
+      elseif heading == "West" then
+         scan_area = {{pos.x-4,pos.y-4},{pos.x+15,pos.y+4}}
+      else
+         message = " Train stop scan error " .. heading .. " "
+         scan_area = {{pos.x+0,pos.y+0},{pos.x+1,pos.y+1}}
+      end
+      local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "train-stop"}
+      for i,passed_stop in ipairs(ents) do
+         distance = util.distance(leading_stock.position, passed_stop.position) - 0 
+         --message = message .. " found stop " 
+         if distance < 12.5 and direction_lookup(passed_stop.direction) == get_heading(leading_stock) then
+            if not first_reset then
+               message = ""
+               first_reset = true
+            end
+            message = message .. math.floor(distance+0.5) .. " meters past train stop " .. passed_stop.backer_name .. ", "
+         end
+      end
+      if first_reset then
+         message = message .. " for the front vehicle. "
+      end
+   end
    printout(message,pindex)
 end
 
---[[ -Reports objects of interest along a rail including distance from the start rail ; todo later
+
+function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
+   local message = ""
+   local origin_rail = rail
+   local dir_ahead = defines.rail_direction.front
+   if not is_forward then
+      dir_ahead = defines.rail_direction.back
+   end
+   local next_entity, next_entity_label, result_extra, next_is_forward, iteration_count = get_next_rail_entity_ahead(origin_rail, dir_ahead, false)
+   if next_entity == nil then
+      printout("Nil error",pindex)
+      return
+   end
+   local distance = math.floor(util.distance(origin_rail.position, next_entity.position))
+      
+   --Test message
+   --message = message .. iteration_count .. " iterations, "
+   
+   --Maybe check for trains here, but there is no point because the checks use signal blocks...
+   --local trains_in_origin_block = origin_rail.trains_in_block
+   --local trains_in_current_block = current_rail.trains_in_block
+   
+   --Report opposite direction entities.
+   if next_is_forward == false and next_entity_label ~= "junction rail" ~= "end rail" then
+      message = message .. " Opposite direction's "
+   end
+   
+   --Add more info depending on entity label
+   if next_entity_label == "end rail" then
+      message = message .. next_entity_label
+      
+   elseif next_entity_label == "junction rail" then
+      local entering_segment_rail = result_extra  
+      message = message .. next_entity_label
+      --todo later here, give more info such as the name of the junction and available directions
+      
+   elseif next_entity_label == "rail signal" then
+      local signal_state = next_entity.signal_state --todo later here decode the signals with a lookup table call
+      message = message .. "rail signal with state " .. signal_state .. " "
+      
+   elseif next_entity_label == "chain signal" then
+      local signal_state = next_entity.chain_signal_state
+      message = message .. "chain signal with state " .. signal_state .. " "
+      
+   elseif next_entity_label == "train stop" then
+      local stop_name = next_entity.backer_name
+      --Add more specific distance info
+      if math.abs(distance) > 25 or next_is_forward == false then
+         message = message .. "Train stop " .. stop_name .. ", in " .. distance .. " meters, "
+      else
+         distance = util.distance(origin_rail.position, next_entity.position) - 0
+         if math.abs(distance) <= 0.2 then
+            message = " Aligned with train stop " .. stop_name
+         elseif distance > 0.2 then
+            message = math.floor(distance * 10) / 10 .. " meters away from train stop " .. stop_name .. ", for the frontmost vehicle. " 
+         elseif distance < 0.2 then
+            message = math.floor((-distance) * 10) / 10 .. " meters past train stop " .. stop_name .. ", for the frontmost vehicle. " 
+         end
+      end
+   
+   elseif next_entity_label == "other rail" then
+      message = message .. "unspecified entity"
+      
+   elseif next_entity_label == "other entity" then
+      message = message .. next_entity.name
+   end
+   
+   --Add general distance info
+   if next_entity_label ~= "train stop" then
+      message = message .. " in " .. distance .. " meters, "
+      if next_entity_label == "end rail" then
+         message = message .. " facing " .. direction_lookup(result_extra)
+      end
+   end
+   printout(message,pindex)
+end
+
+
+--[[ 
+     -Work in progress. Reports objects of interest along a rail including distance from the start rail ; todo later
+     -Similar to train_read_next_rail_entity_ahead
      -Ideally opened by left clicking on a rail. Needs to track steps away from the start rail and save a lot of info in faplayer
      
      -will need to track current_step, last_step. Step 0 is the menu start. Step 1 and up is forward. Step -1 and down is backward
@@ -979,9 +1149,9 @@ function rail_analyzer_menu(pindex, origin_rail,is_called_from_train)
    
    if current_step == 0 then --First line
       if called_from_train then
-         message = "Rail analyzer menu. Press W to travel forward along this rail and S to travel backward."
+         message = "Rail analyzer menu. Press UP ARROW to travel forward along this rail and DOWN ARROW to travel backward."
       else
-         message = "Rail analyzer menu. Press W to travel forward along this rail and S to travel backward."
+         message = "Rail analyzer menu. Press UP ARROW to travel forward along this rail and DOWN ARROW to travel backward."
       end
       printout(message, pindex)
       return
@@ -999,7 +1169,7 @@ function rail_analyzer_menu(pindex, origin_rail,is_called_from_train)
 end
 
 
---For a train, reports the name and distance of the nearest rail structure such as train stop. Reporting junctions will require having the structure log.
+--DEPRECATED: For a train, reports the name and distance of the nearest rail structure such as train stop. Reporting junctions will require having the structure log.
 --todo later delete when done copying
 function read_structure_ahead(vehicle, back_instead)
    local back_instead = back_instead or false
@@ -1025,7 +1195,7 @@ function read_structure_ahead(vehicle, back_instead)
       entity_ahead      = entity_ahead
       other_enity_ahead = entity_ahead
       result = result .. "In reverse "
-      return---**temp
+      return
    end
      
    --Check the distance ahead
@@ -2217,7 +2387,7 @@ function build_train_stop(anchor_rail, pindex)
    
    --7. Sounds and results
    game.get_player(pindex).play_sound{path = "entity-build/train-stop"}
-   printout("Train stop built facing" .. read_dir(dir) .. ", " .. build_comment, pindex)
+   printout("Train stop built facing" .. direction_lookup(dir) .. ", " .. build_comment, pindex)
    return
 end
 
@@ -2251,7 +2421,7 @@ function get_heading(ent)
 end
 
 --Directions lookup table
-function read_dir(dir)
+function direction_lookup(dir)
    local reading = "unknown"
    if dir < 0 then
       return "direction error 1"
@@ -2434,7 +2604,7 @@ function rail_builder(pindex, clicked_in)
          end
       elseif menu_line == 5 then
          if not clicked then
-            comment = comment .. "Train stop"
+            comment = comment .. "Train stop facing end rail direction"
             printout(comment,pindex)
          else
             --Build it here
@@ -2507,17 +2677,23 @@ function train_menu(menu_index, pindex, clicked, other_input)
       players[pindex].train_menu.locomotive = locomotive
    else
       players[pindex].train_menu.locomotive = nil
-      printout("Train menu error", pindex)
+      printout("Train menu requires a locomotive", pindex)
       return
    end
+   local train = locomotive.train
    
    if index == 0 then
       --Give basic info about this train, such as its name and ID. Instructions.
-      printout("Train ".. get_train_name(locomotive.train) .. " with ID " .. locomotive.train.id .. ", Press W and S to navigate options, press LEFT BRACKET to select an option or press E to exit this menu.", pindex)
+      printout("Train ".. get_train_name(train) .. " with ID " .. train.id 
+      .. ", Press UP ARROW and DOWN ARROW to navigate options, press LEFT BRACKET to select an option or press E to exit this menu.", pindex)
    elseif index == 1 then
       if not clicked then
          printout("Rename this train.", pindex)
       else
+         if train.locomotives == nil then
+            printout("The train must have locomotives for it to be named.", pindex)
+            return
+         end
          printout("Enter a new name for this train, then press ENTER to confirm.", pindex)
          players[pindex].train_menu.renaming = true
          local frame = game.get_player(pindex).gui.screen.add{type = "frame", name = "train-rename"}
@@ -2529,10 +2705,10 @@ function train_menu(menu_index, pindex, clicked, other_input)
          input.focus()
       end
    elseif index == 2 then
-      local locos = locomotive.train.locomotives--**todo test
+      local locos = train.locomotives
       printout("Vehicle counts, " .. #locos["front_movers"] .. " locomotives facing front, " 
-      .. locos["back_movers"] .. " locomotives facing back, " .. #locomotive.train.cargo_wagons .. " cargo wagons, "
-      .. #locomotive.train.fluid_wagons .. " fluid wagons, ", pindex) 
+      .. #locos["back_movers"] .. " locomotives facing back, " .. #train.cargo_wagons .. " cargo wagons, "
+      .. #train.fluid_wagons .. " fluid wagons, ", pindex) 
    elseif index == 3 then  
       printout("Train menu 3", pindex)
    end

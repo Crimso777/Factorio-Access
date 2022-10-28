@@ -179,7 +179,7 @@ data:extend({
     type = "custom-input",
     name = "scan-up",
     key_sequence = "PAGEUP",
-    alternative_key_sequence = "UP",
+    --alternative_key_sequence = "UP",
     consuming = "none"
 },
 
@@ -187,7 +187,7 @@ data:extend({
     type = "custom-input",
     name = "scan-down",
     key_sequence = "PAGEDOWN",
-    alternative_key_sequence = "DOWN",
+    --alternative_key_sequence = "DOWN",
     consuming = "none"
 },
 
@@ -233,6 +233,20 @@ data:extend({
     name = "recalibrate",
     key_sequence = "CONTROL + END",
     alternative_key_sequence = "CONTROL + RCTRL",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "up-arrow",
+    key_sequence = "UP",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "down-arrow",
+    key_sequence = "DOWN",
     consuming = "none"
 },
 

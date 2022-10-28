@@ -5154,7 +5154,7 @@ end
 
 script.on_event("shift-click", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
    if players[pindex].in_menu then
@@ -5223,6 +5223,16 @@ script.on_event("shift-click", function(event)
 
 
       end
+   else
+      local ent = players[pindex].tile.ents[1]
+      if ent ~= nil then 
+         if ent.name == "straight-rail" then
+            --Open rail builder
+            rail_builder_open(pindex, ent)
+         elseif ent.name == "curved-rail" then
+            printout("Rail builder menu cannot use curved rails.", pindex)
+         end
+      end
    end
 end
 )
@@ -5244,12 +5254,7 @@ script.on_event("control-click", function(event)
       end
    else
       local stack = game.get_player(pindex).cursor_stack
-      local ent = players[pindex].tile.ents[1]
-      
-      if ent ~= nil and ent.name == "straight-rail" then
-         --Open rail builder
-         rail_builder_open(pindex, ent)
-      elseif stack.valid and stack.valid_for_read and stack.name == "rail" then
+      if stack.valid and stack.valid_for_read and stack.name == "rail" then
          --Straight rail free placement
          build_item_in_hand(pindex, 1.337)--Uses sentinel value
       end
@@ -5271,7 +5276,7 @@ script.on_event("control-right-click", function(event)
    if players[pindex].in_menu then
       if players[pindex].menu == "building" then
          do_multi_stack_transfer(0.5,pindex)
-      end      
+      end
    end
 end
 )
@@ -5379,9 +5384,10 @@ end
 
 script.on_event("right-click", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
+   local stack = game.get_player(pindex).cursor_stack
    if players[pindex].in_menu then
       if players[pindex].menu == "crafting" then
          local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
@@ -5442,6 +5448,9 @@ script.on_event("right-click", function(event)
          end
 
       end
+   elseif stack.valid and stack.valid_for_read and stack.name == "rail" then
+      --Append rail
+      build_item_in_hand(pindex, 0)
    elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
       --Print out the status of a machine, if it exists.
       local ent = players[pindex].tile.ents[1]

@@ -1,4 +1,3 @@
---**todo cargo wagon ent info contents!!!
 
 --Key information about rail units. 
 function rail_ent_info(pindex, ent, description)  
@@ -925,10 +924,13 @@ end
 
 
 --Takes all the output from the get_next_rail_entity_ahead and adds extra info before reading them out. Todo maybe also include train ahead warning if possible.
-function train_read_next_rail_entity_ahead(pindex)
+function train_read_next_rail_entity_ahead(pindex, invert)
    local message = ""
    local train = game.get_player(pindex).vehicle.train
    local leading_rail, dir_ahead, leading_stock = get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex,train, false)
+   if invert then
+      dir_ahead = get_opposite_rail_direction(dir_ahead)
+   end
    local next_entity, next_entity_label, result_extra, next_is_forward, iteration_count = get_next_rail_entity_ahead(leading_rail, dir_ahead, false)
    if next_entity == nil then
       printout("Nil error",pindex)
@@ -2887,5 +2889,40 @@ function train_stop_menu_down(pindex)
    end
    --Load menu 
    train_stop_menu(players[pindex].train_stop_menu.index, pindex, false)
+end
+
+--Reads cargo wagon contents in detail, todo later: a full inventory screen
+function read_cargo_wagon_contents(pindex,wagon)
+   local result = ""
+   local itemset = wagon.get_inventory(defines.inventory.cargo_wagon).get_contents()
+   local itemtable = {}
+   for name, count in pairs(itemset) do
+      table.insert(itemtable, {name = name, count = count})
+   end
+   table.sort(itemtable, function(k1, k2)
+      return k1.count > k2.count
+   end)
+   if #itemtable == 0 then
+      result = result .. " Contains nothing "
+   else
+      result = result .. " Contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
+      if #itemtable > 1 then
+         result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. " "
+      end
+      if #itemtable > 2 then
+         result = result .. " and " .. itemtable[3].name .. " times " .. itemtable[3].count .. " "
+      end
+      if #itemtable > 3 then
+         result = result .. " and " .. itemtable[4].name .. " times " .. itemtable[4].count .. " "
+      end
+      if #itemtable > 4 then
+         result = result .. " and " .. itemtable[5].name .. " times " .. itemtable[5].count .. " "
+      end
+      if #itemtable > 5 then
+         result = result .. " and other items."
+      end
+   end
+   result = result .. ", Use inserters or cursor shortcuts to fill and empty this wagon. "
+   printout(result,pindex)
 end
 

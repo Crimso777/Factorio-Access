@@ -295,6 +295,9 @@ function ent_info(pindex, ent, description)
       else
          result = result .. " containing " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
          if #itemtable > 1 then
+            result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. " "
+         end
+         if #itemtable > 2 then
             result = result .. "and other items "
          end
       end
@@ -487,7 +490,28 @@ function ent_info(pindex, ent, description)
          end
       end
    end
-	
+	if ent.name == "cargo-wagon" then
+      --Explain contents
+      local itemset = ent.get_inventory(defines.inventory.cargo_wagon).get_contents()
+      local itemtable = {}
+      for name, count in pairs(itemset) do
+         table.insert(itemtable, {name = name, count = count})
+      end
+      table.sort(itemtable, function(k1, k2)
+         return k1.count > k2.count
+      end)
+      if #itemtable == 0 then
+         result = result .. " containing nothing "
+      else
+         result = result .. " containing " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
+         if #itemtable > 1 then
+            result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. " "
+         end
+         if #itemtable > 2 then
+            result = result .. "and other items "
+         end
+      end
+   end
    if ent.type == "electric-pole" then
       result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, Network currently producing "
       local power = 0
@@ -3817,7 +3841,7 @@ script.on_event("jump-to-player", function(event)
       return
    end
    if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
-      train_read_next_rail_entity_ahead(pindex)
+      train_read_next_rail_entity_ahead(pindex,false)
    elseif not (players[pindex].in_menu) then
       if players[pindex].cursor then jump_to_player(pindex)
       end
@@ -3833,7 +3857,7 @@ script.on_event("shift-j", function(event)
       return
    end
    if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
-      --Nothing
+      train_read_next_rail_entity_ahead(pindex,true)
    end
 end
 )
@@ -5424,11 +5448,14 @@ script.on_event("right-click", function(event)
       local ent_status_id = ent.status
       local ent_status_text = ""
       local status_lookup = into_lookup(defines.entity_status)
-      --Different behavior for rails: Report what is along the rail
       if ent.name == "straight-rail" or ent.name == "curved-rail" then
+         --Report what is along the rail
          rail_read_next_rail_entity_ahead(pindex, ent, true)
-      --Print status
+      elseif ent.name == "cargo-wagon" then
+         --Read contents   
+         read_cargo_wagon_contents(pindex,ent)
       elseif ent_status_id ~= nil then
+         --Print status
          ent_status_text = status_lookup[ent_status_id]
          printout(" " .. ent_status_text ,pindex)
       else
@@ -6247,7 +6274,7 @@ script.on_event("control-g-key", function(event)
       printout("Leading rail, " .. where_is_a_for_b(leading_rail,game.get_player(pindex).vehicle) .. " and leading stock is a " .. leading_stock.name 
       .. " facing " .. get_heading(leading_stock) ,pindex)
       --Test object ahead
-      --train_read_next_rail_entity_ahead(pindex)
+      --train_read_next_rail_entity_ahead(pindex,false)
    elseif ent ~= nil then
       printout(ent.name .. " with unit number " .. ent.unit_number .. " " .. where_is_a_for_b(ent,players[pindex]),pindex)
    end

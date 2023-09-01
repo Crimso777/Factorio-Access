@@ -1992,10 +1992,10 @@ function build_small_plus_intersection(anchor_rail, pindex)
       surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y-2}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y-2}, direction = 2, force = game.forces.player}
       
-      surf.create_entity{name = "rail-signal"  , position = {pos.x-2, pos.y-0}, direction = 0, force = game.forces.player}
-      surf.create_entity{name = "rail-signal"  , position = {pos.x+1, pos.y-5}, direction = 4, force = game.forces.player}
-      surf.create_entity{name = "rail-signal"  , position = {pos.x-3, pos.y-4}, direction = 2, force = game.forces.player}
-      surf.create_entity{name = "rail-signal"  , position = {pos.x+2, pos.y-1}, direction = 6, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x-2, pos.y-0}, direction = 0, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x+1, pos.y-5}, direction = 4, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x-3, pos.y-4}, direction = 2, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x+2, pos.y-1}, direction = 6, force = game.forces.player}
       
       surf.create_entity{name = "rail-chain-signal", position = {pos.x+1, pos.y-0}, direction = 4, force = game.forces.player}
       surf.create_entity{name = "rail-chain-signal", position = {pos.x-2, pos.y-5}, direction = 0, force = game.forces.player}
@@ -2009,10 +2009,10 @@ function build_small_plus_intersection(anchor_rail, pindex)
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+0}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+2}, direction = 0, force = game.forces.player}
       
-      surf.create_entity{name = "rail-signal"  , position = {pos.x-1, pos.y-2}, direction = 2, force = game.forces.player}
-      surf.create_entity{name = "rail-signal"  , position = {pos.x+4, pos.y+1}, direction = 6, force = game.forces.player}
-      surf.create_entity{name = "rail-signal"  , position = {pos.x+3, pos.y-3}, direction = 4, force = game.forces.player}
-      surf.create_entity{name = "rail-signal"  , position = {pos.x-0, pos.y+2}, direction = 0, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x-1, pos.y-2}, direction = 2, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x+4, pos.y+1}, direction = 6, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x+3, pos.y-3}, direction = 4, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x-0, pos.y+2}, direction = 0, force = game.forces.player}
       
       surf.create_entity{name = "rail-chain-signal", position = {pos.x-1, pos.y+1}, direction = 6, force = game.forces.player}
       surf.create_entity{name = "rail-chain-signal", position = {pos.x+4, pos.y-2}, direction = 2, force = game.forces.player}
@@ -2028,10 +2028,10 @@ function build_small_plus_intersection(anchor_rail, pindex)
       surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y+2}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x+2, pos.y+2}, direction = 2, force = game.forces.player}
       
-      surf.create_entity{name = "rail-signal"  , position = {pos.x+1, pos.y-1}, direction = 4, force = game.forces.player}
-      surf.create_entity{name = "rail-signal"  , position = {pos.x-2, pos.y+4}, direction = 0, force = game.forces.player}
-      surf.create_entity{name = "rail-signal"  , position = {pos.x-3, pos.y+0}, direction = 2, force = game.forces.player}
-      surf.create_entity{name = "rail-signal"  , position = {pos.x+2, pos.y+3}, direction = 6, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x+1, pos.y-1}, direction = 4, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x-2, pos.y+4}, direction = 0, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x-3, pos.y+0}, direction = 2, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x+2, pos.y+3}, direction = 6, force = game.forces.player}
       
       surf.create_entity{name = "rail-chain-signal", position = {pos.x-2, pos.y-1}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "rail-chain-signal", position = {pos.x+1, pos.y+4}, direction = 4, force = game.forces.player}
@@ -2045,10 +2045,10 @@ function build_small_plus_intersection(anchor_rail, pindex)
       surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y+0}, direction = 0, force = game.forces.player}
       surf.create_entity{name = "straight-rail", position = {pos.x-2, pos.y+2}, direction = 0, force = game.forces.player}
       
-      surf.create_entity{name = "rail-signal"  , position = {pos.x-0, pos.y+1}, direction = 6, force = game.forces.player}
-      surf.create_entity{name = "rail-signal"  , position = {pos.x-5, pos.y-2}, direction = 2, force = game.forces.player}
-      surf.create_entity{name = "rail-signal"  , position = {pos.x-4, pos.y+2}, direction = 0, force = game.forces.player}
-      surf.create_entity{name = "rail-signal"  , position = {pos.x-1, pos.y-3}, direction = 4, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x-0, pos.y+1}, direction = 6, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x-5, pos.y-2}, direction = 2, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x-4, pos.y+2}, direction = 0, force = game.forces.player}
+      surf.create_entity{name = "rail-chain-signal"  , position = {pos.x-1, pos.y-3}, direction = 4, force = game.forces.player}
       
       surf.create_entity{name = "rail-chain-signal", position = {pos.x-0, pos.y-2}, direction = 2, force = game.forces.player}
       surf.create_entity{name = "rail-chain-signal", position = {pos.x-5, pos.y+1}, direction = 6, force = game.forces.player}

@@ -1,18 +1,28 @@
 # Version 0.3.1
 
-Updated 10/11/2022
+Updated 10/26/2022
 
 ## New Features
 
 -Build lock. When enabled, the game will continuously try to build behind the player as they walk, or under the cursor in cursor mode. Useful for tasks like building long transport belts. Press CONTROL + B to enable or disable. It also automatically gets disabled when you switch into or out of cursor mode or empty your hand and take a step.
 
+-Build lock has a special case for small electric poles where it places an electric pole only if it is within 6.5 to 7.5 tiles of the nearest small electric pole, allowing you to build lines of fully spaced out small electric poles while just walking. Note that not every tile between the fully spaced poles is powered.
+
 ## Changes
+
+-Scanner Resource Aggregation: On the scan list, patches of resources will now be read as a group.  This includes all resource types including water, trees, and ores.
 
 -Getting item or entity information with the L key now works for entities on the surface and inside chests and most building menus.
 
 -Getting slot coordinates with the K key now works inside chests and most/all building menus.
 
 -In cursor mode, pressing J will announce that the cursor is returned to the player in addition to doing it.
+
+-Transport belt parts such as corners, junctions, and ends will now be specified when read by the cursor.
+
+## Bug fixes
+
+-Fixed a crash when setting filter inserter filters due to being able to select unsupported fluid recipes.
 
 # Version 0.3.0
 

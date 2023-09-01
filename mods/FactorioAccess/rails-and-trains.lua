@@ -8,6 +8,10 @@ function rail_ent_info(pindex, ent, description)
    --Check if end rail: The rail is at the end of its segment and is also not connected to another rail
    is_end_rail, end_rail_dir, build_comment = check_end_rail(ent,pindex)
    if is_end_rail then
+      --Further check if it is a single rail
+      if build_comment == "single rail" then
+         result = result .. "Single "
+      end
       result = result .. "End rail "
    else
       result = result .. "Rail "
@@ -254,6 +258,9 @@ function check_end_rail(check_rail, pindex)
       --End rail confirmed, get direction
       is_end_rail = true
       comment = "End rail confirmed."
+      if connection_count == 0 then
+         comment = "single rail"
+      end
       if check_rail.name == "straight-rail" then
          local next_rail_straight,temp1,temp2 = check_rail.get_connected_rail{rail_direction = defines.rail_direction.front, 
                rail_connection_direction = defines.rail_connection_direction.straight}
@@ -2612,14 +2619,14 @@ function rail_builder(pindex, clicked_in)
             --Build it here
             build_train_stop(rail, pindex)
          end
-      elseif menu_line == 6 then
-         if not clicked then
-            comment = comment .. "Plus intersection"
-            printout(comment,pindex)
-         else
-            --Build it here
-            build_small_plus_intersection(rail, pindex)
-         end
+      --elseif menu_line == 6 then
+      --   if not clicked then
+      --      comment = comment .. "Plus intersection"
+      --      printout(comment,pindex)
+      --   else
+      --      --Build it here
+      --      build_small_plus_intersection(rail, pindex)
+      --   end
       end
    elseif rail_type == 2 then
       --Diagonal end rails
@@ -2642,14 +2649,15 @@ function rail_builder(pindex, clicked_in)
       end
    elseif rail_type == 3 then
       --Straight mid rails
-      if menu_line == 1 then
-         if not clicked then
-            comment = comment .. "Train stop facing the player direction"
-            printout(comment,pindex)
-         else
-            --Build it here
-            build_train_stop(rail, pindex)
-         end
+      --After implementing junctions we will allow building mid rail train stops. This is commented out for now.
+      --if menu_line == 1 then 
+      --   if not clicked then
+      --      comment = comment .. "Train stop facing the player direction"
+      --      printout(comment,pindex)
+      --   else
+      --      --Build it here
+      --      build_train_stop(rail, pindex)
+      --   end
       end
    elseif rail_type == 4 then
       --Diagonal mid rails

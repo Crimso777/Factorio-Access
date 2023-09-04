@@ -2658,7 +2658,7 @@ function rail_builder(pindex, clicked_in)
       --      --Build it here
       --      build_train_stop(rail, pindex)
       --   end
-      end
+      --end
    elseif rail_type == 4 then
       --Diagonal mid rails
       if menu_line == 1 then

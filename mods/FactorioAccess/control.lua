@@ -2425,7 +2425,6 @@ function scan_index(pindex)
 --      if ents[players[pindex].nearby.index].name == "water" then
 --      if true then
       if ents[players[pindex].nearby.index].aggregate == false then
-
          local i = 1
          while i <= #ents[players[pindex].nearby.index].ents do
             if ents[players[pindex].nearby.index].ents[i].valid then
@@ -6413,7 +6412,7 @@ script.on_event(defines.events.on_chunk_charted,function(event)
             }
          end
          local merged_groups = {}
-         local many2many = []
+         local many2many = {}
 --         for pos, resource in pairs(v.resources) do
 --            if resources[i].positions[pos] ~= nil then
 --               local island_group = resource.group
@@ -6487,7 +6486,7 @@ script.on_event(defines.events.on_chunk_charted,function(event)
             end
          end
          for island_group, resource_groups in pairs(merged_groups) do
-            local matches = []
+            local matches = {}
             for i1, ref in ipairs(many2many) do
                local match = false
                for i2, v2 in pairs(resource_groups) do
@@ -6504,32 +6503,34 @@ script.on_event(defines.events.on_chunk_charted,function(event)
                end
             end
             local old = table.deepcopy(resource_group)
-            local new = {}
-            new[island_group] = true
-            if table_size(matches) == 0 then
-               local entry = {}
-               entry["old"] = old
-               entry["new"] = new
-               table.insert(many2many, entry)
-            else
-               table.sort(matches, function(k1, k2)
-                  return k1 > k2
-              end)
+            if old ~= nil then
+               local new = {}
+               new[island_group] = true
+               if table_size(matches) == 0 then
+                  local entry = {}
+                  entry["old"] = old
+                  entry["new"] = new
+                  table.insert(many2many, table.deepcopy(entry))
+               else
+                  table.sort(matches, function(k1, k2)
+                     return k1 > k2
+                 end)
 
-               for i1, merge_index in ipairs(matches) do
-                  for i2, v2 in pairs(many2many[merge_index]["old"]) do
-                     old[i2] = true
+                  for i1, merge_index in ipairs(matches) do
+                     for i2, v2 in pairs(many2many[merge_index]["old"]) do
+                        old[i2] = true
+                     end
+                     for i2, v2 in pairs(many2many[merge_index]["new"]) do
+                        new[i2] = true
+                     end
+                     table.remove(many2many, merge_index)
                   end
-                  for i2, v2 in pairs(many2many[merge_index]["new"]) do
-                     new[i2] = true
-                  end
-                  table.remove(many2many, merge_index)
+                  local entry = {}
+                  entry["old"] = old
+                  entry["new"] = new
+
+                  table.insert(many2many, table.deepcopy(entry)) 
                end
-               local entry = {}
-               entry["old"] = old
-               entry["new"] = new
-
-               table.insert(many2many, entry) 
             end
          end
          for i1, entry in pairs(many2many) do

@@ -1021,7 +1021,7 @@ function train_read_next_rail_entity_ahead(pindex, invert)
       elseif heading == "West" then
          scan_area = {{pos.x-4,pos.y-4},{pos.x+15,pos.y+4}}
       else
-         message = " Train stop scan error " .. heading .. " "
+         message = " Rail object scan error " .. heading .. " "
          scan_area = {{pos.x+0,pos.y+0},{pos.x+1,pos.y+1}}
       end
       local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "train-stop"}
@@ -2084,7 +2084,7 @@ function append_rail(pos, pindex)
    local comment = ""
    
    --0 Check if there is at least 1 rail in hand, else return
-   if not (stack.valid and stack.valid_for_read and stack.name == "rail" and stack.count > 10) then
+   if not (stack.valid and stack.valid_for_read and stack.name == "rail" and stack.count > 0) then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("You need at least 1 rail in hand.", pindex)
       return
@@ -2569,10 +2569,7 @@ function rail_builder(pindex, clicked_in)
    end
    
    if menu_line == 0 then
-      comment = comment .. "Select a structure to build by going up or down this menu, attempt to build it via LEFT BRACKET, "
-      if rail_type > 2 then
-         comment = comment .. "Note that end rails and vertical or horizontal rails have more options available. "
-      end
+	  comment = comment .. "Select a structure to build by going up or down this menu, attempt to build it via LEFT BRACKET, "
       printout(comment,pindex)
       return
    end
@@ -2649,6 +2646,15 @@ function rail_builder(pindex, clicked_in)
       end
    elseif rail_type == 3 then
       --Straight mid rails
+	  if menu_line == 1 then
+         if not clicked then
+            comment = comment .. "No options available"
+            printout(comment,pindex)
+         else
+            comment = comment .. "No options available"
+            printout(comment,pindex)
+         end
+      end
       --After implementing junctions we will allow building mid rail train stops. This is commented out for now.
       --if menu_line == 1 then 
       --   if not clicked then

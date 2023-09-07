@@ -2725,8 +2725,9 @@ function train_menu(menu_index, pindex, clicked, other_input)
       printout("Vehicle counts, " .. #locos["front_movers"] .. " locomotives facing front, " 
       .. #locos["back_movers"] .. " locomotives facing back, " .. #train.cargo_wagons .. " cargo wagons, "
       .. #train.fluid_wagons .. " fluid wagons, ", pindex) 
-   elseif index == 3 then  
-      printout("Train menu 3", pindex)
+   elseif index == 3 then 
+	  --Fuel info
+      printout("Locomotive fuel tank " .. read_locomotive_fuel(pindex,locomotive), pindex)
    end
    --[[ Train menu options ideas
    name, id, menu instructions
@@ -2793,8 +2794,8 @@ end
 
 function train_menu_down(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index + 1
-   if players[pindex].train_menu.index > 2 then
-      players[pindex].train_menu.index = 2
+   if players[pindex].train_menu.index > 3 then
+      players[pindex].train_menu.index = 3
       game.get_player(pindex).play_sound{path = "Mine-Building"}
    else
       --Play sound
@@ -2938,5 +2939,32 @@ function read_cargo_wagon_contents(pindex,wagon)
    end
    result = result .. ", Use inserters or cursor shortcuts to fill and empty this wagon. "
    printout(result,pindex)
+end
+
+
+--Return fuel content in the locomotive
+function read_locomotive_fuel(pindex,loco)
+   local result = ""
+   local itemset = loco.get_fuel_inventory().get_contents()
+   local itemtable = {}
+   for name, count in pairs(itemset) do
+      table.insert(itemtable, {name = name, count = count})
+   end
+   table.sort(itemtable, function(k1, k2)
+      return k1.count > k2.count
+   end)
+   if #itemtable == 0 then
+      result = result .. " Contains nothing "
+   else
+      result = result .. " Contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
+      if #itemtable > 1 then
+         result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. " "
+      end
+      if #itemtable > 2 then
+         result = result .. " and " .. itemtable[3].name .. " times " .. itemtable[3].count .. " "
+      end
+   end
+   --printout(result,pindex)
+   return result
 end
 

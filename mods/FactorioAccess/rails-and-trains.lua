@@ -2293,6 +2293,70 @@ function append_rail(pos, pindex)
 
 end
 
+--Counts rails within range of a selected rail.
+function count_rails_within_range(rail, range, pindex)
+   --1. Scan around the rail for other rails
+   local counter = 0
+   local pos = rail.position
+   local scan_area = {{pos.x-range,pos.y-range},{pos.x+range,pos.y+range}}
+   local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "straight-rail"}
+   for i,other_rail in ipairs(ents) do
+      --2. Increase counter for each straight rail
+	  counter = counter + 1
+   end
+   ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "curved-rail"}
+   for i,other_rail in ipairs(ents) do
+      --3. Increase counter for each curved rail
+	  counter = counter + 1
+   end
+   return counter
+end
+
+--Checks if the rail is parallel to another neighboring segment.
+function has_parallel_neighbor(rail, pindex)
+   --1. Scan around the rail for other rails
+   local pos = rail.position
+   local scan_area = {{pos.x-2,pos.y-2},{pos.x+2,pos.y+2}} --TODO tweak selection area**
+   local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "straight-rail"}
+   for i,other_rail in ipairs(ents) do
+	 --2. For each rail, does it have the same rotation but a different segment? If yes return true.
+	  if rail.direction == other_rail.direction and not rail.is_rail_in_same_rail_segment_as(other_rail) then
+	 	 return true
+	  end
+   end
+   return false
+end
+
+--Checks if the rail is amid an intersection.
+function is_intersection_rail(rail, pindex)
+   --1. Scan around the rail for other rails
+   local pos = rail.position
+   local scan_area = {{pos.x-1,pos.y-1},{pos.x+1,pos.y+1}} --TODO tweak selection area**
+   local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "straight-rail"}
+   for i,other_rail in ipairs(ents) do
+      --2. For each rail, does it have a different rotation and a different segment? If yes return true.
+	  if rail.direction ~= other_rail.direction and not rail.is_rail_in_same_rail_segment_as(other_rail) then
+         return true
+	  end
+   end
+   return false
+end
+
+--Checks if the rail is intersecting curved rails.
+function is_intersecting_curved_rails(rail, pindex)
+   --1. Scan around the rail for other rails
+   local pos = rail.position
+   local scan_area = {{pos.x-1,pos.y-1},{pos.x+1,pos.y+1}} --TODO tweak selection area**
+   local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "curved-rail"}
+   for i,other_rail in ipairs(ents) do
+      --2. For each rail, does it have a different segment? If yes return true.
+	  if not rail.is_rail_in_same_rail_segment_as(other_rail) then
+         return true
+	  end
+   end
+   return false
+end
+
 
 --Places a train stop facing the direction of the end rail.
 function build_train_stop(anchor_rail, pindex)

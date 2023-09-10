@@ -4316,8 +4316,12 @@ script.on_event("jump-to-player", function(event)
    if not check_for_player(pindex) then
       return
    end
+   local ent = players[pindex].tile.ents[1] 
    if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
       train_read_next_rail_entity_ahead(pindex,false)
+   elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
+      --Report what is along the rail
+      rail_read_next_rail_entity_ahead(pindex, ent, true)
    elseif not (players[pindex].in_menu) then
       if players[pindex].cursor then jump_to_player(pindex)
       end
@@ -4332,8 +4336,12 @@ script.on_event("shift-j", function(event)
    if not check_for_player(pindex) then
       return
    end
+   local ent = players[pindex].tile.ents[1] 
    if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
       train_read_next_rail_entity_ahead(pindex,true)
+   elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
+      --Report what is along the rail
+      rail_read_next_rail_entity_ahead(pindex, ent, false)
    end
 end
 )
@@ -5422,8 +5430,6 @@ input.select(1, 0)
             train_stop_menu_open(pindex)
          elseif ent.name == "locomotive" or ent.name == "cargo-wagon" or ent.name == "fluid-wagon" then
             train_menu_open(pindex)
-         elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
-            rail_read_next_rail_entity_ahead(pindex, ent, false)
          elseif ent.operable and ent.prototype.is_building then
             if ent.prototype.subgroup.name == "belt" then
                players[pindex].in_menu = true
@@ -5985,10 +5991,7 @@ script.on_event("right-click", function(event)
       local ent_status_id = ent.status
       local ent_status_text = ""
       local status_lookup = into_lookup(defines.entity_status)
-      if ent.name == "straight-rail" or ent.name == "curved-rail" then
-         --Report what is along the rail
-         rail_read_next_rail_entity_ahead(pindex, ent, true)
-      elseif ent.name == "cargo-wagon" then
+      if ent.name == "cargo-wagon" then
          --Read contents   
          read_cargo_wagon_contents(pindex,ent)
       elseif ent_status_id ~= nil then

@@ -1021,8 +1021,8 @@ function train_read_next_rail_entity_ahead(pindex, invert)
       elseif heading == "West" then
          scan_area = {{pos.x-4,pos.y-4},{pos.x+15,pos.y+4}}
       else
-         message = " Rail object scan error " .. heading .. " "
-         scan_area = {{pos.x+0,pos.y+0},{pos.x+1,pos.y+1}}
+         --message = " Rail object scan error " .. heading .. " "
+         scan_area = {{pos.x+4,pos.y+4},{pos.x+4,pos.y+4}}
       end
       local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "train-stop"}
       for i,passed_stop in ipairs(ents) do
@@ -1045,11 +1045,12 @@ end
 
 
 function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
-   local message = ""
+   local message = "Up this rail, "
    local origin_rail = rail
    local dir_ahead = defines.rail_direction.front
    if not is_forward then
       dir_ahead = defines.rail_direction.back
+	  message = "Down this rail, "
    end
    local next_entity, next_entity_label, result_extra, next_is_forward, iteration_count = get_next_rail_entity_ahead(origin_rail, dir_ahead, false)
    if next_entity == nil then

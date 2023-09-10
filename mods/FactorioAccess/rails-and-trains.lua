@@ -932,11 +932,12 @@ end
 
 --Takes all the output from the get_next_rail_entity_ahead and adds extra info before reading them out. Todo maybe also include train ahead warning if possible.
 function train_read_next_rail_entity_ahead(pindex, invert)
-   local message = ""
+   local message = "Ahead, "
    local train = game.get_player(pindex).vehicle.train
    local leading_rail, dir_ahead, leading_stock = get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex,train, false)
    if invert then
       dir_ahead = get_opposite_rail_direction(dir_ahead)
+	  message = "Behind, "
    end
    local next_entity, next_entity_label, result_extra, next_is_forward, iteration_count = get_next_rail_entity_ahead(leading_rail, dir_ahead, false)
    if next_entity == nil then
@@ -1094,13 +1095,13 @@ function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
       if math.abs(distance) > 25 or next_is_forward == false then
          message = message .. "Train stop " .. stop_name .. ", in " .. distance .. " meters, "
       else
-         distance = util.distance(origin_rail.position, next_entity.position) - 0
+         distance = util.distance(origin_rail.position, next_entity.position) - 2.5
          if math.abs(distance) <= 0.2 then
             message = " Aligned with train stop " .. stop_name
          elseif distance > 0.2 then
-            message = math.floor(distance * 10) / 10 .. " meters away from train stop " .. stop_name .. ", for the frontmost vehicle. " 
+            message = math.floor(distance * 10) / 10 .. " meters away from train stop " .. stop_name .. ". " 
          elseif distance < 0.2 then
-            message = math.floor((-distance) * 10) / 10 .. " meters past train stop " .. stop_name .. ", for the frontmost vehicle. " 
+            message = math.floor((-distance) * 10) / 10 .. " meters past train stop " .. stop_name .. ". " 
          end
       end
    

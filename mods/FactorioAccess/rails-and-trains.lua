@@ -691,6 +691,13 @@ function get_rail_segment_entity_beside_train(train)
    return nil
 end
 
+--Checks if the train is all in one segment, which means the front and back rails are in the same segment.
+function train_is_all_in_one_segment(train)
+	return train.front_rail.is_rail_in_same_rail_segment_as(train.back_rail)
+end
+
+
+
 
 --[[Returns the leading rail and the direction on it that is "ahead" and the leading stock. This is the direction that the currently boarded locomotive or wagon is facing.
 --Checks whether the current locomotive is one of the front or back locomotives and gives leading rail and leading stock accordingly.
@@ -709,26 +716,26 @@ function get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex, train, is_
    local front_rail = train.front_rail
    local back_rail  = train.back_rail
    local locos = train.locomotives
-   local vehicle_is_front_loco = nil
+   local vehicle_is_a_front_loco = nil
    
    --Find the leading rail. If any "front" locomotive velocity is positive, the front stock is the one going ahead and its rail is the leading rail. 
    if vehicle.name == "locomotive" then
       --Leading direction is the one this loconotive faces
       for i,loco in ipairs(locos["front_movers"]) do
          if vehicle.unit_number == loco.unit_number then
-            vehicle_is_front_loco = true
+            vehicle_is_a_front_loco = true
          end
       end
-      if vehicle_is_front_loco == true then
+      if vehicle_is_a_front_loco == true then
          leading_rail = front_rail
          leading_stock = train.front_stock 
       else
          for i,loco in ipairs(locos["back_movers"]) do
             if vehicle.unit_number == loco.unit_number then
-               vehicle_is_front_loco = false
+               vehicle_is_a_front_loco = false
             end
          end
-         if vehicle_is_front_loco == false then
+         if vehicle_is_a_front_loco == false then
             leading_rail = back_rail
             leading_stock = train.back_stock
          else
@@ -807,11 +814,18 @@ end
 
 --Return what is ahead at the end of this rail's segment in this given direction.
 --Return the entity, a label, an extra value sometimes, and whether the entity faces the forward direction
-function get_rail_segment_end_object(rail, dir_ahead, force_forward, prefer_back)
+function identify_rail_segment_end_object(rail, dir_ahead, accept_only_forward, prefer_back)
    local result_entity = nil
    local result_entity_label = ""
    local result_extra = nil
    local result_is_forward = nil
+   
+   --Correction: Flip the correct direction ahead for mismatching diagonal rails
+   if rail.name == "straight-rail" and (rail.direction == 5 or rail.direction == 7) 
+      or rail.name == "curved-rail" and (rail.direction == 0 or rail.direction == 1 or rail.direction == 2 or rail.direction == 3) then
+      dir_ahead = get_opposite_rail_direction(dir_ahead)
+   end
+   
    local segment_last_rail = rail.get_rail_segment_end(dir_ahead)
    local entity_ahead = nil
    local entity_ahead_forward = rail.get_rail_segment_entity(dir_ahead,false)
@@ -823,17 +837,17 @@ function get_rail_segment_end_object(rail, dir_ahead, force_forward, prefer_back
    if entity_ahead_forward ~= nil then
       entity_ahead = entity_ahead_forward
       result_is_forward = true
-   elseif entity_ahead_reverse ~= nil and force_forward == false then
+   elseif entity_ahead_reverse ~= nil and accept_only_forward == false then
       entity_ahead = entity_ahead_reverse
       result_is_forward = false
    end
    
-   if prefer_back == true and entity_ahead_reverse ~= nil and force_forward == false then 
+   if prefer_back == true and entity_ahead_reverse ~= nil and accept_only_forward == false then 
       entity_ahead = entity_ahead_reverse
       result_is_forward = false
    end
    
-   --When no entity ahead
+   --When no entity ahead, check if the segment end is an end rail or fork rail?
    if entity_ahead == nil then
       if segment_last_is_end_rail then
          --End rail
@@ -844,17 +858,40 @@ function get_rail_segment_end_object(rail, dir_ahead, force_forward, prefer_back
       elseif segment_last_neighbor_count > 2 then
          --Junction rail
          result_entity = segment_last_rail
-         result_entity_label = "junction rail"
+         result_entity_label = "fork split"
          result_extra = rail --A rail from the segment "entering" the junction
          return result_entity, result_entity_label, result_extra, result_is_forward
       else
-         --This is expected: Another entity at the end of the neighbor segment
-         result_entity = segment_last_rail
-         result_entity_label = "other rail" 
-         result_extra = nil
-         return result_entity, result_entity_label, result_extra, result_is_forward
+         --The neighbor of the segment end rail is either a fork or an end rail or has an entity instead
+		 neighbor_rail, neighbor_r_dir, neighbor_c_dir = get_neighbor_rail_segment_end(segment_last_rail, nil)
+		 if neighbor_rail == nil then
+		    --This must be a closed loop?
+			result_entity = nil
+            result_entity_label = "loop" 
+            result_extra = nil
+			return result_entity, result_entity_label, result_extra, result_is_forward
+		 elseif count_rail_connections(neighbor_rail) > 2 then
+		    --The neighbor is a forking rail
+			result_entity = neighbor_rail
+            result_entity_label = "fork merge" 
+            result_extra = nil
+			return result_entity, result_entity_label, result_extra, result_is_forward
+		 elseif count_rail_connections(neighbor_rail) == 1 then
+		    --The neighbor is an end rail
+			local neighbor_is_end_rail, end_rail_dir, comment = check_end_rail(neighbor_rail, pindex)
+			result_entity = neighbor_rail
+            result_entity_label = "neighbor end" 
+            result_extra = end_rail_dir
+			return result_entity, result_entity_label, result_extra, result_is_forward
+		 else
+		    --The neighbor should have an entity or something**
+            result_entity = segment_last_rail
+            result_entity_label = "other rail" 
+            result_extra = nil
+            return result_entity, result_entity_label, result_extra, result_is_forward
+		 end
       end
-   --When entity ahead
+   --When entity ahead, check its type
    else
       if entity_ahead.name == "rail-signal" then
          result_entity = entity_ahead
@@ -885,7 +922,7 @@ end
 --Reads out the nearest railway object ahead with relevant details. Skips to the next segment if needed. 
 --The output could be an end rail, junction rail, rail signal, chain signal, or train stop. 
 function get_next_rail_entity_ahead(origin_rail, dir_ahead, only_this_segment)
-   local next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(origin_rail, dir_ahead, false, false)
+   local next_entity, next_entity_label, result_extra, next_is_forward = identify_rail_segment_end_object(origin_rail, dir_ahead, false, false)
    local iteration_count = 1
    local segment_end_ahead, dir_se = origin_rail.get_rail_segment_end(dir_ahead)
    local prev_rail = segment_end_ahead
@@ -895,7 +932,7 @@ function get_next_rail_entity_ahead(origin_rail, dir_ahead, only_this_segment)
    
    --First correction for the train stop exception
    if next_entity_label == "train stop" and next_is_forward == false then
-      next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, true, false)
+      next_entity, next_entity_label, result_extra, next_is_forward = identify_rail_segment_end_object(current_rail, neighbor_r_dir, true, false)
    end
    
    --Skip all "other rail" cases
@@ -904,10 +941,10 @@ function get_next_rail_entity_ahead(origin_rail, dir_ahead, only_this_segment)
          --Switch to neighboring segment
          current_rail, neighbor_r_dir, neighbor_c_dir = get_neighbor_rail_segment_end(prev_rail, nil)
          prev_rail = current_rail
-         next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, false, true)
+         next_entity, next_entity_label, result_extra, next_is_forward = identify_rail_segment_end_object(current_rail, neighbor_r_dir, false, true)
          --Correction for the train stop exception
          if next_entity_label == "train stop" and next_is_forward == false then
-            next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, true, true)
+            next_entity, next_entity_label, result_extra, next_is_forward = identify_rail_segment_end_object(current_rail, neighbor_r_dir, true, true)
          end
          --Correction for flipped direction
          if next_is_forward ~= nil then
@@ -917,10 +954,10 @@ function get_next_rail_entity_ahead(origin_rail, dir_ahead, only_this_segment)
       else
          --Check other end of the segment. NOTE: Never got more than 2 iterations in tests so far...
          neighbor_r_dir = get_opposite_rail_direction(neighbor_r_dir)
-         next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, false, false)
+         next_entity, next_entity_label, result_extra, next_is_forward = identify_rail_segment_end_object(current_rail, neighbor_r_dir, false, false)
          --Correction for the train stop exception
          if next_entity_label == "train stop" and next_is_forward == false then
-            next_entity, next_entity_label, result_extra, next_is_forward = get_rail_segment_end_object(current_rail, neighbor_r_dir, true, false)
+            next_entity, next_entity_label, result_extra, next_is_forward = identify_rail_segment_end_object(current_rail, neighbor_r_dir, true, false)
          end
          iteration_count = iteration_count + 1
       end
@@ -941,7 +978,7 @@ function train_read_next_rail_entity_ahead(pindex, invert)
    end
    local next_entity, next_entity_label, result_extra, next_is_forward, iteration_count = get_next_rail_entity_ahead(leading_rail, dir_ahead, false)
    if next_entity == nil then
-      printout("Nil error",pindex)
+      printout("Analysis error. This rail might be looping.",pindex)
       return
    end
    local distance = math.floor(util.distance(leading_stock.position, next_entity.position))
@@ -962,10 +999,18 @@ function train_read_next_rail_entity_ahead(pindex, invert)
    if next_entity_label == "end rail" then
       message = message .. next_entity_label
       
-   elseif next_entity_label == "junction rail" then
+   elseif next_entity_label == "fork split" then
       local entering_segment_rail = result_extra  
-      message = message .. next_entity_label
+      message = message .. "rail fork splitting "
       --todo later here, give more info such as the name of the junction and available directions
+   
+   elseif next_entity_label == "fork merge" then
+      local entering_segment_rail = result_extra  
+      message = message .. "rail fork merging "
+	  
+   elseif next_entity_label == "neighbor end" then
+      local entering_segment_rail = result_extra  
+      message = message .. "end rail "
       
    elseif next_entity_label == "rail signal" then
       local signal_state = next_entity.signal_state --todo later here decode the signals with a lookup table call
@@ -1042,6 +1087,15 @@ function train_read_next_rail_entity_ahead(pindex, invert)
       end
    end
    printout(message,pindex)
+   --Draw cricles for visual debugging
+   rendering.draw_circle{
+         color = {0, 1, 0},
+         radius = 1,
+         width = 10,
+         target = next_entity,
+         surface = next_entity.surface,
+         time_to_live = 9,
+       }
 end
 
 
@@ -1055,7 +1109,7 @@ function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
    end
    local next_entity, next_entity_label, result_extra, next_is_forward, iteration_count = get_next_rail_entity_ahead(origin_rail, dir_ahead, false)
    if next_entity == nil then
-      printout("Nil error",pindex)
+      printout("Analysis error. This rail might be looping.",pindex)
       return
    end
    local distance = math.floor(util.distance(origin_rail.position, next_entity.position))
@@ -1069,18 +1123,26 @@ function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
    
    --Report opposite direction entities.
    if next_is_forward == false and next_entity_label ~= "junction rail" ~= "end rail" then
-      message = message .. " Opposite direction's "
+      message = message .. " Opposite direction's "--todo fix**
    end
    
    --Add more info depending on entity label
    if next_entity_label == "end rail" then
       message = message .. next_entity_label
       
-   elseif next_entity_label == "junction rail" then
+   elseif next_entity_label == "fork split" then
       local entering_segment_rail = result_extra  
-      message = message .. next_entity_label
+      message = message .. "rail fork splitting "
       --todo later here, give more info such as the name of the junction and available directions
-      
+   
+   elseif next_entity_label == "fork merge" then
+      local entering_segment_rail = result_extra  
+      message = message .. "rail fork merging "
+	  
+   elseif next_entity_label == "neighbor end" then
+      local entering_segment_rail = result_extra  
+      message = message .. "end rail "
+	  
    elseif next_entity_label == "rail signal" then
       local signal_state = next_entity.signal_state --todo later here decode the signals with a lookup table call
       message = message .. "rail signal with state " .. signal_state .. " "
@@ -1120,6 +1182,15 @@ function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
       end
    end
    printout(message,pindex)
+   --Draw cricles for visual debugging
+   rendering.draw_circle{
+         color = {0, 1, 0},
+         radius = 1,
+         width = 10,
+         target = next_entity,
+         surface = next_entity.surface,
+         time_to_live = 9,
+       }
 end
 
 

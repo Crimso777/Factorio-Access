@@ -4319,7 +4319,7 @@ script.on_event("jump-to-player", function(event)
    local ent = players[pindex].tile.ents[1] 
    if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
       train_read_next_rail_entity_ahead(pindex,false)
-   elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
+   elseif ent ~= nil and ent.valid and (ent.name == "straight-rail" or ent.name == "curved-rail") then
       --Report what is along the rail
       rail_read_next_rail_entity_ahead(pindex, ent, true)
    elseif not (players[pindex].in_menu) then
@@ -4339,7 +4339,7 @@ script.on_event("shift-j", function(event)
    local ent = players[pindex].tile.ents[1] 
    if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
       train_read_next_rail_entity_ahead(pindex,true)
-   elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
+   elseif ent ~= nil and ent.valid and (ent.name == "straight-rail" or ent.name == "curved-rail") then
       --Report what is along the rail
       rail_read_next_rail_entity_ahead(pindex, ent, false)
    end
@@ -5759,7 +5759,7 @@ script.on_event("shift-click", function(event)
       end
    else
       local ent = players[pindex].tile.ents[1]
-      if ent ~= nil then 
+      if ent ~= nil and ent.valid then 
          if ent.name == "straight-rail" then
             --Open rail builder
             rail_builder_open(pindex, ent)
@@ -6095,7 +6095,7 @@ script.on_event("item-info", function(event)
    end
    if not players[pindex].in_menu then
       local ent = players[pindex].tile.ents[1]
-      if ent ~= nil then
+      if ent ~= nil and ent.valid then
          local str = ent.localised_description
          printout(str, pindex)
       end
@@ -6464,7 +6464,7 @@ script.on_event("open-fast-travel", function(event)
    local vehicle = nil
    if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
       vehicle = game.get_player(pindex).vehicle
-   --elseif ent ~= nil and ent.train ~= nil then
+   --elseif ent ~= nil and ent.valid and ent.train ~= nil then
    --   vehicle = ent
    end
    
@@ -6689,7 +6689,7 @@ script.on_event("control-left", function(event)
       return
    end
    --Build left turns on end rails
-   if ent ~= nil and ent.name == "straight-rail" then
+   if ent ~= nil and ent.valid and ent.name == "straight-rail" then
       build_rail_turn_left_45_degrees(ent, pindex)
    end
 end)
@@ -6702,7 +6702,7 @@ script.on_event("control-right", function(event)
       return
    end
    --Build right turns on end rails
-   if ent ~= nil and ent.name == "straight-rail" then
+   if ent ~= nil and ent.valid and ent.name == "straight-rail" then
       build_rail_turn_right_45_degrees(ent, pindex)
    end
 end)
@@ -6719,7 +6719,7 @@ script.on_event("g-key", function(event)
    
    if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
       vehicle = game.get_player(pindex).vehicle
-   elseif ent ~= nil and ent.train ~= nil then
+   elseif ent ~= nil and ent.valid and ent.train ~= nil then
       vehicle = ent
    end
    

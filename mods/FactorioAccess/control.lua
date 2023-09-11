@@ -38,6 +38,13 @@ function scale_area(area, factor)
 end
 function area_edge(area,dir,pos,name)
    local adjusted_area = table.deepcopy(area)
+   if name == "forest" then
+      local chunk_size = 4
+      adjusted_area.left_top.x = adjusted_area.left_top.x / chunk_size
+      adjusted_area.left_top.y = adjusted_area.left_top.y / chunk_size
+      adjusted_area_right_bottom.x = adjusted_area.right_bottom.x / chunk_size
+      adjusted_area.right_bottom.y = adjusted_area.right_bottom.y / chunk_size
+   end
    if dir == 0 then
       if adjusted_area.left_top.y == math.floor(pos.y) then
          return true
@@ -92,7 +99,19 @@ function find_islands(surf, area, pindex)
    local islands = {}
    local ents = surf.find_entities_filtered{area = area, type = "resource"}
    local waters = surf.find_tiles_filtered{area = area, name = "water"}
-   if #ents == 0 and #waters == 0then return {} end
+   local trents = surf.find_entities_filtered{area = area, type = "tree"}
+
+   while i <= #trents do
+      local check = (trent.position.x >= area.left_top.x and trent.position.y < area.left_top.y and trent.position.x < area.right_bottom.x and trent.position.y >= area.right_bottom.y)
+  
+      if ~check then
+         table.remove(trents, i) 
+      else
+         i = i + 1 
+      end
+   end
+
+   if #ents == 0 and #waters == 0 and #trents == 0 then return {} end
 
    for i, ent in ipairs(ents) do
       local destroy_id = script.register_on_entity_destroyed(ent)
@@ -123,6 +142,32 @@ function find_islands(surf, area, pindex)
       if islands["water"].resources[str] == nil then
          islands["water"].groups[i] = {str}
          islands["water"].resources[str] = {group=i, edge = false}
+      end
+   end
+   if #trents > 0 then
+      islands["forest"] = {
+         name = "forest",
+         groups = {},
+         resources = {},
+         edges = {},
+      neighbors = {}
+      }
+   end
+   for i, trent in pairs(trents) do
+      local destroy_id = script.register_on_entity_destroyed(trent)
+      players[pindex].destroyed[destroy_id] = {name = trent.name, position = trent.position, type = trent.type, area = trent.bounding_box}
+
+      local pos = table.deepcopy(trent.position)
+      pos.x = math.floor(pos.x/4)
+      pos.y = math.floor(pos.y/4)
+
+      local str = pos2str(pos)
+
+      if islands["forest"].resources[str] == nil then
+         islands["forest"].groups[i] = {str}
+         islands["forest"].resources[str] = {group=i, edge = false, count = 1}
+      else         
+         islands["forest"].resources[str].count = islands["forest"].resources[str].count + 1
       end
    end
 
@@ -6388,18 +6433,6 @@ script.on_event(defines.events.on_chunk_charted,function(event)
    end
    players[pindex].mapped[pos2str(event.position)] = true
    local islands = find_islands(game.surfaces[event.surface_index], event.area, pindex)
-   local trees = game.surfaces[event.surface_index].find_entities_filtered{area = event.area, type="tree"}
-   if #trees > 0 then 
-      players[pindex].tree_chunks[pos2str(event.position)] = {count = #trees, group = 0} 
-      if event.area.left_top.x - event.area.right_bottom.x > 32 then
-         print("Oops")
-      end
-   end
-   for i, tree in pairs(trees) do
-      players[pindex].tree_positions[pos2str(tree.position)] = 0
-      local destroy_id = script.register_on_entity_destroyed(tree)
-      players[pindex].destroyed[destroy_id] = {name = tree.name, position = tree.position, type = tree.type, area = tree.bounding_box}
-   end
 
    if table_size(islands) > 0 then
       for i, v in pairs(islands) do
@@ -6591,7 +6624,6 @@ if 'number' == type(players[pindex].resources[i].patches[new_group]) then new_gr
                      players[pindex].resources[i].patches[new_index].edges[pos] = islands[i].edges[pos]
                      if islands[i].edges[pos] then
                         local position = str2pos(pos)
-   --                     if math.floor(position.y) == event.area.left_top.y then
                         if area_edge(event.area, 0, position, i) then
    
                            local chunk_pos = pos2str(offset_position(event.position, 0, 1))

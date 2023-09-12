@@ -395,7 +395,7 @@ function vehicle_info(pindex)
    if train == nil then
       --This is a type of car or tank.
       result = vehicle.name .. " " 
-      --todo later: can add more info here? For example health status and fuel status
+      --laterdo: can add more info here? For example health status and fuel status
       return result
    else
       --This is a type of locomotive or wagon.
@@ -967,7 +967,7 @@ function get_next_rail_entity_ahead(origin_rail, dir_ahead, only_this_segment)
 end
 
 
---Takes all the output from the get_next_rail_entity_ahead and adds extra info before reading them out. Todo maybe also include train ahead warning if possible.
+--Takes all the output from the get_next_rail_entity_ahead and adds extra info before reading them out. Does NOT detect trains.
 function train_read_next_rail_entity_ahead(pindex, invert)
    local message = "Ahead, "
    local train = game.get_player(pindex).vehicle.train
@@ -991,7 +991,7 @@ function train_read_next_rail_entity_ahead(pindex, invert)
    --local trains_in_current_block = current_rail.trains_in_block
    
    --Report opposite direction entities.
-   if next_is_forward == false and next_entity_label ~= "junction rail" ~= "end rail" then
+   if next_is_forward == false and (next_entity_label == "train stop" or next_entity_label == "rail signal" or next_entity_label == "chain signal") then
       message = message .. " Opposite direction's "
    end
    
@@ -1002,7 +1002,7 @@ function train_read_next_rail_entity_ahead(pindex, invert)
    elseif next_entity_label == "fork split" then
       local entering_segment_rail = result_extra  
       message = message .. "rail fork splitting "
-      --todo later here, give more info such as the name of the junction and available directions
+      --laterdo here, list available fork directions
    
    elseif next_entity_label == "fork merge" then
       local entering_segment_rail = result_extra  
@@ -1013,7 +1013,7 @@ function train_read_next_rail_entity_ahead(pindex, invert)
       message = message .. "end rail "
       
    elseif next_entity_label == "rail signal" then
-      local signal_state = next_entity.signal_state --todo later here decode the signals with a lookup table call
+      local signal_state = next_entity.signal_state --laterdo here decode the signals with a lookup table call
       message = message .. "rail signal with state " .. signal_state .. " "
       
    elseif next_entity_label == "chain signal" then
@@ -1122,8 +1122,8 @@ function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
    --local trains_in_current_block = current_rail.trains_in_block
    
    --Report opposite direction entities.
-   if next_is_forward == false and next_entity_label ~= "junction rail" ~= "end rail" then
-      message = message .. " Opposite direction's "--todo fix**
+   if next_is_forward == false and (next_entity_label == "train stop" or next_entity_label == "rail signal" or next_entity_label == "chain signal") then
+      message = message .. " Opposite direction's "
    end
    
    --Add more info depending on entity label
@@ -1133,7 +1133,7 @@ function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
    elseif next_entity_label == "fork split" then
       local entering_segment_rail = result_extra  
       message = message .. "rail fork splitting "
-      --todo later here, give more info such as the name of the junction and available directions
+      --laterdo here, give rail fork directions
    
    elseif next_entity_label == "fork merge" then
       local entering_segment_rail = result_extra  
@@ -1144,7 +1144,7 @@ function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
       message = message .. "end rail "
 	  
    elseif next_entity_label == "rail signal" then
-      local signal_state = next_entity.signal_state --todo later here decode the signals with a lookup table call
+      local signal_state = next_entity.signal_state --laterdo here decode the signals with a lookup table call
       message = message .. "rail signal with state " .. signal_state .. " "
       
    elseif next_entity_label == "chain signal" then
@@ -1194,183 +1194,9 @@ function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
 end
 
 
---[[ 
-     -Work in progress. Reports objects of interest along a rail including distance from the start rail ; todo later
-     -Similar to train_read_next_rail_entity_ahead
-     -Ideally opened by left clicking on a rail. Needs to track steps away from the start rail and save a lot of info in faplayer
-     
-     -will need to track current_step, last_step. Step 0 is the menu start. Step 1 and up is forward. Step -1 and down is backward
-     -will need to track current_object, next_object, prev_object, last_read_object
-     
-     -track trains_in_block and fire an alert if too many
-     
-     -for a train, the origin rail is the leading rail
-     -for a static rail, the origin rail is the rail
-     
-     -for a train, press J to repeat. The menu is opened as soon as you enter a train and closed when you leave. ahead/behind is determined by direction faced by the vehicle you board.
-     -for a static rail, left click to open the menu. 
-     
-     -for both, use arrow keys to navigate up down left right. Can navigate while driving
---]]
+ 
+--laterdo here: Rail analyzer menu where you will use arrow keys to go forward/back and left/right along a rail.
 function rail_analyzer_menu(pindex, origin_rail,is_called_from_train)
-   local called_from_train = is_called_from_train
-   local message = ""
-   
-   --Load in global vars
-   local current_step = nil
-   local last_step = nil
-   local current_object = nil
-   local last_object  = nil
-   local front_object = nil
-   local back_object  = nil
-   
-   local current_rail = nil
-   local last_rail  = nil
-   local front_rail = nil
-   local back_rail  = nil
-   
-   if current_step == 0 then --First line
-      if called_from_train then
-         message = "Rail analyzer menu. Press UP ARROW to travel forward along this rail and DOWN ARROW to travel backward."
-      else
-         message = "Rail analyzer menu. Press UP ARROW to travel forward along this rail and DOWN ARROW to travel backward."
-      end
-      printout(message, pindex)
-      return
-   elseif current_step == last_step then
-      --We did not iterate forward or backward, like when pressing left/right at a junction
-   elseif current_step > last_step then
-      --We went forward
-      last_object = current_object
-      front_object = nil --
-   elseif current_step < last_step then
-      --We went backward
-   end
-
-   return
-end
-
-
---DEPRECATED: For a train, reports the name and distance of the nearest rail structure such as train stop. Reporting junctions will require having the structure log.
---todo later delete when done copying
-function read_structure_ahead(vehicle, back_instead)
-   local back_instead = back_instead or false
-   local train = vehicle.train
-   local result = ""
-   local front_rail = train.front_rail
-   local front_last_rail = front_rail.get_rail_segment_end(train.rail_direction_from_front_rail)
-   local entity_ahead = front_rail.get_rail_segment_entity(train.rail_direction_from_front_rail, false)
-   local other_entity_1 = front_rail.get_rail_segment_entity(train.rail_direction_from_front_rail, true)
-   local other_entity_2 = front_rail.get_rail_segment_entity(train.rail_direction_from_back_rail, false)
-   local other_entity_3 = front_rail.get_rail_segment_entity(train.rail_direction_from_back_rail, true)
-   local check_further = false
-   local distance = -1
-   
-   if train == nil then
-      printout("This check works only for trains.",pindex)
-      return
-   end
-   
-   if back_instead then--here find correct other entity for the reverse direction, maybe using the back rail
-      front_rail = train.front_rail
-      front_last_rail   = front_rail.get_rail_segment_end(train.rail_direction_from_back_rail)
-      entity_ahead      = entity_ahead
-      other_enity_ahead = entity_ahead
-      result = result .. "In reverse "
-      return
-   end
-     
-   --Check the distance ahead
-   distance = util.distance(front_rail.position, front_last_rail.position)
-   
-   --Identify what is ahead
-   if entity_ahead == nil then
-      local is_end_rail, dir, comment = check_end_rail(front_last_rail, pindex)
-      local connection_count = count_rail_connections(front_last_rail)
-      if is_end_rail then
-         result = result .. "End rail "
-      elseif connection_count > 2 then
-         result = result .. "Junction "
-         check_further = true
-      else
-         check_further = true
-         if other_entity_1 ~= nil then
-            result = result .. " other 1, " .. other_entity_1.name .. " "--opposite direction rail signal
-         elseif other_entity_2 ~= nil then
-            result = result .. " other 2, " .. other_entity_1.name .. " "
-         elseif other_entity_3 ~= nil then
-            result = result .. " other 3, " .. other_entity_1.name .. " "--likely to be same entity as other 1
-         else
-            result = result .. " Unknown structure " --here iterate to next rail or something to find it.
-         end
-      end   
-   elseif entity_ahead.name == "train-stop" then
-      distance = distance - 2
-      if distance > 25 then
-         result = "Train stop " .. entity_ahead.backer_name .. " ahead in " .. distance .. " meters. "
-         if back_instead then
-            result = "Train stop " .. entity_ahead.backer_name .. " behind in " .. distance .. " meters. "
-         end
-      else
-         distance = util.distance(vehicle.position, entity_ahead.position) - 3.6
-         if math.abs(distance) <= 0.2 then
-            result = " Aligned with train stop " .. entity_ahead.backer_name
-         elseif distance > 0.2 then
-            result = math.floor(distance * 10) / 10 .. " meters away from train stop " .. entity_ahead.backer_name .. ", for this vehicle. " --maybe always read front locomotive?
-         elseif distance < 0.2 then
-            result = math.floor((-distance) * 10) / 10 .. " meters past train stop " .. entity_ahead.backer_name .. ", for this vehicle. " --maybe always read front locomotive?
-         end
-      end
-   elseif entity_ahead.name == "rail-signal" then
-      result = result .. "Rail signal, state " .. entity_ahead.signal_state .. " "
-      check_further = true
-   elseif entity_ahead.name == "rail-chain-signal" then
-      result = result .. "Chain signal, state " .. entity_ahead.chain_signal_state .. " "
-      check_further = true
-   else
-      result = result .. "Unknown structure "
-   end
-   
-   -- here later: check the structure log to identify if there is a known junction
-   if check_further then
-      result = result
-   end
-   
-   --Give a distance until the end rail. Note: The current distance is direct and ignores the rail length, which may cause errors for curved paths.
-   if entity_ahead == nil or entity_ahead.name ~= "train-stop" then
-      result = result .. " ahead in " .. math.floor(distance) .. " meters, "
-      
-      --Feature to notify passed train stops.
-      if vehicle.name == "locomotive" then
-         local heading = get_heading(vehicle)
-         local pos = vehicle.position
-         local scan_area = nil
-         local passed_stop = nil
-         --Scan behind the locomotive for 25 meters for straight rails. Need to test!
-         if heading == "North" then
-            scan_area = {{pos.x-3,pos.y-3},{pos.x+3,pos.y+25}}
-         elseif heading == "South" then
-            scan_area = {{pos.x-3,pos.y+3},{pos.x+3,pos.y-25}}
-         elseif heading == "East" then
-            scan_area = {{pos.x-25,pos.y-3},{pos.x+3,pos.y+3}}
-         elseif heading == "West" then
-            scan_area = {{pos.x+25,pos.y-3},{pos.x-3,pos.y+3}}
-         else
-            scan_area = {{pos.x+0,pos.y+0},{pos.x+1,pos.y+1}}
-         end
-         local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "train-stop"}
-         if #ents > 0 then
-            passed_stop = ents[1]
-            distance = util.distance(vehicle.position, passed_stop.position)
-            if distance > 12.5 then
-               result = result .. " train stop " .. passed_stop.backer_name .. " behind in " .. math.floor(distance) .. " meters. "
-            else
-               result = math.floor(distance) .. " meters past train stop " .. passed_stop.backer_name .. ", for this vehicle. " --maybe always read front locomotive?
-            end
-         end
-      end
-   end
-   printout(result,pindex)
    return
 end
 
@@ -2864,7 +2690,7 @@ function train_menu(menu_index, pindex, clicked, other_input)
       .. #train.fluid_wagons .. " fluid wagons, ", pindex) 
    elseif index == 3 then 
 	  --Fuel info
-      printout("Locomotive fuel tank " .. read_locomotive_fuel(pindex,locomotive), pindex)
+      printout("Locomotive fuel tank " .. fuel_inventory_info(locomotive, pindex), pindex)
    end
    --[[ Train menu options ideas
    name, id, menu instructions
@@ -2974,7 +2800,7 @@ function train_stop_menu(menu_index, pindex, clicked, other_input)
          input.focus()
       end
    elseif index == 2 then
-      printout("Note, you are recommended to set up a fast travel point near this stop.",pindex)--todo later: add clickable option to add/remove this stop to the list.
+      printout("Note, you are recommended to set up a fast travel point near this stop.",pindex)--laterdo: add clickable option to add/remove this stop to the list.
    end
 end
 
@@ -3043,7 +2869,7 @@ function train_stop_menu_down(pindex)
    train_stop_menu(players[pindex].train_stop_menu.index, pindex, false)
 end
 
---Reads cargo wagon contents in detail, todo later: a full inventory screen
+--Reads cargo wagon contents in detail, laterdo: a full inventory screen
 function read_cargo_wagon_contents(pindex,wagon)
    local result = ""
    local itemset = wagon.get_inventory(defines.inventory.cargo_wagon).get_contents()
@@ -3079,10 +2905,10 @@ function read_cargo_wagon_contents(pindex,wagon)
 end
 
 
---Return fuel content in the locomotive
-function read_locomotive_fuel(pindex,loco)
-   local result = ""
-   local itemset = loco.get_fuel_inventory().get_contents()
+--Return fuel content in a fuel inventory
+function fuel_inventory_info(ent, pindex)
+   local result = "Contains nothing."
+   local itemset = ent.get_fuel_inventory().get_contents()
    local itemtable = {}
    for name, count in pairs(itemset) do
       table.insert(itemtable, {name = name, count = count})
@@ -3090,10 +2916,8 @@ function read_locomotive_fuel(pindex,loco)
    table.sort(itemtable, function(k1, k2)
       return k1.count > k2.count
    end)
-   if #itemtable == 0 then
-      result = result .. " Contains nothing "
-   else
-      result = result .. " Contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
+   if #itemtable > 0 then
+      result = "Contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
       if #itemtable > 1 then
          result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. " "
       end
@@ -3101,7 +2925,6 @@ function read_locomotive_fuel(pindex,loco)
          result = result .. " and " .. itemtable[3].name .. " times " .. itemtable[3].count .. " "
       end
    end
-   --printout(result,pindex)
    return result
 end
 

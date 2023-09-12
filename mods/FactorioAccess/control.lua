@@ -5992,14 +5992,19 @@ script.on_event("right-click", function(event)
       local ent_status_text = ""
       local status_lookup = into_lookup(defines.entity_status)
       if ent.name == "cargo-wagon" then
-         --Read contents   
+         --Instead of status, read contents   
          read_cargo_wagon_contents(pindex,ent)
       elseif ent_status_id ~= nil then
-         --Print status
+         --Print status if it exists
          ent_status_text = status_lookup[ent_status_id]
          printout(" " .. ent_status_text ,pindex)
       else
-         printout("No status." ,pindex)
+	     --When there is no status, for entities with fuel inventories, read that out instead. This is typical for vehicles.
+	     if ent.get_fuel_inventory() ~= nil then
+		    printout("No status, " .. fuel_inventory_info(ent, pindex),pindex)--todo test me**
+		 else
+            printout("No status." ,pindex)
+		 end
       end
    end
 end
@@ -6459,29 +6464,23 @@ script.on_event("open-fast-travel", function(event)
 
    end
    
-   --The V key normally disconnects rolling stock if driving! **todo change that setting because forcing a reconnect does not seem to work
-   --local ent = players[pindex].tile.ents[1]
+   --Report disconnect error because the V key normally disconnects rolling stock if driving.
    local vehicle = nil
    if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
       vehicle = game.get_player(pindex).vehicle
-   --elseif ent ~= nil and ent.valid and ent.train ~= nil then
-   --   vehicle = ent
-   end
-   
-   if vehicle ~= nil then
       local connected = 0
-         if vehicle.get_connected_rolling_stock(defines.rail_direction.front) ~= nil then
-            connected = connected + 1
-         end
-         if vehicle.get_connected_rolling_stock(defines.rail_direction.back) ~= nil then
-            connected = connected + 1
-         end
-         if connected == 0 then
-            printout("Warning, disconnected this vehicle.", pindex)
-            --Attempt to reconnect (does not work)
-            vehicle.connect_rolling_stock(defines.rail_direction.front)
-            vehicle.connect_rolling_stock(defines.rail_direction.back)
-         end
+      if vehicle.get_connected_rolling_stock(defines.rail_direction.front) ~= nil then
+         connected = connected + 1
+      end
+      if vehicle.get_connected_rolling_stock(defines.rail_direction.back) ~= nil then
+         connected = connected + 1
+      end
+      if connected == 0 then
+         printout("Warning, this vehicle was disconnected. Please review mod settings.", pindex)
+         --Attempt to reconnect (does not work)
+         --vehicle.connect_rolling_stock(defines.rail_direction.front)
+         --vehicle.connect_rolling_stock(defines.rail_direction.back)
+      end
    end
 
 end)
@@ -6637,19 +6636,31 @@ script.on_event("scan-selection-down", function(event)
    end
 end)
 
---Mines all trees and rocks in a selected rectangular area. Useful when placing structures.
-function mine_trees_and_rocks_in_area(area, pindex)
+--Mines all trees and rocks in a selected rectangular area. Useful when placing structures. Forces mining. todo** test me
+function mine_trees_and_rocks_in_area(mine_area, pindex)
    local surf = game.get_player(pindex).surface
    local comment = ""
    local outcome = true
+   local trees_cleared = 0
+   local rocks_cleared = 0
    
-   area_ents = surf.find_entities_filtered{area = build_area}
+   --Find and mine trees
+   local trees = surf.find_entities_filtered{area = mine_area, type = "tree"}
+   for i,tree_ent in ipairs(trees) do
+      game.get_player(pindex).mine_entity(tree_ent,true)
+	  trees_cleared = trees_cleared + 1
+   end
    
-   --todo complete this function 
-   --call mine_entity to mine every tree in the array area_ents
-   --comment = comment .. " cleared " .. x .. " trees, "
-   --call mine_entity to mine every rock in the array area_ents
-   --comment = comment .. " cleared " .. x .. " rocks, "
+   --Find and mine rocks. Note that they are resource entities with specific names
+   local resources = surf.find_entities_filtered{area = mine_area, type = "resource"}
+   for i,resource_ent in ipairs(resources) do
+      if resource_ent.name == "rock-big" or resource_ent.name == "rock-huge" or resource_ent.name == "sand-rock-big" then
+         game.get_player(pindex).mine_entity(resource_ent,true)
+		 rocks_cleared = rocks_cleared + 1
+      end
+   end
+   
+   comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks. "
    return outcome, comment
 end
 

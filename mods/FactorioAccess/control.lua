@@ -473,9 +473,9 @@ function ent_info(pindex, ent, description)
       if #itemtable == 0 then
          result = result .. " containing nothing "
       else
-         result = result .. " containing " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
+         result = result .. " containing " .. itemtable[1].name .. " times " .. itemtable[1].count .. ", "
          if #itemtable > 1 then
-            result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. " "
+            result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. ", "
          end
          if #itemtable > 2 then
             result = result .. "and other items "
@@ -716,9 +716,9 @@ function ent_info(pindex, ent, description)
       if #itemtable == 0 then
          result = result .. " containing nothing "
       else
-         result = result .. " containing " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
+         result = result .. " containing " .. itemtable[1].name .. " times " .. itemtable[1].count .. ", "
          if #itemtable > 1 then
-            result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. " "
+            result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. ", "
          end
          if #itemtable > 2 then
             result = result .. "and other items "
@@ -5569,7 +5569,7 @@ function build_item_in_hand(pindex, offset_val)
       build_offshore_pump_in_hand(pindex)
       return
    elseif stack.name == "rail" then 
-      if offset_val ~= 1.337 then --sentinel value to allow free building rails
+      if offset_val ~= 1.337 then --only when sentinel value, it allows free building rails
          local pos = players[pindex].cursor_pos
          append_rail(pos, pindex)
          return
@@ -5993,7 +5993,7 @@ script.on_event("right-click", function(event)
       local status_lookup = into_lookup(defines.entity_status)
       if ent.name == "cargo-wagon" then
          --Instead of status, read contents   
-         read_cargo_wagon_contents(pindex,ent)
+         printout(" " .. cargo_wagon_top_contents_info(ent),pindex)
       elseif ent_status_id ~= nil then
          --Print status if it exists
          ent_status_text = status_lookup[ent_status_id]
@@ -6001,7 +6001,7 @@ script.on_event("right-click", function(event)
       else
 	     --When there is no status, for entities with fuel inventories, read that out instead. This is typical for vehicles.
 	     if ent.get_fuel_inventory() ~= nil then
-		    printout("No status, " .. fuel_inventory_info(ent, pindex),pindex)--todo test me**
+		    printout(" " .. fuel_inventory_info(ent),pindex)
 		 else
             printout("No status." ,pindex)
 		 end
@@ -6636,8 +6636,8 @@ script.on_event("scan-selection-down", function(event)
    end
 end)
 
---Mines all trees and rocks in a selected rectangular area. Useful when placing structures. Forces mining. todo** test me
-function mine_trees_and_rocks_in_area(mine_area, pindex)
+--Mines all trees and rocks in a selected rectangular area. Useful when placing structures. Forces mining.
+function mine_trees_and_rocks_in_circle(position, radius, pindex)
    local surf = game.get_player(pindex).surface
    local comment = ""
    local outcome = true
@@ -6645,22 +6645,24 @@ function mine_trees_and_rocks_in_area(mine_area, pindex)
    local rocks_cleared = 0
    
    --Find and mine trees
-   local trees = surf.find_entities_filtered{area = mine_area, type = "tree"}
+   local trees = surf.find_entities_filtered{position = position, radius = radius, type = "tree"}
    for i,tree_ent in ipairs(trees) do
       game.get_player(pindex).mine_entity(tree_ent,true)
 	  trees_cleared = trees_cleared + 1
    end
    
    --Find and mine rocks. Note that they are resource entities with specific names
-   local resources = surf.find_entities_filtered{area = mine_area, type = "resource"}
+   local resources = surf.find_entities_filtered{position = position, radius = radius, type = "resource"}
    for i,resource_ent in ipairs(resources) do
       if resource_ent.name == "rock-big" or resource_ent.name == "rock-huge" or resource_ent.name == "sand-rock-big" then
          game.get_player(pindex).mine_entity(resource_ent,true)
 		 rocks_cleared = rocks_cleared + 1
       end
    end
-   
-   comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks. "
+   if trees_cleared + rocks_cleared > 0 then
+      comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks. "
+   end
+   rendering.draw_circle{color = {0, 1, 0},radius = radius,width = radius,target = position,surface = surf,time_to_live = 200}
    return outcome, comment
 end
 
@@ -6815,21 +6817,10 @@ script.on_event("control-g-key", function(event)
    if not check_for_player(pindex) then
       return
    end
-   
-   if ent ~= nil and (ent.name == "straight-rail" or ent.name == "curved-rail") then
-      --build_small_plus_intersection(ent, pindex)
-      --read_all_rail_segment_entities(pindex, ent)
-   elseif game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
-      local leading_rail, dir, leading_stock = get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex, game.get_player(pindex).vehicle.train, false)
-      --Test locomotive leading rail
-      printout("Leading rail, " .. where_is_a_for_b(leading_rail,game.get_player(pindex).vehicle) .. " and leading stock is a " .. leading_stock.name 
-      .. " facing " .. get_heading(leading_stock) ,pindex)
-      --Test object ahead
-      --train_read_next_rail_entity_ahead(pindex,false)
-   elseif ent ~= nil then
-      printout(ent.name .. " with unit number " .. ent.unit_number .. " " .. where_is_a_for_b(ent,players[pindex]),pindex)
+   if ent ~= nil and ent.valid and ent.name == "straight-rail" then
+      local range = 4
+      printout(count_rails_within_range(ent, range, pindex) .. " rails within a range of " .. range,pindex)
    end
-
 end)
 
 --This event handler patches the unwanted opening of the inventory screen when closing a factorio access menu

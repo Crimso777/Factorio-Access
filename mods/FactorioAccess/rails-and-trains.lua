@@ -244,6 +244,11 @@ function check_end_rail(check_rail, pindex)
       comment = "Nil."
       return is_end_rail, -1, comment
    end
+   if not check_rail.valid then
+      is_end_rail = false
+      comment = "Invalid."
+      return is_end_rail, -1, comment
+   end
    if not (check_rail.name == "straight-rail" or check_rail.name == "curved-rail") then
       is_end_rail = false
       comment = "Not a rail."
@@ -394,7 +399,7 @@ function vehicle_info(pindex)
    local train = game.get_player(pindex).vehicle.train
    if train == nil then
       --This is a type of car or tank.
-      result = "Driving " .. vehicle.name .. ", " .. fuel_inventory_info(vehicle, pindex)
+      result = "Driving " .. vehicle.name .. ", " .. fuel_inventory_info(vehicle)
       --laterdo: can add more info here? For example health or ammo or trunk contents
       return result
    else
@@ -703,9 +708,9 @@ end
 --Does not require any specific position or rotation for any of the stock!
 --For the leading rail, the connected rail that is farthest from the leading stock is in the "ahead" direction. 
 --]]
-function get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex, train, is_trailing_instead)
-   local trailing_instead = is_trailing_instead or false
+function get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex, train)
    local leading_rail = nil
+   local trailing_rail = nil
    local leading_stock = nil
    local ahead_rail_dir = nil
 
@@ -725,6 +730,7 @@ function get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex, train, is_
       end
       if vehicle_is_a_front_loco == true then
          leading_rail = front_rail
+		 trailing_rail = back_rail
          leading_stock = train.front_stock 
       else
          for i,loco in ipairs(locos["back_movers"]) do
@@ -734,6 +740,7 @@ function get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex, train, is_
          end
          if vehicle_is_a_front_loco == false then
             leading_rail = back_rail
+			trailing_rail = front_rail
             leading_stock = train.back_stock
          else
             --Unexpected place
@@ -743,18 +750,8 @@ function get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex, train, is_
    else
       --Just assume the front stock is leading
       leading_rail = front_rail
+	  trailing_rail = back_rail
       leading_stock = train.front_stock
-   end
-
-   --Flip the "leading rail" to get the trailing rail
-   if trailing_instead then
-      if leading_rail.unit_number == back_rail.unit_number then
-         leading_rail = front_rail
-         leading_stock = train.front_stock
-      else
-         leading_rail = back_rail
-         leading_stock = train.back_stock
-      end
    end
    
    --Error check
@@ -788,8 +785,8 @@ function get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex, train, is_
       return leading_rail, defines.rail_direction.back, leading_stock
    end
    
-   local front_dist = math.abs(util.distance(leading_stock.position, front_rail.position))
-   local back_dist = math.abs(util.distance(leading_stock.position, back_rail.position))
+   local front_dist = math.abs(util.distance(leading_stock.position, front_rail.position)) 
+   local back_dist = math.abs(util.distance(leading_stock.position, back_rail.position)) 
    --The connected rail that is farther from the leading stock is in the ahead direction.
    if front_dist > back_dist then
       return leading_rail, defines.rail_direction.front, leading_stock
@@ -881,7 +878,7 @@ function identify_rail_segment_end_object(rail, dir_ahead, accept_only_forward, 
             result_extra = end_rail_dir
 			return result_entity, result_entity_label, result_extra, result_is_forward
 		 else
-		    --The neighbor should have an entity or something**
+		    --The neighbor rail should have an entity?
             result_entity = segment_last_rail
             result_entity_label = "other rail" 
             result_extra = nil
@@ -968,14 +965,23 @@ end
 function train_read_next_rail_entity_ahead(pindex, invert)
    local message = "Ahead, "
    local train = game.get_player(pindex).vehicle.train
-   local leading_rail, dir_ahead, leading_stock = get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex,train, false)
+   local leading_rail, dir_ahead, leading_stock = get_leading_rail_and_dir_of_train_by_boarded_vehicle(pindex,train)
    if invert then
       dir_ahead = get_opposite_rail_direction(dir_ahead)
 	  message = "Behind, "
    end
+   --Correction for trains: Flip the correct direction ahead for mismatching diagonal rails
+   if leading_rail.name == "straight-rail" and (leading_rail.direction == 5 or leading_rail.direction == 7) then
+      dir_ahead = get_opposite_rail_direction(dir_ahead)
+   end
+   --Correction for trains: Curved rails report different directions based on where the train sits and so are unreliable.
+   if leading_rail.name == "curved-rail" then
+      printout("Curved rail analysis error, check from another rail.",pindex)
+	  return
+   end
    local next_entity, next_entity_label, result_extra, next_is_forward, iteration_count = get_next_rail_entity_ahead(leading_rail, dir_ahead, false)
    if next_entity == nil then
-      printout("Analysis error. This rail might be looping.",pindex)
+      printout("Analysis error, this rail might be looping.",pindex)
       return
    end
    local distance = math.floor(util.distance(leading_stock.position, next_entity.position))
@@ -1085,14 +1091,7 @@ function train_read_next_rail_entity_ahead(pindex, invert)
    end
    printout(message,pindex)
    --Draw circles for visual debugging
-   rendering.draw_circle{
-         color = {0, 1, 0},
-         radius = 1,
-         width = 10,
-         target = next_entity,
-         surface = next_entity.surface,
-         time_to_live = 9,
-       }
+   rendering.draw_circle{color = {0, 1, 0},radius = 1,width = 10,target = next_entity,surface = next_entity.surface,time_to_live = 100}
 end
 
 
@@ -1180,14 +1179,7 @@ function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
    end
    printout(message,pindex)
    --Draw circles for visual debugging
-   rendering.draw_circle{
-         color = {0, 1, 0},
-         radius = 1,
-         width = 10,
-         target = next_entity,
-         surface = next_entity.surface,
-         time_to_live = 9,
-       }
+   rendering.draw_circle{color = {0, 1, 0},radius = 1,width = 10,target = next_entity,surface = next_entity.surface,time_to_live = 100}
 end
 
 
@@ -1238,16 +1230,16 @@ function build_rail_turn_right_45_degrees(anchor_rail, pindex)
    pos = anchor_rail.position
    
    --3. Clear trees and rocks in the build area, can be tuned later...
-   if dir == 0 or dir == 1 then
-      build_area = {{pos.x, pos.y},{pos.x+12,pos.y-12}}
-   elseif dir == 2 or dir == 3 then
-      build_area = {{pos.x, pos.y},{pos.x+12,pos.y+12}}
-   elseif dir == 4 or dir == 5 then
-      build_area = {{pos.x, pos.y},{pos.x-12,pos.y+12}}
-   elseif dir == 6 or dir == 7 then
-      build_area = {{pos.x, pos.y},{pos.x-12,pos.y-12}}
-   end 
-   temp1, build_comment = mine_trees_and_rocks_in_area(build_area, pindex)
+   -- if dir == 0 or dir == 1 then
+      -- build_area = {{pos.x-9, pos.y+9},{pos.x+16,pos.y-16}}
+   -- elseif dir == 2 or dir == 3 then
+      -- build_area = {{pos.x-9, pos.y-9},{pos.x+16,pos.y+16}}
+   -- elseif dir == 4 or dir == 5 then
+      -- build_area = {{pos.x+9, pos.y-9},{pos.x-16,pos.y+16}}
+   -- elseif dir == 6 or dir == 7 then
+      -- build_area = {{pos.x+9, pos.y+9},{pos.x-16,pos.y-16}}
+   -- end 
+   temp1, build_comment = mine_trees_and_rocks_in_circle(pos,12, pindex)
    
    --4. Check if every object can be placed
    if dir == 0 then 
@@ -1420,16 +1412,16 @@ function build_rail_turn_right_90_degrees(anchor_rail, pindex)
    end
    
    --3. Clear trees and rocks in the build area
-   if dir == 0 then
-      build_area = {{pos.x, pos.y},{pos.x+16,pos.y-16}}
-   elseif dir == 2 then
-      build_area = {{pos.x, pos.y},{pos.x+16,pos.y+16}}
-   elseif dir == 4 then
-      build_area = {{pos.x, pos.y},{pos.x-16,pos.y+16}}
-   elseif dir == 6 then
-      build_area = {{pos.x, pos.y},{pos.x-16,pos.y-16}}
-   end 
-   temp1, build_comment = mine_trees_and_rocks_in_area(build_area, pindex)
+   -- if dir == 0 then
+      -- build_area = {{pos.x-2, pos.y+2},{pos.x+16,pos.y-16}}
+   -- elseif dir == 2 then
+      -- build_area = {{pos.x-2, pos.y-2},{pos.x+16,pos.y+16}}
+   -- elseif dir == 4 then
+      -- build_area = {{pos.x+2, pos.y-2},{pos.x-16,pos.y+16}}
+   -- elseif dir == 6 then
+      -- build_area = {{pos.x+2, pos.y+2},{pos.x-16,pos.y-16}}
+   -- end 
+   temp1, build_comment = mine_trees_and_rocks_in_circle(pos,18, pindex)
    
    --4. Check if every object can be placed
    if dir == 0 then 
@@ -1537,16 +1529,16 @@ function build_rail_turn_left_45_degrees(anchor_rail, pindex)
    pos = anchor_rail.position
    
    --3. Clear trees and rocks in the build area, can be tuned later...
-   if dir == 0 or dir == 1 then
-      build_area = {{pos.x, pos.y},{pos.x-12,pos.y-12}}
-   elseif dir == 2 or dir == 3 then
-      build_area = {{pos.x, pos.y},{pos.x+12,pos.y-12}}
-   elseif dir == 4 or dir == 5 then
-      build_area = {{pos.x, pos.y},{pos.x+12,pos.y+12}}
-   elseif dir == 6 or dir == 7 then
-      build_area = {{pos.x, pos.y},{pos.x-12,pos.y+12}}
-   end 
-   temp1, build_comment = mine_trees_and_rocks_in_area(build_area, pindex)
+   -- if dir == 0 or dir == 1 then
+      -- build_area = {{pos.x+9, pos.y+9},{pos.x-16,pos.y-16}}
+   -- elseif dir == 2 or dir == 3 then
+      -- build_area = {{pos.x-9, pos.y+9},{pos.x+16,pos.y-16}}
+   -- elseif dir == 4 or dir == 5 then
+      -- build_area = {{pos.x-9, pos.y-9},{pos.x+16,pos.y+16}}
+   -- elseif dir == 6 or dir == 7 then
+      -- build_area = {{pos.x+9, pos.y-9},{pos.x-16,pos.y+16}}
+   -- end 
+   temp1, build_comment = mine_trees_and_rocks_in_circle(pos,12, pindex)
    
    --4. Check if every object can be placed
    if dir == 0 then 
@@ -1719,16 +1711,16 @@ function build_rail_turn_left_90_degrees(anchor_rail, pindex)
    end
    
    --3. Clear trees and rocks in the build area
-   if dir == 0 then
-      build_area = {{pos.x, pos.y},{pos.x-16,pos.y-16}}
-   elseif dir == 2 then
-      build_area = {{pos.x, pos.y},{pos.x+16,pos.y-16}}
-   elseif dir == 4 then
-      build_area = {{pos.x, pos.y},{pos.x+16,pos.y+16}}
-   elseif dir == 6 then
-      build_area = {{pos.x, pos.y},{pos.x-16,pos.y+16}}
-   end 
-   temp1, build_comment = mine_trees_and_rocks_in_area(build_area, pindex)
+   -- if dir == 0 then
+      -- build_area = {{pos.x+2, pos.y+2},{pos.x-16,pos.y-16}}
+   -- elseif dir == 2 then
+      -- build_area = {{pos.x+2, pos.y+2},{pos.x+16,pos.y-16}}
+   -- elseif dir == 4 then
+      -- build_area = {{pos.x+2, pos.y+2},{pos.x+16,pos.y+16}}
+   -- elseif dir == 6 then
+      -- build_area = {{pos.x+2, pos.y+2},{pos.x-16,pos.y+16}}
+   -- end 
+   temp1, build_comment = mine_trees_and_rocks_in_circle(pos,18, pindex)
    
    --4. Check if every object can be placed
    if dir == 0 then 
@@ -1840,7 +1832,7 @@ function build_small_plus_intersection(anchor_rail, pindex)
    end
    
    --3. Clear trees and rocks in the build area
-   temp1, build_comment = mine_trees_and_rocks_in_area({{pos.x-7,pos.y-7},{pos.x+7,pos.y+7}}, pindex)
+   temp1, build_comment = mine_trees_and_rocks_in_circle(pos,10, pindex)
    
    --4. Check if every object can be placed
    if dir == 0 then 
@@ -2183,9 +2175,16 @@ function append_rail(pos, pindex)
    
    --7. Finally, create the appended rail and subtract 1 rail from the hand.
    --game.get_player(pindex).build_from_cursor{position = append_rail_pos, direction = append_rail_dir}--acts unsolvably weird when building diagonals of rotation 5 and 7
-   surf.create_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir, force = game.forces.player}
+   created_rail = surf.create_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir, force = game.forces.player}
    game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 1
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
+   
+   --8. Check if the appended rail is with 4 tiles of a parallel rail. If so, delete it.
+   if has_parallel_neighbor(created_rail,pindex) then
+      game.get_player(pindex).mine_entity(created_rail,true)
+	  game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      printout("Cannot place, parallel rail segments should be at least 4 tiles apart.",pindex)
+   end
 
 end
 
@@ -2205,6 +2204,8 @@ function count_rails_within_range(rail, range, pindex)
       --3. Increase counter for each curved rail
 	  counter = counter + 1
    end
+   --Draw the range for visual debugging
+   rendering.draw_circle{color = {0, 1, 0}, radius = range, width = range, target = rail, surface = rail.surface,time_to_live = 100}
    return counter
 end
 
@@ -2212,14 +2213,17 @@ end
 function has_parallel_neighbor(rail, pindex)
    --1. Scan around the rail for other rails
    local pos = rail.position
-   local scan_area = {{pos.x-2,pos.y-2},{pos.x+2,pos.y+2}} --TODO tweak selection area
+   local scan_area = {{pos.x-4,pos.y-4},{pos.x+4,pos.y+4}} 
    local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "straight-rail"}
    for i,other_rail in ipairs(ents) do
 	 --2. For each rail, does it have the same rotation but a different segment? If yes return true.
-	  if rail.direction == other_rail.direction and not rail.is_rail_in_same_rail_segment_as(other_rail) then
+	  if rail.direction == other_rail.direction and not rail.is_rail_in_same_rail_segment_as(other_rail) 
+	     and (pos.x ~= other_rail.position.x) and (pos.y ~= other_rail.position.y) then
+	     --3. Parallel neighbor found, but we ignore cases where the X or Y axes are equal so that we can merge rails along the same lines.
 	 	 return true
 	  end
    end
+   --4. No parallel neighbor found
    return false
 end
 
@@ -2311,7 +2315,7 @@ function build_train_stop(anchor_rail, pindex)
    end
    
    --3. Clear trees and rocks in the build area
-   temp1, build_comment = mine_trees_and_rocks_in_area({{pos.x-5,pos.y-5},{pos.x+5,pos.y+5}}, pindex)
+   temp1, build_comment = mine_trees_and_rocks_in_circle(pos,3, pindex)
    
    --4. Check if every object can be placed
    if dir == 0 then 
@@ -2689,7 +2693,7 @@ function train_menu(menu_index, pindex, clicked, other_input)
       .. #train.fluid_wagons .. " fluid wagons, ", pindex) 
    elseif index == 4 then 
 	  --Train contents
-      printout("Cargo " .. read_train_top_contents(train,pindex), pindex)
+      printout("Cargo " .. train_top_contents_info(train) .. " ", pindex)
    end
    --[[ Train menu options summary
    0. name, id, menu instructions
@@ -2867,8 +2871,8 @@ function train_stop_menu_down(pindex)
    train_stop_menu(players[pindex].train_stop_menu.index, pindex, false)
 end
 
---Reads most common items in a cargo wagon. laterdo a full inventory screen maybe.
-function read_cargo_wagon_top_contents(pindex,wagon)
+--Returns most common items in a cargo wagon. laterdo a full inventory screen maybe.
+function cargo_wagon_top_contents_info(wagon)
    local result = ""
    local itemset = wagon.get_inventory(defines.inventory.cargo_wagon).get_contents()
    local itemtable = {}
@@ -2881,29 +2885,29 @@ function read_cargo_wagon_top_contents(pindex,wagon)
    if #itemtable == 0 then
       result = result .. " Contains nothing "
    else
-      result = result .. " Contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
+      result = result .. " Contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. ", "
       if #itemtable > 1 then
-         result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. " "
+         result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. ", "
       end
       if #itemtable > 2 then
-         result = result .. " and " .. itemtable[3].name .. " times " .. itemtable[3].count .. " "
+         result = result .. " and " .. itemtable[3].name .. " times " .. itemtable[3].count .. ", "
       end
       if #itemtable > 3 then
-         result = result .. " and " .. itemtable[4].name .. " times " .. itemtable[4].count .. " "
+         result = result .. " and " .. itemtable[4].name .. " times " .. itemtable[4].count .. ", "
       end
       if #itemtable > 4 then
-         result = result .. " and " .. itemtable[5].name .. " times " .. itemtable[5].count .. " "
+         result = result .. " and " .. itemtable[5].name .. " times " .. itemtable[5].count .. ", "
       end
       if #itemtable > 5 then
-         result = result .. " and other items."
+         result = result .. " and other items. "
       end
    end
    result = result .. ", Use inserters or cursor shortcuts to fill and empty this wagon. "
-   printout(result,pindex)
+   return result
 end
 
---Reads most common items in a train (sum of all cargo wagons)
-function read_train_top_contents(train,pindex)
+--Returns most common items in a train (sum of all cargo wagons)
+function train_top_contents_info(train)
    local result = ""
    local itemset = train.get_contents()
    local itemtable = {}
@@ -2916,23 +2920,23 @@ function read_train_top_contents(train,pindex)
    if #itemtable == 0 then
       result = result .. " Contains nothing "
    else
-      result = result .. " Contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
+      result = result .. " Contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. ", "
       if #itemtable > 1 then
-         result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. " "
+         result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. ", "
       end
       if #itemtable > 2 then
-         result = result .. " and " .. itemtable[3].name .. " times " .. itemtable[3].count .. " "
+         result = result .. " and " .. itemtable[3].name .. " times " .. itemtable[3].count .. ", "
       end
       if #itemtable > 3 then
-         result = result .. " and other items."
+         result = result .. " and other items. "
       end
    end
-   printout(result,pindex)
+   return result
 end
 
 
 --Return fuel content in a fuel inventory
-function fuel_inventory_info(ent, pindex)
+function fuel_inventory_info(ent)
    local result = "Contains no fuel."
    local itemset = ent.get_fuel_inventory().get_contents()
    local itemtable = {}
@@ -2943,7 +2947,7 @@ function fuel_inventory_info(ent, pindex)
       return k1.count > k2.count
    end)
    if #itemtable > 0 then
-      result = "Contains as fuel " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
+      result = "Contains as fuel, " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
       if #itemtable > 1 then
          result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. " "
       end
@@ -2953,4 +2957,3 @@ function fuel_inventory_info(ent, pindex)
    end
    return result
 end
-

@@ -1,3 +1,40 @@
+# Version 0.4.0
+
+Updated in September of 2023.
+
+## New Features
+- General vehicle support
+  * Entering and exiting a vehicle will notify you about the vehicle name.
+  * Press K inside a vehicle to learn the heading and coordinates.
+  * Pressing L while inside a vehicle will provide additional information about it. For cars, the fuel stocks are stated. For trains, basic info is given while the train menu has detailed info.
+  * You can refuel a vehicle by dropping a stack in hand into it via CONTROL + LEFT BRACKET.
+
+- Phase 0 and Phase 1 of Trains Implementation. In general, we made it accessible to build rail lines, analyze rail segments, build train stations, build and examine trains, and drive trains manually.
+  * Added info support for rails. There is now distinction between end rails, station rails, etc. and the directions of rails are given.
+  * Added support for building and renaming train stops.
+  * Added train station rail information tool. When you look at a rail behind a train stop, you get information of which section of which rail vehicle would be positioned there when a train stops at the station.
+  * Rail appender tool: Adds a straight rail to extend any straight end rail near the cursor.
+  * Rail structure building menu: Allows building correctly oriented railway structures based on a selected end rail as the anchor point.
+  * Functions added to build 45 degree turns and 90 degree turns as structures at end rails.
+  * Added support for building and naming trains.
+  * Allowed reading the fuel amount in a locomotive: check its status via RIGHT BRACKET.
+  * Information about a train can be read from its menu including name, length, vehicle counts, cargo item counts, etc.
+  * Rail analyzer tool: Press J inside a train to learn the nearest structure ahead on the rails and the distance to it. Press SHIFT + J to check the opposite direction.
+  * Rail analyzer tool works on foot as well.
+  * Examining a cargo wagon reads its contents.
+  * Other additions all across the code to support trains.
+  * Note 1: Parallel rail lines should be at least 4 tiles apart. This is partially enforced for the rail appender tool.
+  * Note 2: Partially and fully automated train support are goals for later updates. See Chapter 16 of the wiki for more info.
+
+## Changes
+- Changed the keybind for disconnecting rail vehicles from "V" to "SHIFT + G".
+- Teleporting is disabled while riding a vehicle..
+- Extra entries added to the ent info function for train related entities.
+
+## Bugfixes
+- Fixed a bug where the inventory is opened directly when a Factorio Access menu is closed.
+
+
 # Version 0.3.1
 
 Updated 10/26/2022

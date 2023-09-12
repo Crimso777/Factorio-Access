@@ -383,7 +383,7 @@ function check_end_rail(check_rail, pindex)
 end
 
 
---Report more info about a vehicle. For trains, this would include the name, ID, and destination.
+--Report more info about a vehicle. For trains, this would include the name, ID, and train state.
 function vehicle_info(pindex)
    local result = ""
    if not game.get_player(pindex).driving then
@@ -394,39 +394,43 @@ function vehicle_info(pindex)
    local train = game.get_player(pindex).vehicle.train
    if train == nil then
       --This is a type of car or tank.
-      result = vehicle.name .. " " 
-      --laterdo: can add more info here? For example health status and fuel status
+      result = "Driving " .. vehicle.name .. ", " .. fuel_inventory_info(vehicle, pindex)
+      --laterdo: can add more info here? For example health or ammo or trunk contents
       return result
    else
       --This is a type of locomotive or wagon.
-      --Check the state of the train
-      local train_state_id = train.state
-      local train_state_text = ""
-      local state_lookup = into_lookup(defines.train_state)
-      if train_state_id ~= nil then
-         train_state_text = state_lookup[train_state_id]
-      else
-         train_state_text = "No state"
-      end
       
       --Add the train name
-      result = " Train " .. get_train_name(train) .. " with ID " .. train.id .. ", "
+      result = "On board " .. vehicle.name .. " of train " .. get_train_name(train) .. ", "
       
       --Add the train state
-      result = result .. train_state_text .. ", "
+      result = result .. get_train_state(train) .. ", "
       
-      --Declare destination if any. Note: Not tested yet.
-      if train.has_path and train.path_end_stop ~= nil then 
-         result = result .. " heading to train stop " .. train.path_end_stop.backer_name .. ", "
-         result = result .. " traveled a distance of " .. train.path.travelled_distance .. " out of " train.path.total_distance " distance, "
-      end
+      --Declare destination if any. Note: Not tested yet. laterdo
+      --if train.has_path and train.path_end_stop ~= nil then 
+      --   result = result .. " heading to train stop " .. train.path_end_stop.backer_name .. ", "
+      --   result = result .. " traveled a distance of " .. train.path.travelled_distance .. " out of " train.path.total_distance " distance, "
+      --end
       
       --Note that more info and options are found in the train menu
       if vehicle.name == "locomotive" then
-         result = result .. " Press LEFT BRACKET to open this locomotive's menu. "
+         result = result .. " Press LEFT BRACKET to open the train menu. "
       end
       return result
    end
+end
+
+--Look up and translate the train state. -laterdo better explanations
+function get_train_state(train)
+   local train_state_id = train.state
+   local train_state_text = ""
+   local state_lookup = into_lookup(defines.train_state)
+   if train_state_id ~= nil then
+      train_state_text = state_lookup[train_state_id]
+   else
+      train_state_text = "None"
+   end
+   return train_state_text
 end
 
 
@@ -686,17 +690,10 @@ function where_is_a_for_b(a,b)
 end
 
 
---If an entity on the rail is beside a train, it is closer to the vehicle than the front rail or back rail is. It is also located "behind" the front rail and "in front of" the back rail (but check both directions for both anyway) todo later
-function get_rail_segment_entity_beside_train(train)
-   return nil
-end
-
 --Checks if the train is all in one segment, which means the front and back rails are in the same segment.
 function train_is_all_in_one_segment(train)
 	return train.front_rail.is_rail_in_same_rail_segment_as(train.back_rail)
 end
-
-
 
 
 --[[Returns the leading rail and the direction on it that is "ahead" and the leading stock. This is the direction that the currently boarded locomotive or wagon is facing.
@@ -1050,7 +1047,7 @@ function train_read_next_rail_entity_ahead(pindex, invert)
          message = message .. " facing " .. direction_lookup(result_extra)
       end
    end
-   --Feature to notify passed train stops.
+   --If a train stop is close behind, read that instead
    if leading_stock.name == "locomotive" and next_entity_label ~= "train stop" then
       local heading = get_heading(leading_stock)
       local pos = leading_stock.position
@@ -1087,7 +1084,7 @@ function train_read_next_rail_entity_ahead(pindex, invert)
       end
    end
    printout(message,pindex)
-   --Draw cricles for visual debugging
+   --Draw circles for visual debugging
    rendering.draw_circle{
          color = {0, 1, 0},
          radius = 1,
@@ -1182,7 +1179,7 @@ function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
       end
    end
    printout(message,pindex)
-   --Draw cricles for visual debugging
+   --Draw circles for visual debugging
    rendering.draw_circle{
          color = {0, 1, 0},
          radius = 1,
@@ -1424,13 +1421,13 @@ function build_rail_turn_right_90_degrees(anchor_rail, pindex)
    
    --3. Clear trees and rocks in the build area
    if dir == 0 then
-      build_area = {{pos.x, pos.y},{pos.x+14,pos.y-12}}
+      build_area = {{pos.x, pos.y},{pos.x+16,pos.y-16}}
    elseif dir == 2 then
-      build_area = {{pos.x, pos.y},{pos.x+12,pos.y+14}}
+      build_area = {{pos.x, pos.y},{pos.x+16,pos.y+16}}
    elseif dir == 4 then
-      build_area = {{pos.x, pos.y},{pos.x-14,pos.y+12}}
+      build_area = {{pos.x, pos.y},{pos.x-16,pos.y+16}}
    elseif dir == 6 then
-      build_area = {{pos.x, pos.y},{pos.x-12,pos.y-14}}
+      build_area = {{pos.x, pos.y},{pos.x-16,pos.y-16}}
    end 
    temp1, build_comment = mine_trees_and_rocks_in_area(build_area, pindex)
    
@@ -1723,13 +1720,13 @@ function build_rail_turn_left_90_degrees(anchor_rail, pindex)
    
    --3. Clear trees and rocks in the build area
    if dir == 0 then
-      build_area = {{pos.x, pos.y},{pos.x-14,pos.y-12}}
+      build_area = {{pos.x, pos.y},{pos.x-16,pos.y-16}}
    elseif dir == 2 then
-      build_area = {{pos.x, pos.y},{pos.x+12,pos.y-14}}
+      build_area = {{pos.x, pos.y},{pos.x+16,pos.y-16}}
    elseif dir == 4 then
-      build_area = {{pos.x, pos.y},{pos.x+14,pos.y+12}}
+      build_area = {{pos.x, pos.y},{pos.x+16,pos.y+16}}
    elseif dir == 6 then
-      build_area = {{pos.x, pos.y},{pos.x-12,pos.y+14}}
+      build_area = {{pos.x, pos.y},{pos.x-16,pos.y+16}}
    end 
    temp1, build_comment = mine_trees_and_rocks_in_area(build_area, pindex)
    
@@ -2215,7 +2212,7 @@ end
 function has_parallel_neighbor(rail, pindex)
    --1. Scan around the rail for other rails
    local pos = rail.position
-   local scan_area = {{pos.x-2,pos.y-2},{pos.x+2,pos.y+2}} --TODO tweak selection area**
+   local scan_area = {{pos.x-2,pos.y-2},{pos.x+2,pos.y+2}} --TODO tweak selection area
    local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "straight-rail"}
    for i,other_rail in ipairs(ents) do
 	 --2. For each rail, does it have the same rotation but a different segment? If yes return true.
@@ -2230,7 +2227,7 @@ end
 function is_intersection_rail(rail, pindex)
    --1. Scan around the rail for other rails
    local pos = rail.position
-   local scan_area = {{pos.x-1,pos.y-1},{pos.x+1,pos.y+1}} --TODO tweak selection area**
+   local scan_area = {{pos.x-1,pos.y-1},{pos.x+1,pos.y+1}} --TODO tweak selection area
    local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "straight-rail"}
    for i,other_rail in ipairs(ents) do
       --2. For each rail, does it have a different rotation and a different segment? If yes return true.
@@ -2245,7 +2242,7 @@ end
 function is_intersecting_curved_rails(rail, pindex)
    --1. Scan around the rail for other rails
    local pos = rail.position
-   local scan_area = {{pos.x-1,pos.y-1},{pos.x+1,pos.y+1}} --TODO tweak selection area**
+   local scan_area = {{pos.x-1,pos.y-1},{pos.x+1,pos.y+1}} --TODO tweak selection area
    local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "curved-rail"}
    for i,other_rail in ipairs(ents) do
       --2. For each rail, does it have a different segment? If yes return true.
@@ -2663,11 +2660,13 @@ function train_menu(menu_index, pindex, clicked, other_input)
    
    if index == 0 then
       --Give basic info about this train, such as its name and ID. Instructions.
-      printout("Train ".. get_train_name(train) .. " with ID " .. train.id 
+      printout("Train ".. get_train_name(train) .. ", with ID " .. train.id 
       .. ", Press UP ARROW and DOWN ARROW to navigate options, press LEFT BRACKET to select an option or press E to exit this menu.", pindex)
    elseif index == 1 then
+      printout("Train state " .. get_train_state(train) .. " ", pindex)
+   elseif index == 2 then
       if not clicked then
-         printout("Rename this train.", pindex)
+         printout("Rename this train, press LEFT BRACKET.", pindex)
       else
          if train.locomotives == nil then
             printout("The train must have locomotives for it to be named.", pindex)
@@ -2683,23 +2682,22 @@ function train_menu(menu_index, pindex, clicked, other_input)
          local input = frame.add{type="textfield", name = "input"}
          input.focus()
       end
-   elseif index == 2 then
+   elseif index == 3 then
       local locos = train.locomotives
       printout("Vehicle counts, " .. #locos["front_movers"] .. " locomotives facing front, " 
       .. #locos["back_movers"] .. " locomotives facing back, " .. #train.cargo_wagons .. " cargo wagons, "
       .. #train.fluid_wagons .. " fluid wagons, ", pindex) 
-   elseif index == 3 then 
-	  --Fuel info
-      printout("Locomotive fuel tank " .. fuel_inventory_info(locomotive, pindex), pindex)
+   elseif index == 4 then 
+	  --Train contents
+      printout("Cargo " .. read_train_top_contents(train,pindex), pindex)
    end
-   --[[ Train menu options ideas
-   name, id, menu instructions
-   click to rename
-   train status + destination if any + parked trainstop if any
-   fuel info, click to add fuel
-   vehicle counts
-   cargo counts
-   schedule
+   --[[ Train menu options summary
+   0. name, id, menu instructions
+   1. Train state , destination
+   2. click to rename
+   3. vehicles
+   4. Cargo
+   5. click to set schedule
    ]]
 end
 
@@ -2757,8 +2755,8 @@ end
 
 function train_menu_down(pindex)
    players[pindex].train_menu.index = players[pindex].train_menu.index + 1
-   if players[pindex].train_menu.index > 3 then
-      players[pindex].train_menu.index = 3
+   if players[pindex].train_menu.index > 4 then
+      players[pindex].train_menu.index = 4
       game.get_player(pindex).play_sound{path = "Mine-Building"}
    else
       --Play sound
@@ -2869,8 +2867,8 @@ function train_stop_menu_down(pindex)
    train_stop_menu(players[pindex].train_stop_menu.index, pindex, false)
 end
 
---Reads cargo wagon contents in detail, laterdo: a full inventory screen
-function read_cargo_wagon_contents(pindex,wagon)
+--Reads most common items in a cargo wagon. laterdo a full inventory screen maybe.
+function read_cargo_wagon_top_contents(pindex,wagon)
    local result = ""
    local itemset = wagon.get_inventory(defines.inventory.cargo_wagon).get_contents()
    local itemtable = {}
@@ -2904,10 +2902,38 @@ function read_cargo_wagon_contents(pindex,wagon)
    printout(result,pindex)
 end
 
+--Reads most common items in a train (sum of all cargo wagons)
+function read_train_top_contents(train,pindex)
+   local result = ""
+   local itemset = train.get_contents()
+   local itemtable = {}
+   for name, count in pairs(itemset) do
+      table.insert(itemtable, {name = name, count = count})
+   end
+   table.sort(itemtable, function(k1, k2)
+      return k1.count > k2.count
+   end)
+   if #itemtable == 0 then
+      result = result .. " Contains nothing "
+   else
+      result = result .. " Contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
+      if #itemtable > 1 then
+         result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. " "
+      end
+      if #itemtable > 2 then
+         result = result .. " and " .. itemtable[3].name .. " times " .. itemtable[3].count .. " "
+      end
+      if #itemtable > 3 then
+         result = result .. " and other items."
+      end
+   end
+   printout(result,pindex)
+end
+
 
 --Return fuel content in a fuel inventory
 function fuel_inventory_info(ent, pindex)
-   local result = "Contains nothing."
+   local result = "Contains no fuel."
    local itemset = ent.get_fuel_inventory().get_contents()
    local itemtable = {}
    for name, count in pairs(itemset) do
@@ -2917,7 +2943,7 @@ function fuel_inventory_info(ent, pindex)
       return k1.count > k2.count
    end)
    if #itemtable > 0 then
-      result = "Contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
+      result = "Contains as fuel " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
       if #itemtable > 1 then
          result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. " "
       end

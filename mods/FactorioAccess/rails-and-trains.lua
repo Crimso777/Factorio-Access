@@ -2161,12 +2161,13 @@ function append_rail(pos, pindex)
       end
    end
 
-   --6. Check if the selected 2x2 space is free for building, else return
+   --6. Clear trees and rocks nearby and check if the selected 2x2 space is free for building, else return
    if append_rail_pos == nil then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout(end_rail_dir .. " and " .. rail_api_dir .. ", rail appending direction error.",pindex)
       return
    end
+   temp1, build_comment = mine_trees_and_rocks_in_circle(append_rail_pos,3, pindex)
    if not surf.can_place_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir} then 
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("Cannot place here to extend the rail.",pindex)

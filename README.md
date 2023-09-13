@@ -286,6 +286,70 @@ Jump to previous category level: W
 Select category from currently selected tier: A and D
 
 
+## Rail Building and Analyzing
+
+- Rail placement: Press CONTROL + LEFT BRACKET with rails in hand to place down a single straight rail.
+
+- Rail appending: Press LEFT BRACKET with rails in hand to automatically extend the nearest end rail by one unit. Also accepts RIGHT BRACKET.
+
+- Rail structure building menu: Press SHIFT + LEFT BRACKET on any rail, but end rails have the most options. Structures include turns, train stops, etc.
+
+- Rail analyzer UP: Press J with empty hand on any rail to check which rail structure is UP along the selected rail. Note: This cannot detect trains!
+
+- Rail analyzer DOWN: Press SHIFT + J with empty hand on any rail to check which rail structure is DOWN along the selected rail. Note: This cannot detect trains!
+
+- Station rail analyzer: Select a rail behind a train stop to hear corresponding the station space. Note: Every rail vehicle is 6 tiles long and there is one tile of extra space between each vehicle on a train.
+
+- Note 1: When building parallel rail segments, it is recommended to have at least 4 tiles of space between them in order to leave space for infrastructure such as rail signals, connecting rails, or crossing buildings.
+
+- Note 2: In case of bugs, be sure to save regularly. There is a known bug related to extending rails after building a train stop on an end rail.
+
+- Shortcut for building right turn 45 degrees: CONTROL + RIGHT ARROW on an end rail.
+
+- Shortcut for building left turn 45 degrees: CONTROL + LEFT ARROW on an end rail.
+
+## Train Building and Examining
+
+- Place rail vehicles: LEFT BRACKET on an empty rail with the vehicle in hand. Locomotives snap into place at train stops. Nearby vehicles connect automatically to each other upon placing.
+
+- Manually connect rail vehicles: G near vehicles
+
+- Manually disconnect rail vehicles: SHIFT + G near vehicles
+
+- Flip direction of a rail vehicle: SHIFT + R on the vehicle, but it must be fully disconnected first.
+
+- Open train menu: LEFT BRACKET on the train
+
+- Train vehicle quick info: L
+
+- Examine locomotive fuel tank contents: RIGHT BRACKET. 
+
+- Examine cargo wagon contents: RIGHT BRACKET. Note that items can for now be added or removed only via cursor shortcuts or inserters.
+
+- Add fuel to a locomotive: With fuel items in hand, CONTROL + LEFT BRACKET on the locomotive
+
+
+## Train Driving
+
+- Enter or exit train: ENTER
+
+- Break or accelerate forward: W
+
+- Break or accelerate backward: S
+
+- Get basic train info: L
+
+- Get info for Train heading, speed, and position: K
+
+- Rail analyzer ahead of train: J. Note: Does not detect other trains!
+
+- Rail analyzer near or behind the train: SHIFT + J. Note: Does not detect other trains!
+
+- When near a train stop, read precise distance: J
+
+- Open train menu: LEFT BRACKET. The menu provides key information about the train, and allows renaming the train. In the future it will allow setting destinations and schedules.
+
+
 
 # FAQ:
 
@@ -305,12 +369,10 @@ Q: How much of the game is accessible right now?
 A: All basic interactions with buildings and items are supported. With the recently added support for fluid handling, you can now progress until the late game, which takes dozens of hours. Some iconic optional features such as trains, combat, and multiplayer, are still being worked on. Some unique features have been added to increase accessibility. More about this can be found on the wiki.
 
 Q:  My game crashed, what gives?
-
 A:  This mod is currently still in early access.  Bugs are normal and expected.  Please post about it in the issues channel of Discord.
 
 Q:  Do I have to pay to use the mod?
-
-A:  The mod is and always will be free.  The game itself costs $30 on [Factorio.com](www.factorio.com) and prices can vary per country on Steam.
+A:  The mod is and always will be free.  The game itself costs $35 on [Factorio.com](www.factorio.com) and prices can vary per country on Steam.
 
 
 

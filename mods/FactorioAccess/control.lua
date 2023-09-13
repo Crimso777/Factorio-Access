@@ -6318,6 +6318,7 @@ script.on_event(defines.events.on_chunk_charted,function(event)
                if new_group < resource_group and players[pindex].resources[i].patches[resource_group] ~= nil then
                   for i1, pos in pairs(players[pindex].resources[i].patches[resource_group].positions) do
                      players[pindex].resources[i].positions[pos] = new_group
+                     players[pindex].resources[i].count = islands[i].resources[p].count
                   end
                   table_concat(players[pindex].resources[i].patches[new_group].positions, players[pindex].resources[i].patches[resource_group].positions)
                   for pos, val in pairs(players[pindex].resources[i].patches[resource_group].edges) do

@@ -6452,7 +6452,7 @@ function mine_trees_and_rocks_in_circle(position, radius, pindex)
    if trees_cleared + rocks_cleared > 0 then
       comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks. "
    end
-   rendering.draw_circle{color = {0, 1, 0},radius = radius,width = radius,target = position,surface = surf,time_to_live = 200}
+   rendering.draw_circle{color = {0, 1, 0},radius = radius,width = radius,target = position,surface = surf,time_to_live = 100}
    return outcome, comment
 end
 
@@ -6608,8 +6608,11 @@ script.on_event("control-g-key", function(event)
       return
    end
    if ent ~= nil and ent.valid and ent.name == "straight-rail" then
-      local range = 4
-      printout(count_rails_within_range(ent, range, pindex) .. " rails within a range of " .. range,pindex)
+      --local range = 4
+      --printout(count_rails_within_range(ent, range, pindex) .. " rails within a range of " .. range,pindex)
+	  if not place_chain_signal_pair(ent,pindex) then
+	     game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+	  end
    end
 end)
 

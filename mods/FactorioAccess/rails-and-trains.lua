@@ -196,6 +196,10 @@ function rail_ent_info(pindex, ent, description)
       end
    end
    
+   if is_intersection_rail(ent, pindex) then
+      result = result .. ", intersection "
+   end
+   
    return result
 end
 
@@ -1559,7 +1563,7 @@ function build_rail_turn_left_45_degrees(anchor_rail, pindex)
          can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+4, pos.y-8}, direction = 0, force = game.forces.player}
       elseif anchor_dir == 7 then--3
          can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+0, pos.y-2}, direction = 3, force = game.forces.player}
-         can_place_all = can_place_all and surf.can_place_entityy{name = "curved-rail", position = {pos.x+4, pos.y-4}, direction = 5, force = game.forces.player}
+         can_place_all = can_place_all and surf.can_place_entity{name = "curved-rail", position = {pos.x+4, pos.y-4}, direction = 5, force = game.forces.player}
          can_place_all = can_place_all and surf.can_place_entity{name = "straight-rail", position = {pos.x+4, pos.y-10}, direction = 0, force = game.forces.player}
       end
    elseif dir == 5 then
@@ -2174,20 +2178,35 @@ function append_rail(pos, pindex)
       return
    end
    
-   --7. Finally, create the appended rail and subtract 1 rail from the hand.
+   --7. Create the appended rail and subtract 1 rail from the hand.
    --game.get_player(pindex).build_from_cursor{position = append_rail_pos, direction = append_rail_dir}--acts unsolvably weird when building diagonals of rotation 5 and 7
    created_rail = surf.create_entity{name = "straight-rail", position = append_rail_pos, direction = append_rail_dir, force = game.forces.player}
    game.get_player(pindex).cursor_stack.count = game.get_player(pindex).cursor_stack.count - 1
    game.get_player(pindex).play_sound{path = "entity-build/straight-rail"}
    
+   if not (created_rail ~= nil and created_rail.valid) then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      printout("Rail invalid error.",pindex)
+      return
+   end
+   
    --8. Check if the appended rail is with 4 tiles of a parallel rail. If so, delete it.
-   if has_parallel_neighbor(created_rail,pindex) then
+   if created_rail.valid and has_parallel_neighbor(created_rail,pindex) then
       game.get_player(pindex).mine_entity(created_rail,true)
 	  game.get_player(pindex).play_sound{path = "utility/cannot_build"}
       printout("Cannot place, parallel rail segments should be at least 4 tiles apart.",pindex)
    end
-
+   
+   --9. Check if the appended rail has created an intersection. If so, notify the player.
+   if created_rail.valid and is_intersection_rail(created_rail,pindex) then
+      printout("Intersection created.",pindex)
+   end
+      
 end
+
+--laterdo maybe revise build-item-in-hand for single placed rails so that you can have more control on it. Create a new place single rail function
+--function place_single_rail(pindex)
+--end
 
 --Counts rails within range of a selected rail.
 function count_rails_within_range(rail, range, pindex)
@@ -2214,14 +2233,23 @@ end
 function has_parallel_neighbor(rail, pindex)
    --1. Scan around the rail for other rails
    local pos = rail.position
-   local scan_area = {{pos.x-4,pos.y-4},{pos.x+4,pos.y+4}} 
+   local dir = rail.direction
+   local range = 4
+   if dir % 2 == 1 then
+      range = 3
+   end
+   local scan_area = {{pos.x-range,pos.y-range},{pos.x+range,pos.y+range}} 
    local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "straight-rail"}
    for i,other_rail in ipairs(ents) do
 	 --2. For each rail, does it have the same rotation but a different segment? If yes return true.
-	  if rail.direction == other_rail.direction and not rail.is_rail_in_same_rail_segment_as(other_rail) 
-	     and (pos.x ~= other_rail.position.x) and (pos.y ~= other_rail.position.y) then
-	     --3. Parallel neighbor found, but we ignore cases where the X or Y axes are equal so that we can merge rails along the same lines.
-	 	 return true
+	 local pos2 = other_rail.position
+	  if rail.direction == other_rail.direction and not rail.is_rail_in_same_rail_segment_as(other_rail) then
+	     --3. Also ignore cases where the rails are directly facing each other so that they can be connected
+	     if (pos.x ~= pos2.x) and (pos.y ~= pos2.y) and (math.abs(pos.x - pos2.x) - math.abs(pos.y - pos2.y)) > 1 then
+	        --4. Parallel neighbor found
+		    rendering.draw_circle{color = {1, 0, 0},radius = range,width = range,target = pos,surface = rail.surface,time_to_live = 100}
+	 	    return true
+		 end
 	  end
    end
    --4. No parallel neighbor found
@@ -2232,30 +2260,105 @@ end
 function is_intersection_rail(rail, pindex)
    --1. Scan around the rail for other rails
    local pos = rail.position
-   local scan_area = {{pos.x-1,pos.y-1},{pos.x+1,pos.y+1}} --TODO tweak selection area
+   local dir = rail.direction
+   local scan_area = {{pos.x-1,pos.y-1},{pos.x+1,pos.y+1}} 
    local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "straight-rail"}
    for i,other_rail in ipairs(ents) do
       --2. For each rail, does it have a different rotation and a different segment? If yes return true.
-	  if rail.direction ~= other_rail.direction and not rail.is_rail_in_same_rail_segment_as(other_rail) then
+	  local dir_2 = other_rail.direction
+	  dir = dir % 4
+	  dir_2 = dir_2 % 4
+	  if dir ~= dir_2 and not rail.is_rail_in_same_rail_segment_as(other_rail) then
+	     rendering.draw_circle{color = {0, 0, 1},radius = 1.5,width = 1.5,target = pos,surface = rail.surface,time_to_live = 100}
          return true
 	  end
    end
    return false
 end
 
---Checks if the rail is intersecting curved rails.
-function is_intersecting_curved_rails(rail, pindex)
-   --1. Scan around the rail for other rails
+--Places a chain signal pair around a rail depending on its direction. May fail if the spots are full.
+function place_chain_signal_pair(rail,pindex)
+   local build_comment = ""
+   local successful = true
+   local dir = rail.direction
    local pos = rail.position
-   local scan_area = {{pos.x-1,pos.y-1},{pos.x+1,pos.y+1}} --TODO tweak selection area
-   local ents = game.get_player(pindex).surface.find_entities_filtered{area = scan_area, name = "curved-rail"}
-   for i,other_rail in ipairs(ents) do
-      --2. For each rail, does it have a different segment? If yes return true.
-	  if not rail.is_rail_in_same_rail_segment_as(other_rail) then
-         return true
-	  end
+   local surf = rail.surface
+   local can_place_all = true
+   
+   --1. Check if signals can be placed, based on direction
+   if dir == 0 or dir == 4 then
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-chain-signal", position = {pos.x+1, pos.y}, direction = 4, force = game.forces.player}
+	  can_place_all = can_place_all and surf.can_place_entity{name = "rail-chain-signal", position = {pos.x-2, pos.y}, direction = 0, force = game.forces.player}
+   elseif dir == 2 or dir == 6 then
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-chain-signal", position = {pos.x, pos.y-2}, direction = 2, force = game.forces.player}
+	  can_place_all = can_place_all and surf.can_place_entity{name = "rail-chain-signal", position = {pos.x, pos.y+1}, direction = 6, force = game.forces.player}
+   elseif dir == 1 then
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-chain-signal", position = {pos.x-1, pos.y-0}, direction = 7, force = game.forces.player}
+	  can_place_all = can_place_all and surf.can_place_entity{name = "rail-chain-signal", position = {pos.x+1, pos.y-2}, direction = 3, force = game.forces.player}
+   elseif dir == 5 then
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-chain-signal", position = {pos.x-2, pos.y+1}, direction = 7, force = game.forces.player}
+	  can_place_all = can_place_all and surf.can_place_entity{name = "rail-chain-signal", position = {pos.x+0, pos.y-1}, direction = 3, force = game.forces.player}
+   elseif dir == 3 then
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-chain-signal", position = {pos.x-1, pos.y-1}, direction = 1, force = game.forces.player}
+	  can_place_all = can_place_all and surf.can_place_entity{name = "rail-chain-signal", position = {pos.x+1, pos.y+1}, direction = 5, force = game.forces.player}
+   elseif dir == 7 then
+      can_place_all = can_place_all and surf.can_place_entity{name = "rail-chain-signal", position = {pos.x-2, pos.y-2}, direction = 1, force = game.forces.player}
+	  can_place_all = can_place_all and surf.can_place_entity{name = "rail-chain-signal", position = {pos.x+0, pos.y+0}, direction = 5, force = game.forces.player}
+   else
+      successful = false
+	  build_comment = "direction error"
+	  return successful, build_comment
    end
-   return false
+   
+   if not can_place_all then
+      successful = false
+	  build_comment = "cannot place"
+	  return successful, build_comment
+   end
+   
+   --2. Check if there are already chain signals or rail signals nearby. If yes, stop.
+   local signals_found = 0
+   local signals = surf.find_entities_filtered{position = pos, radius = 3, name="rail-chain-signal"}
+   for i,signal in ipairs(signals) do
+      signals_found = signals_found + 1
+   end
+   local signals = surf.find_entities_filtered{position = pos, radius = 3, name="rail-signal"}
+   for i,signal in ipairs(signals) do
+      signals_found = signals_found + 1
+   end
+   if signals_found > 0 then
+      successful = false
+	  build_comment = "Too close to existing signals."
+	  return successful, build_comment
+   end
+   
+   --3. Place the signals.
+   if dir == 0 or dir == 4 then
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x+1, pos.y}, direction = 4, force = game.forces.player}
+	  surf.create_entity{name = "rail-chain-signal", position = {pos.x-2, pos.y}, direction = 0, force = game.forces.player}
+   elseif dir == 2 or dir == 6 then
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x, pos.y-2}, direction = 2, force = game.forces.player}
+	  surf.create_entity{name = "rail-chain-signal", position = {pos.x, pos.y+1}, direction = 6, force = game.forces.player}
+   elseif dir == 1 then
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-1, pos.y-0}, direction = 7, force = game.forces.player}
+	  surf.create_entity{name = "rail-chain-signal", position = {pos.x+1, pos.y-2}, direction = 3, force = game.forces.player}
+   elseif dir == 5 then
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-2, pos.y+1}, direction = 7, force = game.forces.player}
+	  surf.create_entity{name = "rail-chain-signal", position = {pos.x+0, pos.y-1}, direction = 3, force = game.forces.player} 
+   elseif dir == 3 then
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-1, pos.y-1}, direction = 1, force = game.forces.player}
+	  surf.create_entity{name = "rail-chain-signal", position = {pos.x+1, pos.y+1}, direction = 5, force = game.forces.player}
+   elseif dir == 7 then
+      surf.create_entity{name = "rail-chain-signal", position = {pos.x-2, pos.y-2}, direction = 1, force = game.forces.player}
+	  surf.create_entity{name = "rail-chain-signal", position = {pos.x+0, pos.y+0}, direction = 5, force = game.forces.player}
+   else
+      successful = false
+	  build_comment = "direction error"
+	  return successful, build_comment
+   end
+   
+   game.get_player(pindex).play_sound{path = "entity-build/rail-chain-signal"}
+   return successful, build_comment
 end
 
 
@@ -2613,10 +2716,16 @@ function rail_builder(pindex, clicked_in)
       --Straight mid rails
 	  if menu_line == 1 then
          if not clicked then
-            comment = comment .. "No options available"
+            comment = comment .. "Pair of chain rail signals."
             printout(comment,pindex)
          else
-            comment = comment .. "No options available"
+            local success, build_comment = place_chain_signal_pair(rail,pindex)
+			if success then
+			   comment = "Signals placed."
+			else
+			   game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+			   comment = comment .. build_comment
+			end
             printout(comment,pindex)
          end
       end
@@ -2634,10 +2743,16 @@ function rail_builder(pindex, clicked_in)
       --Diagonal mid rails
       if menu_line == 1 then
          if not clicked then
-            comment = comment .. "No options available"
+            comment = comment .. "Pair of chain rail signals." 
             printout(comment,pindex)
          else
-            comment = comment .. "No options available"
+            local success, build_comment = place_chain_signal_pair(rail,pindex)
+			if success then
+			   comment = "Signals placed."
+			else
+			   game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+			   comment = comment .. build_comment
+			end
             printout(comment,pindex)
          end
       end

@@ -26,10 +26,19 @@ Updated in September of 2023.
   * Note 1: Parallel rail lines should be at least 4 tiles apart. This is partially enforced for the rail appender tool.
   * Note 2: Partially and fully automated train support are goals for later updates. See Chapter 16 of the wiki for more info.
 
+
 ## Changes
 - Changed the keybind for disconnecting rail vehicles from "V" to "SHIFT + G".
-- Teleporting is disabled while riding a vehicle..
+- Teleporting is disabled while riding a vehicle.
+- Teleporting function can now also be called silently.
 - Extra entries added to the ent info function for train related entities.
+- Minor changes
+  * Entity ghosts are now better identified.
+  * Containers now report top 2 items at first look, instead of 1.
+  * Added information reporting for entities facing diagonal directions.
+  * Added new sound effects for reaching the borders of inventories.
+  * Hand item building function now checks for validity.
+  * Added function to mine all trees and rocks in a given circular area.
 
 ## Bugfixes
 - Fixed a bug where the inventory is opened directly when a Factorio Access menu is closed.

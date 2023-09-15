@@ -5412,6 +5412,23 @@ function build_item_in_hand(pindex, offset_val)
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             return
          end
+	  elseif stack.name == "medium-electric-pole" and players[pindex].build_lock == true then
+         --Place a medium electric pole in this position only if it is within 6.5 to 7.5 tiles of another medium electric pole
+         local surf = game.get_player(pindex).surface
+         local med_poles = surf.find_entities_filtered{position = position, radius = 7.5, name = "medium-electric-pole"}
+         local all_beyond_6_5 = true
+         local any_connects = false
+         for i,pole in ipairs(med_poles) do
+            if util.distance(position, pole.position) < 6.5 then
+               all_beyond_6_5 = false
+            elseif util.distance(position, pole.position) >= 6.5 then
+               any_connects = true
+            end
+         end
+         if not (all_beyond_6_5 and any_connects) then
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            return
+         end
       end
       local building = {
          position = position,

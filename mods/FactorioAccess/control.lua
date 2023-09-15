@@ -849,9 +849,7 @@ function ent_info(pindex, ent, description)
    end
    
    if ent.prototype.burner_prototype ~= nil then
-      if ent.energy == 0 then
---         local inv = ent.get_fuel_inventory()
---         if inv.is_empty() then
+      if ent.energy == 0 and fuel_inventory_info(ent) == "Contains no fuel." then
          result = result .. ", Out of Fuel "
       end
    end
@@ -6625,12 +6623,14 @@ script.on_event("prompt", function(event)
    if not check_for_player(pindex) then
       return
    end
+   --For rocket entities, return the silo instead
    if ent ~= nil and ent.valid and ent.name == "rocket-silo-rocket-shadow" or ent.name == "rocket-silo-rocket" then
       local ents = ent.surface.find_entities_filtered{position = ent.position, radius = 20, name = "rocket-silo"}
 	  for i,silo in ipairs(ents) do
 	     ent = silo
       end
    end
+   --Try to launch from the silo
    if ent ~= nil and ent.valid and ent.name == "rocket-silo" then
       local try_launch = ent.launch_rocket()
 	  if try_launch then

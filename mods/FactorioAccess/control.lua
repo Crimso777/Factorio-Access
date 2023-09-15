@@ -879,6 +879,8 @@ function ent_info(pindex, ent, description)
          solar_status = ", zero production, night time. "
       end
       result = result .. solar_status
+   elseif ent.name == "rocket-silo" then
+      result = result .. ", press SPACE to launch a rocket when ready. "
    end
    return result
 end
@@ -6612,6 +6614,29 @@ script.on_event("control-g-key", function(event)
       --printout(count_rails_within_range(ent, range, pindex) .. " rails within a range of " .. range,pindex)
 	  if not place_chain_signal_pair(ent,pindex) then
 	     game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+	  end
+   end
+end)
+
+--Attempt to launch a rocket
+script.on_event("prompt", function(event)
+   local pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
+   if not check_for_player(pindex) then
+      return
+   end
+   if ent ~= nil and ent.valid and ent.name == "rocket-silo-rocket-shadow" or ent.name == "rocket-silo-rocket" then
+      local ents = ent.surface.find_entities_filtered{position = ent.position, radius = 20, name = "rocket-silo"}
+	  for i,silo in ipairs(ents) do
+	     ent = silo
+      end
+   end
+   if ent ~= nil and ent.valid and ent.name == "rocket-silo" then
+      local try_launch = ent.launch_rocket()
+	  if try_launch then
+	     printout("Launch successful!",pindex)
+	  else
+	     printout("Not ready to launch!",pindex)
 	  end
    end
 end)

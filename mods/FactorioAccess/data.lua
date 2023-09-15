@@ -456,6 +456,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "mine-group",
+    key_sequence = "SHIFT + X",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "switch-menu",
     key_sequence = "TAB",
     consuming = "none"

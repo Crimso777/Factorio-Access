@@ -849,9 +849,7 @@ function ent_info(pindex, ent, description)
    end
    
    if ent.prototype.burner_prototype ~= nil then
-      if ent.energy == 0 then
---         local inv = ent.get_fuel_inventory()
---         if inv.is_empty() then
+      if ent.energy == 0 and fuel_inventory_info(ent) == "Contains no fuel." then
          result = result .. ", Out of Fuel "
       end
    end
@@ -879,6 +877,8 @@ function ent_info(pindex, ent, description)
          solar_status = ", zero production, night time. "
       end
       result = result .. solar_status
+   elseif ent.name == "rocket-silo" then
+      result = result .. ", press SPACE to launch a rocket when ready. "
    end
    return result
 end
@@ -4918,6 +4918,41 @@ script.on_event("mine-access", function(event)
 end
 )
 
+--Mines groups of entities depending on the name or type. Includes trees and rocks, rails.
+script.on_event("mine-group", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not (players[pindex].in_menu) and #players[pindex].tile.ents > 0 then 
+      local ent = players[pindex].tile.ents[1]
+	  if ent == nil or not ent.valid then
+	     return
+	  end
+	  local surf = ent.surface
+	  local pos = ent.position
+	  if ent ~= nil and ent.valid and ent.type == "tree" or ent.name == "rock-big" or ent.name == "rock-huge" or ent.name == "sand-rock-big" then
+	     --Trees and rocks within 5 tiles
+		 game.get_player(pindex).play_sound{path = "Mine-Building"}
+	     mine_trees_and_rocks_in_circle(pos, 5, pindex)
+	  elseif ent ~= nil and ent.valid and ent.name == "straight-rail" then
+	     --Rails within 3 tiles (and their signals)
+		local rails = surf.find_entities_filtered{position = pos, radius = 3, name = "straight-rail"}
+		for i,rail in ipairs(rails) do
+		   destroy_signals(rail)
+		   game.get_player(pindex).play_sound{path = "Mine-Building"}
+		   game.get_player(pindex).play_sound{path = "Mine-Building"}
+		   game.get_player(pindex).mine_entity(rail,true)
+		end
+	  elseif ent ~= nil and ent.valid and ent.prototype.is_building and (ent.prototype.mineable_properties.products == nil or ent.prototype.mineable_properties.products[1].name == ent.name) then
+         --All others are treated as single objects
+		 game.get_player(pindex).play_sound{path = "Mine-Building"}
+         schedule(25, "play_mining_sound", pindex)
+      end
+   end
+end
+)
+
 script.on_event("left-click", function(event)
    pindex = event.player_index
       if not check_for_player(pindex) then
@@ -5402,6 +5437,23 @@ function build_item_in_hand(pindex, offset_val)
          local all_beyond_6_5 = true
          local any_connects = false
          for i,pole in ipairs(small_poles) do
+            if util.distance(position, pole.position) < 6.5 then
+               all_beyond_6_5 = false
+            elseif util.distance(position, pole.position) >= 6.5 then
+               any_connects = true
+            end
+         end
+         if not (all_beyond_6_5 and any_connects) then
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            return
+         end
+	  elseif stack.name == "medium-electric-pole" and players[pindex].build_lock == true then
+         --Place a medium electric pole in this position only if it is within 6.5 to 7.5 tiles of another medium electric pole
+         local surf = game.get_player(pindex).surface
+         local med_poles = surf.find_entities_filtered{position = position, radius = 7.5, name = "medium-electric-pole"}
+         local all_beyond_6_5 = true
+         local any_connects = false
+         for i,pole in ipairs(med_poles) do
             if util.distance(position, pole.position) < 6.5 then
                all_beyond_6_5 = false
             elseif util.distance(position, pole.position) >= 6.5 then
@@ -6437,15 +6489,17 @@ function mine_trees_and_rocks_in_circle(position, radius, pindex)
    --Find and mine trees
    local trees = surf.find_entities_filtered{position = position, radius = radius, type = "tree"}
    for i,tree_ent in ipairs(trees) do
+      rendering.draw_circle{color = {1, 0, 0},radius = 1,width = 1,target = tree_ent.position,surface = tree_ent.surface,time_to_live = 100}
       game.get_player(pindex).mine_entity(tree_ent,true)
 	  trees_cleared = trees_cleared + 1
    end
    
    --Find and mine rocks. Note that they are resource entities with specific names
-   local resources = surf.find_entities_filtered{position = position, radius = radius, type = "resource"}
+   local resources = surf.find_entities_filtered{position = position, radius = radius, name = {"rock-big","rock-huge","sand-rock-big"}}
    for i,resource_ent in ipairs(resources) do
-      if resource_ent.name == "rock-big" or resource_ent.name == "rock-huge" or resource_ent.name == "sand-rock-big" then
-         game.get_player(pindex).mine_entity(resource_ent,true)
+      if resource_ent ~= nil and resource_ent.valid then
+         --game.get_player(pindex).mine_entity(resource_ent,true) --tolaterdo bug with rock mining
+		 rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = resource_ent.position,surface = resource_ent.surface,time_to_live = 100}
 		 rocks_cleared = rocks_cleared + 1
       end
    end
@@ -6612,6 +6666,31 @@ script.on_event("control-g-key", function(event)
       --printout(count_rails_within_range(ent, range, pindex) .. " rails within a range of " .. range,pindex)
 	  if not place_chain_signal_pair(ent,pindex) then
 	     game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+	  end
+   end
+end)
+
+--Attempt to launch a rocket
+script.on_event("prompt", function(event)
+   local pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
+   if not check_for_player(pindex) then
+      return
+   end
+   --For rocket entities, return the silo instead
+   if ent ~= nil and ent.valid and ent.name == "rocket-silo-rocket-shadow" or ent.name == "rocket-silo-rocket" then
+      local ents = ent.surface.find_entities_filtered{position = ent.position, radius = 20, name = "rocket-silo"}
+	  for i,silo in ipairs(ents) do
+	     ent = silo
+      end
+   end
+   --Try to launch from the silo
+   if ent ~= nil and ent.valid and ent.name == "rocket-silo" then
+      local try_launch = ent.launch_rocket()
+	  if try_launch then
+	     printout("Launch successful!",pindex)
+	  else
+	     printout("Not ready to launch!",pindex)
 	  end
    end
 end)

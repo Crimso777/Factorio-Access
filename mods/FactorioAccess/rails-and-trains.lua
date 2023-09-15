@@ -2361,6 +2361,18 @@ function place_chain_signal_pair(rail,pindex)
    return successful, build_comment
 end
 
+--Deletes rail signals around a rail. todo test
+function destroy_signals(rail)
+   local chains = rail.surface.find_entities_filtered{position = rail.position, radius = 2, name = "rail-chain-signal"}
+   for i,chain in ipairs(chains) do
+      chain.destroy()
+   end
+   local signals = rail.surface.find_entities_filtered{position = rail.position, radius = 2, name = "rail-signal"}
+   for i,signal in ipairs(signals) do
+      signal.destroy()
+   end
+end
+
 
 --Places a train stop facing the direction of the end rail.
 function build_train_stop(anchor_rail, pindex)

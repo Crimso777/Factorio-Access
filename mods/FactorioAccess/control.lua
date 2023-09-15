@@ -5246,6 +5246,9 @@ input.select(1, 0)
          build_item_in_hand(pindex, offset)
       elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
          build_offshore_pump_in_hand(pindex)
+      elseif stack.valid and stack.valid_for_read then
+	     local p = game.get_player(pindex)
+	     p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use it 3 tiles in front of the player instead.
       elseif game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
          train_menu_open(pindex)
       elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
@@ -6666,13 +6669,14 @@ end)
 --**Use this unassigned key binding to test stuff
 script.on_event("control-g-key", function(event)
    local pindex = event.player_index
+   local p = game.get_player(pindex)
    local ent = players[pindex].tile.ents[1]
    if not check_for_player(pindex) then
       return
    end
    if ent ~= nil and ent.valid and ent.name == "straight-rail" then
    end
-   game.get_player(pindex).use_from_cursor{position = game.get_player(pindex).position}
+   
 end)
 
 --Attempt to launch a rocket

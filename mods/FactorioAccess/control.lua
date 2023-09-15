@@ -5238,7 +5238,7 @@ input.select(1, 0)
       end
    else
       local stack = game.get_player(pindex).cursor_stack
-      if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.name ~= "offshore-pump" then
+      if stack.valid_for_read and stack.valid and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
          local offset = 0
          if not players[pindex].cursor then
             offset = 1
@@ -5482,6 +5482,15 @@ function build_item_in_hand(pindex, offset_val)
             printout("Cannot place that there.", pindex)
          end
       end
+   elseif stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
+      --Place tiles 
+	  local p = game.get_player(pindex)
+	  local t_size = 3 --laterdo allow adjusting terrain_building_size
+	  if p.can_build_from_cursor{position = p.position, terrain_building_size = t_size} then
+	     p.build_from_cursor{position = p.position, terrain_building_size = t_size}
+	  else
+	     p.play_sound{path = "utility/cannot_build"}
+	  end 
    else
       if players[pindex].build_lock == true and 1 == 1 then --This check may become a toggle-able game setting
          players[pindex].build_lock = false
@@ -6662,12 +6671,8 @@ script.on_event("control-g-key", function(event)
       return
    end
    if ent ~= nil and ent.valid and ent.name == "straight-rail" then
-      --local range = 4
-      --printout(count_rails_within_range(ent, range, pindex) .. " rails within a range of " .. range,pindex)
-	  if not place_chain_signal_pair(ent,pindex) then
-	     game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-	  end
    end
+   game.get_player(pindex).use_from_cursor{position = game.get_player(pindex).position}
 end)
 
 --Attempt to launch a rocket

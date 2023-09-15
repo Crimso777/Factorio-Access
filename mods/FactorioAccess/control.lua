@@ -5584,7 +5584,7 @@ script.on_event("shift-click", function(event)
                   result = "Moved " .. inserted .. " " .. result .. " to player's inventory."
                   printout(result, pindex)
                else
-                  printout("Inventory full.", pindex)
+                  printout("Cannot insert " .. stack.name .. " to player's inventory.", pindex)
                end
             end
          else
@@ -5603,13 +5603,23 @@ script.on_event("shift-click", function(event)
                      result = "Moved " .. inserted .. " " .. result .. " to " .. players[pindex].building.ent.name
                      printout(result, pindex)
                   else
-                     printout("Inventory full.", pindex)
+                     printout("Cannot insert " .. stack.name .. " to " .. players[pindex].building.ent.name, pindex)
                   end
                end
             end
          end
-
-
+      elseif players[pindex].menu == "inventory" then
+         --Equip armor in hand
+		 local stack = game.get_player(pindex).cursor_stack
+	     if stack.valid_for_read and stack.valid and stack.is_armor then
+		    local armor = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
+		    if armor.is_empty() then
+			   printout(" Equipped " .. stack.name, pindex)
+		    else
+			   printout(" Equipped " .. stack.name .. " and removed " .. armor[1].name .. " to hand.", pindex)
+		    end
+		    stack.swap_stack(armor[1])
+	     end
       end
    else
       local ent = players[pindex].tile.ents[1]
@@ -5718,7 +5728,7 @@ function do_multi_stack_transfer(ratio,pindex)
          local moved, full = transfer_inventory{from=game.players[pindex].get_main_inventory(),to=players[pindex].building.ent,name=item_name,ratio=ratio}
          
          if full then
-            table.insert(result,"Inventory full. ")
+            table.insert(result,"Inventory full or not applicable. ")
          end
          if table_size(moved) == 0 then
             table.insert(result,{"access.placed-nothing"})
@@ -6674,7 +6684,9 @@ script.on_event("control-g-key", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if ent ~= nil and ent.valid and ent.name == "straight-rail" then
+   local stack = game.get_player(pindex).cursor_stack
+   if stack.valid_for_read and stack.valid then
+      --
    end
    
 end)

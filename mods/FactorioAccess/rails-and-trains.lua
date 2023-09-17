@@ -3143,31 +3143,39 @@ function set_temporary_train_stop(train,pindex)
    local train_stops = surf.get_train_stops()
    for i,stop in ipairs(train_stops) do
       --Add the stop to the schedule's top
-	  local new_record = {}
-	  local wait_condition_1 = {}
-	  wait_condition_1["type"] = "passenger_not_present"
-	  wait_condition_1["compare_type"] = "and"
-	  new_record["station"] = "test_name_62"--stop.name**
-	  new_record["temporary"] = true
-	  new_record["wait_conditions"] = wait_condition_1
+	  local wait_condition_1 = {type = "passenger_not_present", compare_type = "and"}
+	  local new_record = {wait_conditions = {wait_condition_1}, station = stop.backer_name, temporary = true}
 	  
 	  local schedule = train.schedule
+	  --schedule.records = {new_record}--, schedule.records--array concat?**
+	  --schedule["current"] = 1--0?**
+	  --table.insert(schedule, "records",{new_record})
+	  --table.insert(schedule, "current",1)
 	  if schedule == nil then--**
-	     schedule = {}
-	     schedule["current"] = 0
-		 schedule["records"] = {}
+	     schedule = {current = 1, records = {new_record}}
+	  else
+	     table.insert(schedule, 1, {current = 1, records = {new_record}})--array...**
+		 rendering.draw_circle{color = {1, 1, 0},radius = 8,width = 8,target = p.position,surface = p.surface,time_to_live = 100}
 	  end
-	  schedule.records = new_record--, schedule.records--array concat?**
-	  schedule["current"] = 1--0?**
 	  train.schedule = schedule
 	  
 	  --Make the train aim for the stop, but change stop if there is no path
 	  train.go_to_station(1)
-	  if train.has_path then
-	     return
-	  else
+	  train.recalculate_path()
+	  if not train.has_path or train.path.size < 3 then --path size < 3 means the train is already at the station
 	     --Clear the schedule record
-		 return--**
+		 rendering.draw_circle{color = {1, 0, 1},radius = i,width = i,target = p.position,surface = p.surface,time_to_live = 100}
+		 if not train.has_path then rendering.draw_circle{color = {1, 0, 0},radius = i,width = i,target = p.position,surface = p.surface,time_to_live = 100} end
+		 --schedule = train.schedule
+		 --table.remove(schedule, 1)
+		 --train.schedule = schedule
+		 train.schedule = nil--todo remove only the temp entry
+	  else
+	     --Valid station and path selected.
+	     rendering.draw_circle{color = {0, 1, 0},radius = 7,width = 7,target = p.position,surface = p.surface,time_to_live = 100}
+		 printout("path size " .. train.path.size,pindex)
+	     return
+	     
 	  end
    end
 end

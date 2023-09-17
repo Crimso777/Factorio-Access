@@ -14,7 +14,7 @@ Updated in September of 2023.
   * Added support for building and renaming train stops.
   * Added train station rail information tool. When you look at a rail behind a train stop, you get information of which section of which rail vehicle would be positioned there when a train stops at the station.
   * Rail appender tool: Adds a straight rail to extend any straight end rail near the cursor.
-  * Rail structure building menu: Allows building correctly oriented railway structures based on a selected end rail as the anchor point.
+  * Rail structure building menu: Allows building correctly oriented railway structures based on a selected end rail as the anchor point. Also can add signals to mid rails.
   * Functions added to build 45 degree turns and 90 degree turns as structures at end rails.
   * Added support for building and naming trains.
   * Allowed reading the fuel amount in a locomotive: check its status via RIGHT BRACKET.
@@ -26,22 +26,37 @@ Updated in September of 2023.
   * Note 1: Parallel rail lines should be at least 4 tiles apart. This is partially enforced for the rail appender tool.
   * Note 2: Partially and fully automated train support are goals for later updates. See Chapter 16 of the wiki for more info.
 
+- Rocket silos can now launch rockets (press SPACE on it when ready).
+
+- Group mining added: If you press SHIFT + X on a tree or a rail, it will mine all of them immediately around you instead of only one.
+
+- Added support for placing stone bricks and concrete varients as tiles, for making pathways or decoration.
+
+- Added support for placing landfill over water. Note: This is not reversible.
+
+- Added support for throwing capsule items, including cliff explosives, defender drones, and grenades. Note: Grenades will damage everything including you while cliff explosives affect only cliffs.
+
+- Added support for wearing or swapping armor. Press SHIFT + LEFT BRACKET to equip an armor in your hand, but only when the inventory screen by itself is open. 
 
 ## Changes
 - Changed the keybind for disconnecting rail vehicles from "V" to "SHIFT + G".
 - Teleporting is disabled while riding a vehicle.
 - Teleporting function can now also be called silently.
+- Build lock smart placement for electric poles now applies to medium electric poles. They are placed to allow maxiumum continuous area coverage rather than maximum wire reach.
 - Extra entries added to the ent info function for train related entities.
 - Minor changes
   * Entity ghosts are now better identified.
-  * Containers now report top 2 items at first look, instead of 1.
+  * Containers now report top 2 items at first look, instead of 1. 
+  * For entities containing fluids, any extra fluids are also reported.
   * Added information reporting for entities facing diagonal directions.
   * Added new sound effects for reaching the borders of inventories.
-  * Hand item building function now checks for validity.
-  * Added function to mine all trees and rocks in a given circular area.
+  * Added function to mine all trees and rocks in a given circular area. Useful for when placing structures.
 
 ## Bugfixes
 - Fixed a bug where the inventory is opened directly when a Factorio Access menu is closed.
+- Fixed a bug where entities that have not started using their fuel are reported as out of fuel.
+- Fixed various crashes related to reading invalid items.
+- Corrected the information error where items cannot be transferred to another building. It is not necessarily because it is full.
 
 
 # Version 0.3.1

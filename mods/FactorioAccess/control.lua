@@ -544,6 +544,12 @@ function ent_info(pindex, ent, description)
       end)
       if #fluids > 0 then
          result = result .. " containing " .. fluids[1].name .. " "
+		 if #fluids > 1 then
+            result = result .. "mostly, and also some " .. fluids[2].name .. " "--todo check amount order.
+		 end
+		 if #fluids > 2 then
+            result = result .. ", and other fluids "
+		 end
       else
       result = result .. " containing no fluid "
       end
@@ -5858,6 +5864,9 @@ script.on_event("right-click", function(event)
       if ent.name == "cargo-wagon" then
          --Instead of status, read contents   
          printout(" " .. cargo_wagon_top_contents_info(ent),pindex)
+      elseif ent.name == "fluid-wagon" then
+         --Instead of status, read contents   
+         printout(" " .. fluid_contents_info(ent),pindex)--**todo test
       elseif ent_status_id ~= nil then
          --Print status if it exists
          ent_status_text = status_lookup[ent_status_id]
@@ -6687,6 +6696,9 @@ script.on_event("control-g-key", function(event)
    local stack = game.get_player(pindex).cursor_stack
    if stack.valid_for_read and stack.valid then
       --
+   end
+   if ent ~= nil and ent.valid and ent.train ~= nil then
+      set_temporary_train_stop(ent.train,pindex)
    end
    
 end)

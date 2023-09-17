@@ -413,7 +413,7 @@ function vehicle_info(pindex)
       result = "On board " .. vehicle.name .. " of train " .. get_train_name(train) .. ", "
       
       --Add the train state
-      result = result .. get_train_state(train) .. ", "
+      result = result .. get_train_state_info(train) .. ", "
       
       --Declare destination if any. Note: Not tested yet. laterdo
       --if train.has_path and train.path_end_stop ~= nil then 
@@ -430,7 +430,7 @@ function vehicle_info(pindex)
 end
 
 --Look up and translate the train state. -laterdo better explanations
-function get_train_state(train)
+function get_train_state_info(train)
    local train_state_id = train.state
    local train_state_text = ""
    local state_lookup = into_lookup(defines.train_state)
@@ -442,6 +442,26 @@ function get_train_state(train)
    return train_state_text
 end
 
+--Look up and translate the signal state. -test**
+function get_signal_state_info(signal)
+   local state_id = 0
+   local state_lookup = nil
+   local state_name = ""
+   local result = ""
+   if signal.name == "rail-signal" then
+      state_id = signal.signal_state
+	  state_lookup = into_lookup(defines.signal_state)
+	  state_name = state_lookup[state_id]
+	  result = state_name
+   elseif signal.name == "rail-chain-signal" then 
+      state_id = signal.chain_signal_state
+	  state_lookup = into_lookup(defines.chain_signal_state)
+	  state_name = state_lookup[state_id]
+	  result = state_name
+	  if state_name == "none_open" then result = "closed" end
+   end
+   return result
+end
 
 --Gets a train's name. The idea is that every locomotive on a train has the same backer name and this is the train's name. If there are multiple names, a warning returned.
 function get_train_name(train)
@@ -611,9 +631,9 @@ function read_all_rail_segment_entities(pindex, rail)
    elseif ent_f1.name == "train-stop" then
       message = message .. "forward 1 is train stop "               .. ent_f1.backer_name .. ", "
    elseif ent_f1.name == "rail-signal" then 
-      message = message .. "forward 1 is rails signal with signal " .. ent_f1.signal_state .. ", "
+      message = message .. "forward 1 is rails signal with signal " .. get_signal_state_info(ent_f1) .. ", "
    elseif ent_f1.name == "rail-chain-signal" then 
-      message = message .. "forward 1 is chain signal with signal " .. ent_f1.chain_signal_state .. ", "
+      message = message .. "forward 1 is chain signal with signal " .. get_signal_state_info(ent_f1) .. ", "
    else
       message = message .. "forward 1 is else, "                    .. ent_f1.name .. ", "
    end
@@ -623,9 +643,9 @@ function read_all_rail_segment_entities(pindex, rail)
    elseif ent_f2.name == "train-stop" then
       message = message .. "forward 2 is train stop "               .. ent_f2.backer_name .. ", "
    elseif ent_f2.name == "rail-signal" then 
-      message = message .. "forward 2 is rails signal with signal " .. ent_f2.signal_state .. ", "
+      message = message .. "forward 2 is rails signal with signal " .. get_signal_state_info(ent_f2) .. ", "
    elseif ent_f2.name == "rail-chain-signal" then 
-      message = message .. "forward 2 is chain signal with signal " .. ent_f2.chain_signal_state .. ", "
+      message = message .. "forward 2 is chain signal with signal " .. get_signal_state_info(ent_f2) .. ", "
    else
       message = message .. "forward 2 is else, "                    .. ent_f2.name .. ", "
    end
@@ -635,9 +655,9 @@ function read_all_rail_segment_entities(pindex, rail)
    elseif ent_b1.name == "train-stop" then
       message = message .. "back 1 is train stop "               .. ent_b1.backer_name .. ", "
    elseif ent_b1.name == "rail-signal" then 
-      message = message .. "back 1 is rails signal with signal " .. ent_b1.signal_state .. ", "
+      message = message .. "back 1 is rails signal with signal " .. get_signal_state_info(ent_b1) .. ", "
    elseif ent_b1.name == "rail-chain-signal" then 
-      message = message .. "back 1 is chain signal with signal " .. ent_b1.chain_signal_state .. ", "
+      message = message .. "back 1 is chain signal with signal " .. get_signal_state_info(ent_b1) .. ", "
    else
       message = message .. "back 1 is else, "                    .. ent_b1.name .. ", "
    end
@@ -647,9 +667,9 @@ function read_all_rail_segment_entities(pindex, rail)
    elseif ent_b2.name == "train-stop" then
       message = message .. "back 2 is train stop "               .. ent_b2.backer_name .. ", "
    elseif ent_b2.name == "rail-signal" then 
-      message = message .. "back 2 is rails signal with signal " .. ent_b2.signal_state .. ", "
+      message = message .. "back 2 is rails signal with signal " .. get_signal_state_info(ent_b2) .. ", "
    elseif ent_b2.name == "rail-chain-signal" then 
-      message = message .. "back 2 is chain signal with signal " .. ent_b2.chain_signal_state .. ", "
+      message = message .. "back 2 is chain signal with signal " .. get_signal_state_info(ent_b2) .. ", "
    else
       message = message .. "back 2 is else, "                    .. ent_b2.name .. ", "
    end
@@ -894,12 +914,12 @@ function identify_rail_segment_end_object(rail, dir_ahead, accept_only_forward, 
       if entity_ahead.name == "rail-signal" then
          result_entity = entity_ahead
          result_entity_label = "rail signal"
-         result_extra = entity_ahead.signal_state
+         result_extra = get_signal_state_info(entity_ahead)
          return result_entity, result_entity_label, result_extra, result_is_forward
       elseif entity_ahead.name == "rail-chain-signal" then
          result_entity = entity_ahead
          result_entity_label = "chain signal"
-         result_extra = entity_ahead.chain_signal_state
+         result_extra = get_signal_state_info(entity_ahead)
          return result_entity, result_entity_label, result_extra, result_is_forward
       elseif entity_ahead.name == "train-stop" then
          result_entity = entity_ahead
@@ -1020,12 +1040,10 @@ function train_read_next_rail_entity_ahead(pindex, invert)
       message = message .. "end rail "
       
    elseif next_entity_label == "rail signal" then
-      local signal_state = next_entity.signal_state --laterdo here decode the signals with a lookup table call
-      message = message .. "rail signal with state " .. signal_state .. " "
+      message = message .. "rail signal with state " .. get_signal_state_info(next_entity) .. " "
       
    elseif next_entity_label == "chain signal" then
-      local signal_state = next_entity.chain_signal_state
-      message = message .. "chain signal with state " .. signal_state .. " "
+      message = message .. "chain signal with state " .. get_signal_state_info(next_entity) .. " "
       
    elseif next_entity_label == "train stop" then
       local stop_name = next_entity.backer_name
@@ -1144,12 +1162,10 @@ function rail_read_next_rail_entity_ahead(pindex, rail, is_forward)
       message = message .. "end rail "
 	  
    elseif next_entity_label == "rail signal" then
-      local signal_state = next_entity.signal_state --laterdo here decode the signals with a lookup table call
-      message = message .. "rail signal with state " .. signal_state .. " "
+      message = message .. "rail signal with state " .. get_signal_state_info(next_entity) .. " "
       
    elseif next_entity_label == "chain signal" then
-      local signal_state = next_entity.chain_signal_state
-      message = message .. "chain signal with state " .. signal_state .. " "
+      message = message .. "chain signal with state " .. get_signal_state_info(next_entity) .. " "
       
    elseif next_entity_label == "train stop" then
       local stop_name = next_entity.backer_name
@@ -2795,7 +2811,7 @@ function train_menu(menu_index, pindex, clicked, other_input)
       printout("Train ".. get_train_name(train) .. ", with ID " .. train.id 
       .. ", Press UP ARROW and DOWN ARROW to navigate options, press LEFT BRACKET to select an option or press E to exit this menu.", pindex)
    elseif index == 1 then
-      printout("Train state " .. get_train_state(train) .. " ", pindex)
+      printout("Train state " .. get_train_state_info(train) .. " ", pindex)
    elseif index == 2 then
       if not clicked then
          printout("Rename this train, press LEFT BRACKET.", pindex)
@@ -3011,7 +3027,7 @@ function cargo_wagon_top_contents_info(wagon)
       return k1.count > k2.count
    end)
    if #itemtable == 0 then
-      result = result .. " Contains nothing "
+      result = result .. " Contains no items. "
    else
       result = result .. " Contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. ", "
       if #itemtable > 1 then
@@ -3027,14 +3043,46 @@ function cargo_wagon_top_contents_info(wagon)
          result = result .. " and " .. itemtable[5].name .. " times " .. itemtable[5].count .. ", "
       end
       if #itemtable > 5 then
-         result = result .. " and other items. "
+         result = result .. " and other items "
       end
    end
    result = result .. ", Use inserters or cursor shortcuts to fill and empty this wagon. "
    return result
 end
 
---Returns most common items in a train (sum of all cargo wagons)
+--Returns most common items in a fluid wagon or train.**test
+function fluid_contents_info(wagon)
+   local result = ""
+   local itemset = wagon.get_fluid_contents()
+   local itemtable = {}
+   for name, amount in pairs(itemset) do
+      table.insert(itemtable, {name = name, amount = amount})
+   end
+   table.sort(itemtable, function(k1, k2)
+      return k1.amount > k2.amount
+   end)
+   if #itemtable == 0 then
+      result = result .. " Contains no fluids. "
+   else
+      result = result .. " Contains " .. itemtable[1].name .. " times " .. string.format(" %.1f ", itemtable[1].amount) .. ", "
+	  if #itemtable > 1 then
+         result = result .. " and " .. itemtable[2].name .. " times " .. string.format(" %.1f ", itemtable[2].amount) .. ", "
+      end
+	  if #itemtable > 2 then
+         result = result .. " and " .. itemtable[3].name .. " times " .. string.format(" %.1f ", itemtable[3].amount) .. ", "
+      end
+      if #itemtable > 3 then
+         result = result .. " and other fluids "
+      end
+   end
+   if wagon.name == "fluid-wagon" then
+      result = result .. ", Use pumps to fill and empty this wagon. "
+   end
+   return result
+end
+
+
+--Returns most common items and fluids in a train (sum of all wagons)
 function train_top_contents_info(train)
    local result = ""
    local itemset = train.get_contents()
@@ -3046,7 +3094,7 @@ function train_top_contents_info(train)
       return k1.count > k2.count
    end)
    if #itemtable == 0 then
-      result = result .. " Contains nothing "
+      result = result .. " Contains no items. "
    else
       result = result .. " Contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. ", "
       if #itemtable > 1 then
@@ -3059,6 +3107,7 @@ function train_top_contents_info(train)
          result = result .. " and other items. "
       end
    end
+   result = result .. fluid_contents_info(train)
    return result
 end
 
@@ -3084,4 +3133,41 @@ function fuel_inventory_info(ent)
       end
    end
    return result
+end
+
+
+--Set a temporary train stop**
+function set_temporary_train_stop(train,pindex)
+   local p = game.get_player(pindex)
+   local surf = p.surface
+   local train_stops = surf.get_train_stops()
+   for i,stop in ipairs(train_stops) do
+      --Add the stop to the schedule's top
+	  local new_record = {}
+	  local wait_condition_1 = {}
+	  wait_condition_1["type"] = "passenger_not_present"
+	  wait_condition_1["compare_type"] = "and"
+	  new_record["station"] = "test_name_62"--stop.name**
+	  new_record["temporary"] = true
+	  new_record["wait_conditions"] = wait_condition_1
+	  
+	  local schedule = train.schedule
+	  if schedule == nil then--**
+	     schedule = {}
+	     schedule["current"] = 0
+		 schedule["records"] = {}
+	  end
+	  schedule.records = new_record--, schedule.records--array concat?**
+	  schedule["current"] = 1--0?**
+	  train.schedule = schedule
+	  
+	  --Make the train aim for the stop, but change stop if there is no path
+	  train.go_to_station(1)
+	  if train.has_path then
+	     return
+	  else
+	     --Clear the schedule record
+		 return--**
+	  end
+   end
 end

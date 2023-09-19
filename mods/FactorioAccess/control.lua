@@ -884,7 +884,22 @@ function ent_info(pindex, ent, description)
       end
       result = result .. solar_status
    elseif ent.name == "rocket-silo" then
-      result = result .. ", press SPACE to launch a rocket when ready. "
+      if ent.rocket_parts ~= nil and ent.rocket_parts < 100 then
+	     result = result .. ", " .. ent.rocket_parts .. " finished out of 100. "
+	  elseif ent.rocket_parts ~= nil then
+         result = result .. ", rocket ready, press SPACE to launch. "
+	  end
+   elseif ent.name == "beacon" then
+      local modules = ent.get_module_inventory()
+	  if modules.get_item_count() == 0 then
+	     result = result .. " with no modules "
+	  elseif modules.get_item_count() == 1 then
+	     result = result .. " with " .. modules[1].name
+	  elseif modules.get_item_count() == 2 then
+	     result = result .. " with " .. modules[1].name .. " and " .. modules[2].name
+      elseif modules.get_item_count() > 2 then
+	     result = result .. " with " .. modules[1].name .. " and " .. modules[2].name .. " and other modules "
+      end
    end
    return result
 end
@@ -2870,6 +2885,20 @@ function read_tile(pindex)
       end
    end
    printout(result, pindex)
+   
+   --If the build lock is on and the player is holding a cut eor copy tool, every entity being read gets mined.
+   local stack = game.get_player(pindex).cursor_stack
+   if stack.valid_for_read and stack.type == "copy-paste-tool" and players[pindex].build_lock then
+	  local ent = players[pindex].tile.ents[1]
+	  local ent_name = "Ent"
+	  if ent ~= nil and ent.valid then 
+	     ent_name = ent.name
+	  end
+	  if try_to_mine_with_sound(ent,pindex) then
+	     printout(ent_name .. " mined.",pindex)
+	  end
+	  return
+   end
 end
 
 
@@ -4940,14 +4969,14 @@ script.on_event("mine-group", function(event)
 	  if ent ~= nil and ent.valid and ent.type == "tree" or ent.name == "rock-big" or ent.name == "rock-huge" or ent.name == "sand-rock-big" then
 	     --Trees and rocks within 5 tiles
 		 game.get_player(pindex).play_sound{path = "Mine-Building"}
+		 game.get_player(pindex).play_sound{path = "Mine-Building"}
 	     mine_trees_and_rocks_in_circle(pos, 5, pindex)
 	  elseif ent ~= nil and ent.valid and ent.name == "straight-rail" then
 	     --Rails within 3 tiles (and their signals)
 		local rails = surf.find_entities_filtered{position = pos, radius = 3, name = "straight-rail"}
 		for i,rail in ipairs(rails) do
 		   destroy_signals(rail)
-		   game.get_player(pindex).play_sound{path = "Mine-Building"}
-		   game.get_player(pindex).play_sound{path = "Mine-Building"}
+		   game.get_player(pindex).play_sound{path = "entity-mined/straight-rail"}
 		   game.get_player(pindex).mine_entity(rail,true)
 		end
 	  elseif ent ~= nil and ent.valid and ent.prototype.is_building and (ent.prototype.mineable_properties.products == nil or ent.prototype.mineable_properties.products[1].name == ent.name) then
@@ -5383,6 +5412,19 @@ input.select(1, 0)
 end
 )
 
+--Mines an entity with the right sound
+function try_to_mine_with_sound(ent,pindex)
+   if ent ~= nil and ent.valid and ent.destructible and ent.type ~= "resource" then
+	 local ent_name = ent.name
+	 if game.get_player(pindex).mine_entity(ent,false) and game.is_valid_sound_path("entity-mined/" .. ent_name) then 
+	    game.get_player(pindex).play_sound{path = "entity-mined/" .. ent_name} 
+		return true
+	 else
+	    return false
+	 end
+   end
+end
+
 
 --[[Attempts to build the item in hand.
 * Does nothing if the hand is empty or the item is not a place-able entity.
@@ -5395,7 +5437,15 @@ function build_item_in_hand(pindex, offset_val)
    
    if not (stack.valid and stack.valid_for_read) then
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
-      printout("Invalid item in hand!", pindex)
+      local message =  "Invalid item in hand!"
+	  if game.get_player(pindex).is_cursor_empty() then
+	     local auto_cancel_when_empty = true --laterdo this check may become a toggle-able game setting
+	     if players[pindex].build_lock == true and auto_cancel_when_empty then 
+		    players[pindex].build_lock = false
+		    message = "Build lock disabled, empty hand."
+	     end
+	  end
+	  printout(message,pindex)
       return
    end
    
@@ -5500,11 +5550,12 @@ function build_item_in_hand(pindex, offset_val)
 	  else
 	     p.play_sound{path = "utility/cannot_build"}
 	  end 
+   elseif stack.valid_for_read and stack.type == "copy-paste-tool" then
+	  if players[pindex].build_lock then
+	     game.get_player(pindex).play_sound{path = "Mine-Building"}
+	  end
    else
-      if players[pindex].build_lock == true and 1 == 1 then --This check may become a toggle-able game setting
-         players[pindex].build_lock = false
-         printout("Build lock disabled, empty hand.", pindex)
-      end
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
    end
 end
 

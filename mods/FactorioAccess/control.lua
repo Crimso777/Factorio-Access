@@ -545,7 +545,7 @@ function ent_info(pindex, ent, description)
       if #fluids > 0 then
          result = result .. " containing " .. fluids[1].name .. " "
 		 if #fluids > 1 then
-            result = result .. "mostly, and also some " .. fluids[2].name .. " "--todo check amount order.
+            result = result .. "mostly, and also some " .. fluids[2].name .. " "--laterdo check amount order.
 		 end
 		 if #fluids > 2 then
             result = result .. ", and other fluids "
@@ -3205,7 +3205,7 @@ end)
 
 
 function menu_cursor_move(direction,pindex)
-   players[pindex].setting_inventory_wraps_around = true--**temporary line because I could not find where to initialize this properly
+   players[pindex].setting_inventory_wraps_around = true--laterdo make this a setting to toggle
    if     direction == defines.direction.north then
       menu_cursor_up(pindex)
    elseif direction == defines.direction.south then
@@ -4134,8 +4134,14 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
    if game.get_player(pindex).driving then
       players[pindex].last_vehicle = game.get_player(pindex).vehicle
       printout("Entered " .. game.get_player(pindex).vehicle.name ,pindex)
+	  if players[pindex].last_vehicle.train ~= nil and players[pindex].last_vehicle.train.schedule == nil then
+	     players[pindex].last_vehicle.train.manual_mode = true
+	  end
    elseif players[pindex].last_vehicle ~= nil then
       printout("Exited " .. players[pindex].last_vehicle.name ,pindex)
+	  if players[pindex].last_vehicle.train ~= nil and players[pindex].last_vehicle.train.schedule == nil then
+	     players[pindex].last_vehicle.train.manual_mode = true
+	  end
       teleport_to_closest(pindex, players[pindex].last_vehicle.position, true)
       if players[pindex].menu == "train_menu" then
          train_menu_close(pindex, false)
@@ -5925,7 +5931,7 @@ script.on_event("right-click", function(event)
          printout(" " .. cargo_wagon_top_contents_info(ent),pindex)
       elseif ent.name == "fluid-wagon" then
          --Instead of status, read contents   
-         printout(" " .. fluid_contents_info(ent),pindex)--**todo test
+         printout(" " .. fluid_contents_info(ent),pindex)
       elseif ent_status_id ~= nil then
          --Print status if it exists
          ent_status_text = status_lookup[ent_status_id]
@@ -6757,7 +6763,8 @@ script.on_event("control-g-key", function(event)
       --
    end
    if ent ~= nil and ent.valid and ent.train ~= nil then
-      set_temporary_train_stop(ent.train,pindex)
+      --set_temporary_train_stop(ent.train,pindex)
+	  sub_automatic_travel_to_other_stop(ent.train,pindex)
    end
    
 end)
@@ -7079,6 +7086,13 @@ script.on_event(defines.events.on_entity_destroyed,function(event)
          players[pindex].tree_positions[str] = nil
    end
    players[pindex].destroyed[event.registration_number] = nil
+end)
+
+--Any train with a blank schedule returns to manual mode by default
+script.on_event(defines.events.on_train_changed_state,function(event)
+   if event.train.state == defines.train_state.no_schedule then
+      event.train.manual_mode = true
+   end
 end)
 
 

@@ -463,6 +463,13 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "control-x",
+    key_sequence = "CONTROL + X",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "switch-menu",
     key_sequence = "TAB",
     consuming = "none"

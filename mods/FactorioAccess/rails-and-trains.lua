@@ -2377,7 +2377,7 @@ function place_chain_signal_pair(rail,pindex)
    return successful, build_comment
 end
 
---Deletes rail signals around a rail. todo test
+--Deletes rail signals around a rail. laterdo add menu option for this
 function destroy_signals(rail)
    local chains = rail.surface.find_entities_filtered{position = rail.position, radius = 2, name = "rail-chain-signal"}
    for i,chain in ipairs(chains) do
@@ -2580,11 +2580,11 @@ function rail_builder_open(pindex, rail)
       if dir == 0 or dir == 2 or dir == 4 or dir == 6 then 
          --Straight mid rails
          players[pindex].rail_builder.rail_type = 3
-         players[pindex].rail_builder.index_max = 1
+         players[pindex].rail_builder.index_max = 2
       else
          --Diagonal mid rails
          players[pindex].rail_builder.rail_type = 4
-         players[pindex].rail_builder.index_max = 1
+         players[pindex].rail_builder.index_max = 2
       end
    end
    
@@ -2756,9 +2756,17 @@ function rail_builder(pindex, clicked_in)
 			end
             printout(comment,pindex)
          end
+	  elseif menu_line == 2 then
+         if not clicked then
+            comment = comment .. "Clear rail signals"
+            printout(comment,pindex)
+         else
+            destroy_signals(rail)
+            printout("Signals cleared.",pindex)
+         end
       end
       --After implementing junctions we will allow building mid rail train stops. This is commented out for now.
-      --if menu_line == 1 then 
+      --if menu_line == 3 then 
       --   if not clicked then
       --      comment = comment .. "Train stop facing the player direction"
       --      printout(comment,pindex)
@@ -2782,6 +2790,14 @@ function rail_builder(pindex, clicked_in)
 			   comment = comment .. build_comment
 			end
             printout(comment,pindex)
+         end
+	  elseif menu_line == 2 then
+         if not clicked then
+            comment = comment .. "Clear rail signals"
+            printout(comment,pindex)
+         else
+            destroy_signals(rail)
+            printout("Signals cleared.",pindex)
          end
       end
    end
@@ -3064,18 +3080,18 @@ function fluid_contents_info(wagon)
    if #itemtable == 0 then
       result = result .. " Contains no fluids. "
    else
-      result = result .. " Contains " .. itemtable[1].name .. " times " .. string.format(" %.1f ", itemtable[1].amount) .. ", "
+      result = result .. " Contains " .. itemtable[1].name .. " times " .. string.format(" %.0f ", itemtable[1].amount) .. ", "
 	  if #itemtable > 1 then
-         result = result .. " and " .. itemtable[2].name .. " times " .. string.format(" %.1f ", itemtable[2].amount) .. ", "
+         result = result .. " and " .. itemtable[2].name .. " times " .. string.format(" %.0f ", itemtable[2].amount) .. ", "
       end
 	  if #itemtable > 2 then
-         result = result .. " and " .. itemtable[3].name .. " times " .. string.format(" %.1f ", itemtable[3].amount) .. ", "
+         result = result .. " and " .. itemtable[3].name .. " times " .. string.format(" %.0f ", itemtable[3].amount) .. ", "
       end
       if #itemtable > 3 then
          result = result .. " and other fluids "
       end
    end
-   if wagon.name == "fluid-wagon" then
+   if wagon.object_name ~= "LuaTrain" and wagon.name == "fluid-wagon" then
       result = result .. ", Use pumps to fill and empty this wagon. "
    end
    return result
@@ -3094,7 +3110,7 @@ function train_top_contents_info(train)
       return k1.count > k2.count
    end)
    if #itemtable == 0 then
-      result = result .. " Contains no items. "
+      result = result .. " Contains no items, "
    else
       result = result .. " Contains " .. itemtable[1].name .. " times " .. itemtable[1].count .. ", "
       if #itemtable > 1 then
@@ -3104,7 +3120,7 @@ function train_top_contents_info(train)
          result = result .. " and " .. itemtable[3].name .. " times " .. itemtable[3].count .. ", "
       end
       if #itemtable > 3 then
-         result = result .. " and other items. "
+         result = result .. " and other items, "
       end
    end
    result = result .. fluid_contents_info(train)

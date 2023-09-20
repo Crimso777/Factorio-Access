@@ -2888,18 +2888,30 @@ function read_tile(pindex)
    
    --If the build lock is on and the player is holding a cut eor copy tool, every entity being read gets mined.
    local stack = game.get_player(pindex).cursor_stack
-   if stack.valid_for_read and stack.type == "copy-paste-tool" and players[pindex].build_lock then
+   if stack.valid_for_read and stack.name == "cut-paste-tool" then
 	  local ent = players[pindex].tile.ents[1]
 	  local ent_name = "Ent"
 	  if ent ~= nil and ent.valid then 
 	     ent_name = ent.name
 	  end
+	  game.get_player(pindex).play_sound{path = "Mine-Building"}
 	  if try_to_mine_with_sound(ent,pindex) then
 	     printout(ent_name .. " mined.",pindex)
 	  end
 	  return
    end
 end
+
+--Turns off the cut paste tool if already held
+script.on_event("control-x", function(event)
+   local pindex = event.player_index
+   local stack = game.get_player(pindex).cursor_stack
+   if stack.valid_for_read and stack.name == "cut-paste-tool" then
+      --game.get_player(pindex).clear_cursor()--does not work
+	  --game.get_player(pindex).cursor_stack.clear()
+	  printout("To disable this tool empty the hand, by pressing SHIFT + Q",pindex)
+   end
+end)
 
 
 --Read the current co-ordinates of the cursor on the map or in a menu. Provides extra information in some menus.
@@ -5550,10 +5562,6 @@ function build_item_in_hand(pindex, offset_val)
 	  else
 	     p.play_sound{path = "utility/cannot_build"}
 	  end 
-   elseif stack.valid_for_read and stack.type == "copy-paste-tool" then
-	  if players[pindex].build_lock then
-	     game.get_player(pindex).play_sound{path = "Mine-Building"}
-	  end
    else
       game.get_player(pindex).play_sound{path = "utility/cannot_build"}
    end

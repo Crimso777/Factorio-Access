@@ -9,7 +9,7 @@ Updated in September of 2023.
   * Pressing L while inside a vehicle will provide additional information about it. For cars, the fuel stocks are stated. For trains, basic info is given while the train menu has detailed info.
   * You can refuel a vehicle by dropping a stack in hand into it via CONTROL + LEFT BRACKET.
 
-- Phase 0 and Phase 1 of Trains Implementation. In general, we made it accessible to build rail lines, analyze rail segments, build train stations, build and examine trains, and drive trains manually.
+- Phases 0 and 1 and 2 of Trains Implementation. In general, we made it accessible to build rail lines, analyze rail segments, build train stations, build and examine trains, and drive trains manually or sub-automatically.
   * Added info support for rails. There is now distinction between end rails, station rails, etc. and the directions of rails are given.
   * Added support for building and renaming train stops.
   * Added train station rail information tool. When you look at a rail behind a train stop, you get information of which section of which rail vehicle would be positioned there when a train stops at the station.
@@ -18,17 +18,20 @@ Updated in September of 2023.
   * Functions added to build 45 degree turns and 90 degree turns as structures at end rails.
   * Added support for building and naming trains.
   * Allowed reading the fuel amount in a locomotive: check its status via RIGHT BRACKET.
+  * The contents of cargo wagons and fluid wagons can be checked via RIGHT BRACKET.
   * Information about a train can be read from its menu including name, length, vehicle counts, cargo item counts, etc.
   * Rail analyzer tool: Press J inside a train to learn the nearest structure ahead on the rails and the distance to it. Press SHIFT + J to check the opposite direction.
   * Rail analyzer tool works on foot as well.
-  * Examining a cargo wagon reads its contents.
+  * Subautomatic travel added: You can select an option from the train menu to make a train go by itself to the other station on a rail line with 2 stations.
   * Other additions all across the code to support trains.
   * Note 1: Parallel rail lines should be at least 4 tiles apart. This is partially enforced for the rail appender tool.
   * Note 2: Partially and fully automated train support are goals for later updates. See Chapter 16 of the wiki for more info.
 
-- Rocket silos can now launch rockets (press SPACE on it when ready).
+- Rocket silo support added: Silos can now report rocket part counts and launch rockets (press SPACE on it when ready).
 
 - Group mining added: If you press SHIFT + X on a tree or a rail, it will mine all of them immediately around you instead of only one.
+
+- Mine lock added: Press CONTROL + X to hold the cut-and-paste tool. Every building the cursor touches while holding this tool will be mined instantly if possible. To disable to tool, empty your hand with SHIFT + Q.
 
 - Added support for placing stone bricks and concrete varients as tiles, for making pathways or decoration.
 
@@ -46,6 +49,7 @@ Updated in September of 2023.
 - Extra entries added to the ent info function for train related entities.
 - Minor changes
   * Entity ghosts are now better identified.
+  * Beacon contents are now read.
   * Containers now report top 2 items at first look, instead of 1. 
   * For entities containing fluids, any extra fluids are also reported.
   * Added information reporting for entities facing diagonal directions.

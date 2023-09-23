@@ -663,7 +663,7 @@ function ent_info(pindex, ent, description)
       local power1 = ent.energy_generated_last_tick * 60
       local power2 = ent.prototype.max_energy_production * 60
       if power2 ~= nil then
-         result = result .. "Producing " .. get_power_string(power1) .. " / " .. get_power_string(power2) .. " "
+         result = result .. "Producing " .. get_power_string(power1) .. " out of " .. get_power_string(power2) .. " capacity, "
       else
          result = result .. "Producing " .. get_power_string(power1) .. " "
       end
@@ -781,7 +781,9 @@ function ent_info(pindex, ent, description)
       end
    end
    if ent.type == "electric-pole" then
-      result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, Network currently producing "
+      result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, "
+	  result = result .. ", " .. get_electricity_satisfaction(ent) .. " percent network satisfaction, with "
+	  --Get network electricity production
       local power = 0
       local capacity = 0
       for i, v in pairs(ent.electric_network_statistics.output_counts) do
@@ -798,7 +800,9 @@ function ent_info(pindex, ent, description)
          end
          capacity = capacity + cap_add   
       end
-      result = result .. get_power_string(power*60) .. " / " .. get_power_string(capacity*60) .. " "
+	  power = power * 60
+	  capacity = capacity * 60
+	  result = result .. get_power_string(power) .. " being produced out of " .. get_power_string(capacity) .. " capacity, "
    end
    if ent.drop_position ~= nil then
       local position = table.deepcopy(ent.drop_position)
@@ -1916,18 +1920,18 @@ function get_power_string(power)
    result = ""
    if power > 1000000000000 then
       power = power/1000000000000
-      result = result .. string.format(" %.3f Terawatts", power) 
+      result = result .. string.format(" %.1f Terawatts", power) 
    elseif power > 1000000000 then
       power = power / 1000000000
-      result = result .. string.format(" %.3f Gigawatts", power) 
+      result = result .. string.format(" %.1f Gigawatts", power) 
    elseif power > 1000000 then
       power = power / 1000000
-      result = result .. string.format(" %.3f Megawatts", power) 
+      result = result .. string.format(" %.1f Megawatts", power) 
    elseif power > 1000 then
       power = power / 1000
-      result = result .. string.format(" %.3f Kilowatts", power) 
+      result = result .. string.format(" %.1f Kilowatts", power) 
    else
-      result = result .. string.format(" %.3f Watts", power) 
+      result = result .. string.format(" %.1f Watts", power) 
    end
    return result
 end
@@ -7109,3 +7113,13 @@ script.on_event(defines.events.on_train_changed_state,function(event)
       end
    end
 end)
+
+--Spawns a lamp at the electric pole and uses its energy level to approximate the network satisfaction percentage with high accuracy
+function get_electricity_satisfaction(electric_pole)
+   local satisfaction = -1
+   local test_lamp = electric_pole.surface.create_entity{name = "small-lamp", position = electric_pole.position, raise_built = false, force = electric_pole.force}
+   satisfaction = math.ceil(test_lamp.energy * 9/8)--Experimentally found coefficient
+   test_lamp.destroy{}
+   return satisfaction
+end
+

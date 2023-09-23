@@ -6768,7 +6768,7 @@ script.on_event("control-g-key", function(event)
    end
    if ent ~= nil and ent.valid and ent.train ~= nil then
       set_temporary_train_stop(ent.train,pindex)
-	  --sub_automatic_travel_to_other_stop(ent.train,pindex)
+	  --sub_automatic_travel_to_other_stop(ent.train)
    end
    
 end)

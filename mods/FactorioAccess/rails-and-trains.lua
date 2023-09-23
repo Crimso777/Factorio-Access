@@ -2921,7 +2921,7 @@ function train_menu(menu_index, pindex, clicked, other_input)
 	  if not clicked then
          printout("Auto travel to a new train stop, press LEFT BRACKET.", pindex)
       else
-	     sub_automatic_travel_to_other_stop(train,pindex)
+	     sub_automatic_travel_to_other_stop(train)
       end
    end
    --[[ Train menu options summary
@@ -2930,7 +2930,7 @@ function train_menu(menu_index, pindex, clicked, other_input)
    2. click to rename
    3. vehicles
    4. Cargo
-   5. click to set schedule
+   5. click to subautomatic travel.
    ]]
 end
 
@@ -3278,9 +3278,8 @@ end
 
 
 --Subautomatic travel to a reachable train stop that is at least 3 rails away
-function sub_automatic_travel_to_other_stop(train,pindex)
-   local p = game.get_player(pindex)
-   local surf = p.surface
+function sub_automatic_travel_to_other_stop(train)
+   local surf = train.front_stock.surface
    local train_stops = surf.get_train_stops()
    for i,stop in ipairs(train_stops) do
       --Set a stop
@@ -3289,14 +3288,24 @@ function sub_automatic_travel_to_other_stop(train,pindex)
 	  train.schedule = {current = 1, records = {new_record}}
 	  
 	  --Make the train aim for the stop
-	  train.go_to_station(1)	  
+	  train.go_to_station(1)
 	  if not train.has_path or train.path.size < 3 then
 	     --Invalid path or path to an station nearby
 	     train.schedule = nil
 		 train.manual_mode = true
 	  else
 	     --Valid station and path selected.
+		 --Announce destination to all passengers
+		  for i,player in ipairs(train.passengers) do
+			 local stop = train.path_end_stop
+			 if stop ~= nil then
+				str = " Next station " .. stop.backer_name .. " "
+				players[player.index].last = str
+				localised_print{"","out ",str}
+			 end
+		  end
 	     return
 	  end
+	  
    end
 end

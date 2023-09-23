@@ -4993,7 +4993,7 @@ script.on_event("mine-group", function(event)
 	     --Rails within 3 tiles (and their signals)
 		local rails = surf.find_entities_filtered{position = pos, radius = 3, name = "straight-rail"}
 		for i,rail in ipairs(rails) do
-		   destroy_signals(rail)
+		   mine_signals(rail,pindex)
 		   game.get_player(pindex).play_sound{path = "entity-mined/straight-rail"}
 		   game.get_player(pindex).mine_entity(rail,true)
 		end
@@ -5476,6 +5476,10 @@ function build_item_in_hand(pindex, offset_val)
          append_rail(pos, pindex)
          return
       end
+   elseif stack.name == "rail-signal" or stack.name == "rail-chain-signal" then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+	  printout("You need to use the building menu of a rail.",pindex)
+      return
    end
    
    if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
@@ -6763,8 +6767,8 @@ script.on_event("control-g-key", function(event)
       --
    end
    if ent ~= nil and ent.valid and ent.train ~= nil then
-      --set_temporary_train_stop(ent.train,pindex)
-	  sub_automatic_travel_to_other_stop(ent.train,pindex)
+      set_temporary_train_stop(ent.train,pindex)
+	  --sub_automatic_travel_to_other_stop(ent.train,pindex)
    end
    
 end)
@@ -7088,11 +7092,20 @@ script.on_event(defines.events.on_entity_destroyed,function(event)
    players[pindex].destroyed[event.registration_number] = nil
 end)
 
---Any train with a blank schedule returns to manual mode by default
+--Scripts regarding train state changes
 script.on_event(defines.events.on_train_changed_state,function(event)
    if event.train.state == defines.train_state.no_schedule then
+      --Trains with no schedule are set back to manual mode
       event.train.manual_mode = true
+   elseif event.train.state == defines.train_state.arrive_station then
+      --Announce station to players on the train
+	  for i,player in ipairs(event.train.passengers) do
+         local stop = event.train.path_end_stop
+		 if stop ~= nil then
+		    str = " Arriving at station " .. stop.backer_name .. " "
+			players[player.index].last = str
+	        localised_print{"","out ",str}
+		 end
+      end
    end
 end)
-
-

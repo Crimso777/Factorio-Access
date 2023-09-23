@@ -23,6 +23,8 @@ Updated in September of 2023.
   * Rail analyzer tool: Press J inside a train to learn the nearest structure ahead on the rails and the distance to it. Press SHIFT + J to check the opposite direction.
   * Rail analyzer tool works on foot as well.
   * Subautomatic travel added: You can select an option from the train menu to make a train go by itself to the other station on a rail line with 2 stations.
+  * Subautomatic trains announce to any passengers their next station and arriving station.
+  * Rail chain signal placement designed to be same as in Vanilla. You need to craft any signals you place and they are refunded when mined.
   * Other additions all across the code to support trains.
   * Note 1: Parallel rail lines should be at least 4 tiles apart. This is partially enforced for the rail appender tool.
   * Note 2: Partially and fully automated train support are goals for later updates. See Chapter 16 of the wiki for more info.
@@ -47,6 +49,7 @@ Updated in September of 2023.
 - Teleporting function can now also be called silently.
 - Build lock smart placement for electric poles now applies to medium electric poles. They are placed to allow maxiumum continuous area coverage rather than maximum wire reach.
 - Extra entries added to the ent info function for train related entities.
+- Renamed all rails and trains directions to use defines instead of hardcoded integers
 - Minor changes
   * Entity ghosts are now better identified.
   * Beacon contents are now read.

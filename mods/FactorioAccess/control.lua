@@ -2966,7 +2966,7 @@ function read_coords(pindex, start_phrase)
 		 end
 		 --Simply give coords
 		 printout(result .. " " .. location .. ", at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
-		 --p.print(result .. " " .. location .. ", at " .. (players[pindex].cursor_pos.x) .. ", " .. (players[pindex].cursor_pos.y))--**
+		 --p.print(result .. " " .. location .. ", at " .. (players[pindex].cursor_pos.x) .. ", " .. (players[pindex].cursor_pos.y))
       end
    elseif players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
       local x = players[pindex].inventory.index %10
@@ -5582,7 +5582,7 @@ function build_item_in_hand(pindex, offset_val)
 		 local check_dist = 6
 		 if stack.name == "fast-underground-belt" then
 		    check_dist = 8
-		 elseif stack.name == "express-underground-belt" then --**todo test and fix, check names and values
+		 elseif stack.name == "express-underground-belt" then
 		    check_dist = 10
 		 elseif stack.name == "pipe-to-ground" then --laterdo this entity has different neighbour rules, so adjust for it later.
 		    check_dist = 12
@@ -6833,6 +6833,7 @@ script.on_event("control-g-key", function(event)
    if ent ~= nil and ent.valid and ent.train ~= nil then
       --set_temporary_train_stop(ent.train,pindex)
 	  --sub_automatic_travel_to_other_stop(ent.train)
+	  instant_schedule(ent.train,pindex)
    end
    
    

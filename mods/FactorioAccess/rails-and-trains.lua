@@ -3191,15 +3191,15 @@ function fuel_inventory_info(ent)
 end
 
 
---Set a temporary train stop...
-function set_temporary_train_stop(train,pindex)
-   local p = game.get_player(pindex)
-   local surf = p.surface
+--For the selected train, adds every reachable train stop to its schedule with the waiting condition of **. todo test and work it in
+function instant_schedule(train,pindex)
+   local surf = train.front_stock.surface
    local train_stops = surf.get_train_stops()
+   train.schedule = nil
    for i,stop in ipairs(train_stops) do
-      --Add the stop to the schedule's top
+      --Add the stop to the schedule's first row
 	  local wait_condition_1 = {type = "passenger_not_present", compare_type = "and"}
-	  local new_record = {wait_conditions = {wait_condition_1}, station = stop.backer_name, temporary = true}
+	  local new_record = {wait_conditions = {wait_condition_1}, station = stop.backer_name, temporary = false}
 	  
 	  local schedule = train.schedule
 	  if schedule == nil then
@@ -3207,40 +3207,34 @@ function set_temporary_train_stop(train,pindex)
 		 game.get_player(pindex).print("made new schedule")
 	  else
 		 local records = schedule.records
-		 table.insert(records, new_record)--**try
-		 game.get_player(pindex).print("added to schedule")
+		 table.insert(records,1, new_record)--**try
+		 game.get_player(pindex).print("added to schedule row 1, schedule length now " .. #records)
 	  end
 	  train.schedule = schedule
 	  
-	  --Make the train aim for the stop, but change stop if there is no path
+	  --Make the train aim for the stop
 	  train.go_to_station(1)
 	  train.recalculate_path()
-	  if true then return end--**
 	  
-	  if not train.has_path or train.path.size < 3 then --path size < 3 means the train is already at the station
-	     game.get_player(pindex).print("nope")--**
-		 --Clear the schedule record
-		 local schedule_len = 0
+	  --React according to valid path
+	  if not train.has_path then
+		 --Clear the invalid schedule record
+		 game.get_player(pindex).print("invalid " .. stop.backer_name)
+		 local schedule = train.schedule
 		 if schedule ~= nil then
-			 for i,row in ipairs(schedule) do
-				schedule_len = schedule_len + 1
-			 end
-			 if schedule_len == 1 then --Removing the only line if any
-				--train.schedule = nil
-				game.get_player(pindex).print("schedule length now 0")
-			 else --Removing one line
-				--train.schedule = table.remove(train.schedule, 1)--**
-				game.get_player(pindex).print("schedule length now " .. (schedule_len - 0))
-			 end
-		 else
-		    game.get_player(pindex).print("schedule was nil")
+			game.get_player(pindex).print("Removing " .. stop.backer_name)
+			local records = schedule.records
+			table.remove(records, 1)--**
+			if #records == 0 then
+			   train.schedule = nil
+			else
+			   train.schedule = schedule
+			end
+			game.get_player(pindex).print("schedule length now " .. #records)
 		 end
 	  else
 	     --Valid station and path selected.
-	     rendering.draw_circle{color = {0, 1, 0},radius = 7,width = 7,target = p.position,surface = p.surface,time_to_live = 100}
-		 game.get_player(pindex).print("path size " .. train.path.size)
-	     return
-	     
+		 game.get_player(pindex).print("valid " .. stop.backer_name .. ", path size " .. train.path.size)
 	  end
    end
 end
@@ -3253,7 +3247,7 @@ function sub_automatic_travel_to_other_stop(train)
    local train_stops = surf.get_train_stops()
    for i,stop in ipairs(train_stops) do
       --Set a stop
-	  local wait_condition_1 = {type = "passenger_present", compare_type = "and"}
+	  local wait_condition_1 = {type = "passenger_not_present", compare_type = "and"}
 	  local new_record = {wait_conditions = {wait_condition_1}, station = stop.backer_name, temporary = true}
 	  train.schedule = {current = 1, records = {new_record}}
 	  
@@ -3279,3 +3273,4 @@ function sub_automatic_travel_to_other_stop(train)
 	  
    end
 end
+

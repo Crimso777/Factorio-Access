@@ -29,6 +29,16 @@ Updated in September of 2023.
   * Note 1: Parallel rail lines should be at least 4 tiles apart. This is partially enforced for the rail appender tool.
   * Note 2: Partially and fully automated train support are goals for later updates. See Chapter 16 of the wiki for more info.
 
+- Improved electric pole support with new features.
+  * Electric network demand satisfaction percentages are now reported. Check with RIGHT BRACKET.
+  * If an electric pole has no power flowing (as in 0 satisfaction), the nearest supplied electric pole is reported.  
+
+- Improved underground belt support with new features.
+  * Underground belts can now be identified as entrances or exits, explaining whether items are flowing into the ground or out from it.
+  * Building assistance was added to auto-rotate new exits to pair with neighbourless entrances. For example, 
+
+- Entity part identification added: When you press K with the cursor hovering over an entity, its selected part will be reported, such as the southeast corner or the center.
+
 - Rocket silo support added: Silos can now report rocket part counts and launch rockets (press SPACE on it when ready).
 
 - Group mining added: If you press SHIFT + X on a tree or a rail, it will mine all of them immediately around you instead of only one.
@@ -45,19 +55,31 @@ Updated in September of 2023.
 
 ## Changes
 - Changed the keybind for disconnecting rail vehicles from "V" to "SHIFT + G".
+
 - Teleporting is disabled while riding a vehicle.
+
 - Teleporting function can now also be called silently.
+
 - Build lock smart placement for electric poles now applies to medium electric poles. They are placed to allow maxiumum continuous area coverage rather than maximum wire reach.
+
 - Extra entries added to the ent info function for train related entities.
+
 - Renamed all rails and trains directions to use defines instead of hardcoded integers
+
+- Reported local time was shifted by twelve hours so that daytime is 6 to 18 and midnight is around 24.
+
+- When placing electric poles, the number of expected connections is stated instead of whether there are any. This assists with understanding if a new pole will merge two disconnected networks.
+
 - Minor changes
   * Entity ghosts are now better identified.
   * Beacon contents are now read.
   * Containers now report top 2 items at first look, instead of 1. 
   * For entities containing fluids, any extra fluids are also reported.
   * Added information reporting for entities facing diagonal directions.
-  * Added new sound effects for reaching the borders of inventories.
+  * Added new sound effects for the cursor reaching the borders of inventories.
   * Added function to mine all trees and rocks in a given circular area. Useful for when placing structures.
+  * Added function "get_direction_of_that_from_this" to assist with locating entities.
+  * Entity part reporting is given as its own function.
 
 ## Bugfixes
 - Fixed a bug where the inventory is opened directly when a Factorio Access menu is closed.

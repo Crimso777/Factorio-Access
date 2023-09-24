@@ -683,7 +683,7 @@ function ent_info(pindex, ent, description)
       result = result .. ", connected to "
       for i, v in pairs(ent.neighbours) do
          for i1, v1 in pairs(v) do
-            result = result .. ", " .. distance(ent.position, v1.position) .. " " .. direction(ent.position, v1.position)
+            result = result .. ", " .. math.floor(distance(ent.position, v1.position)) .. " " .. direction(ent.position, v1.position)
          end
       end
    elseif next(ent.prototype.fluidbox_prototypes) ~= nil then
@@ -714,11 +714,11 @@ function ent_info(pindex, ent, description)
                if ent.type == "assembling-machine" and ent.get_recipe() ~= nil then
                   if ent.name == "oil-refinery" and ent.get_recipe().name == "basic-oil-processing" then
                      if i == 2 then
-                        result = result .. ", crude-oil Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                        result = result .. ", crude-oil Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                      elseif i == 5 then
-                        result = result .. ", petroleum-gas Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                        result = result .. ", petroleum-gas Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                      else
-                        result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                        result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                      end
                   else
                      if pipe.type == "input" then
@@ -734,9 +734,9 @@ function ent_info(pindex, ent, description)
                               i3 = #inputs
                            end
                            local filter = inputs[i3]
-                           result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                           result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                         else
-                           result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                           result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                         end
                      else
                         local outputs = ent.get_recipe().products
@@ -751,9 +751,9 @@ function ent_info(pindex, ent, description)
                               i3 = #outputs
                            end
                            local filter = outputs[i3]
-                           result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                           result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                         else
-                           result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                           result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                         end
 
                      end
@@ -761,7 +761,7 @@ function ent_info(pindex, ent, description)
 
                else
                   local filter = box.filter or {name = ""}
-                  result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                  result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                end
             end
          end
@@ -2960,68 +2960,9 @@ function read_coords(pindex, start_phrase)
          end
          printout(result .. math.floor(vehicle.position.x) .. ", " .. math.floor(vehicle.position.y), pindex)
       else
-         --Check if there is an entity at the cursor
-		 local p = game.get_player(pindex)
-		 local x = players[pindex].cursor_pos.x
-		 local y = players[pindex].cursor_pos.y
-		 local ent = p.surface.find_entities_filtered{position = {x = x,y = y}}
-		 local north_same = false
-		 local south_same = false
-		 local east_same = false
-		 local west_same = false
-		 local location = "point"
-		 if #ent > 0 then
-		    --Report which part of the entity the cursor covers.
-			local ent_north = p.surface.find_entities_filtered{position = {x = x,y = y-1}}
-			if #ent_north > 0 and ent_north[1].unit_number == ent[1].unit_number then north_same = true end
-			local ent_south = p.surface.find_entities_filtered{position = {x = x,y = y+1}}
-			if #ent_south > 0 and ent_south[1].unit_number == ent[1].unit_number then south_same = true end
-			local ent_east = p.surface.find_entities_filtered{position = {x = x+1,y = y}}
-			if #ent_east > 0 and ent_east[1].unit_number == ent[1].unit_number then east_same = true end
-			local ent_west = p.surface.find_entities_filtered{position = {x = x-1,y = y}}
-			if #ent_west > 0 and ent_west[1].unit_number == ent[1].unit_number then west_same = true end
-			
-			if north_same and south_same then
-			   if east_same and west_same then
-			      location = "center"
-			   elseif east_same and not west_same then
-			      location = "west edge"
-			   elseif not east_same and west_same then
-			      location = "east edge"
-			   elseif not east_same and not west_same then
-			      location = "middle"
-			   end
-			elseif north_same and not south_same then
-			   if east_same and west_same then
-			      location = "south edge"
-			   elseif east_same and not west_same then
-			      location = "southwest corner"
-			   elseif not east_same and west_same then
-			      location = "southeast corner"
-			   elseif not east_same and not west_same then
-			      location = "south tip"
-			   end
-			elseif not north_same and south_same then
-			   if east_same and west_same then
-			      location = "north edge"
-			   elseif east_same and not west_same then
-			      location = "northwest corner"
-			   elseif not east_same and west_same then
-			      location = "northeast corner"
-			   elseif not east_same and not west_same then
-			      location = "north tip"
-			   end
-			elseif not north_same and not south_same then
-			   if east_same and west_same then
-			      location = "middle"
-			   elseif east_same and not west_same then
-			      location = "west tip"
-			   elseif not east_same and west_same then
-			      location = "east tip"
-			   elseif not east_same and not west_same then
-			      location = "center"
-			   end
-			end
+         local location = get_entity_part_at_cursor(pindex)
+		 if location == nil then
+		    location = "point"
 		 end
 		 --Simply give coords
 		 printout(result .. " " .. location .. ", at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
@@ -7349,3 +7290,73 @@ function report_nearest_supplied_electric_pole(ent)
    end
    return result
 end
+
+
+--Reports which part of the selected entity has the cursor. E.g. southwest corner, center...
+function get_entity_part_at_cursor(pindex)
+	 --First check if there is an entity at the cursor
+	 local p = game.get_player(pindex)
+	 local x = players[pindex].cursor_pos.x
+	 local y = players[pindex].cursor_pos.y
+	 local ents = p.surface.find_entities_filtered{position = {x = x,y = y}}
+	 local north_same = false
+	 local south_same = false
+	 local east_same = false
+	 local west_same = false
+	 local location = nil
+	 if #ents > 0 then
+		--Report which part of the entity the cursor covers.
+		local ent_north = p.surface.find_entities_filtered{position = {x = x,y = y-1}}
+		if #ent_north > 0 and ent_north[1].unit_number == ents[1].unit_number then north_same = true end
+		local ent_south = p.surface.find_entities_filtered{position = {x = x,y = y+1}}
+		if #ent_south > 0 and ent_south[1].unit_number == ents[1].unit_number then south_same = true end
+		local ent_east = p.surface.find_entities_filtered{position = {x = x+1,y = y}}
+		if #ent_east > 0 and ent_east[1].unit_number == ents[1].unit_number then east_same = true end
+		local ent_west = p.surface.find_entities_filtered{position = {x = x-1,y = y}}
+		if #ent_west > 0 and ent_west[1].unit_number == ents[1].unit_number then west_same = true end
+		
+		if north_same and south_same then
+		   if east_same and west_same then
+			  location = "center"
+		   elseif east_same and not west_same then
+			  location = "west edge"
+		   elseif not east_same and west_same then
+			  location = "east edge"
+		   elseif not east_same and not west_same then
+			  location = "middle"
+		   end
+		elseif north_same and not south_same then
+		   if east_same and west_same then
+			  location = "south edge"
+		   elseif east_same and not west_same then
+			  location = "southwest corner"
+		   elseif not east_same and west_same then
+			  location = "southeast corner"
+		   elseif not east_same and not west_same then
+			  location = "south tip"
+		   end
+		elseif not north_same and south_same then
+		   if east_same and west_same then
+			  location = "north edge"
+		   elseif east_same and not west_same then
+			  location = "northwest corner"
+		   elseif not east_same and west_same then
+			  location = "northeast corner"
+		   elseif not east_same and not west_same then
+			  location = "north tip"
+		   end
+		elseif not north_same and not south_same then
+		   if east_same and west_same then
+			  location = "middle"
+		   elseif east_same and not west_same then
+			  location = "west tip"
+		   elseif not east_same and west_same then
+			  location = "east tip"
+		   elseif not east_same and not west_same then
+			  location = "center"
+		   end
+		end
+	 end
+	 return location
+end
+

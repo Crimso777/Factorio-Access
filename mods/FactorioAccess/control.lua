@@ -5570,21 +5570,24 @@ function build_item_in_hand(pindex, offset_val)
             return
          end
       elseif stack.name == "underground-belt" or stack.name == "fast-underground-belt" 
-	      or stack.name == "express-underground-belt" or stack.name == "pipe-to-ground" then --Rotate undergrounds to match automatically
+	      or stack.name == "express-underground-belt" then --Rotate undergrounds to match automatically
+		 local p = game.get_player(pindex)
 		 local build_dir = players[pindex].building_direction * 2--laterdo get building directions to match the official defines
-		 local check_dist = 5
+		 local check_dist = 6
 		 if stack.name == "fast-underground-belt" then
-		    check_dist = 7
+		    check_dist = 8
 		 elseif stack.name == "express-underground-belt" then --**todo test and fix, check names and values
-		    check_dist = 9
-		 elseif stack.name == "pipe-to-ground" then
-		    check_dist = 11
+		    check_dist = 10
+		 elseif stack.name == "pipe-to-ground" then --laterdo this entity has different neighbour rules, so adjust for it later.
+		    check_dist = 12
 		 end
-		 --Find any neighborless matching underground of the same name and same/opposite direction
+		 --Find any neighborless matching underground of the same name and same/opposite direction, and along the correct axis
 		 local candidates = game.get_player(pindex).surface.find_entities_filtered{ name = stack.name, position = position, radius = check_dist, direction = {build_dir,(build_dir + dirs.south) % (2 * dirs.south)} } 
 		 if #candidates > 0 then
 		    for i,cand in ipairs(candidates) do
-			   if cand.neighbours == nil and cand.direction == build_dir then --Keep if opposite direction, flip if same direction. laterdo update build_dir
+			rendering.draw_circle{color = {1, 1, 0},radius = 3,width = 3,target = cand.position,surface = cand.surface,time_to_live = 100}
+			   if cand.neighbours == nil and cand.direction == build_dir 
+			   and (get_direction_of_that_from_this(p,cand) == build_dir) then --Keep if opposite direction, flip if same direction. laterdo update build_dir
 			      rendering.draw_circle{color = {0, 1, 0},radius = 3,width = 3,target = cand.position,surface = cand.surface,time_to_live = 100}
 				  players[pindex].building_direction = (players[pindex].building_direction + 2) % 4
 			   end

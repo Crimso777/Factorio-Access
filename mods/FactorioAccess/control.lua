@@ -5569,7 +5569,8 @@ function build_item_in_hand(pindex, offset_val)
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             return
          end
-      elseif stack.prototype.type == "underground-belt" or stack.name == "pipe-to-ground" then --Rotate undergrounds to match automatically
+      elseif stack.name == "underground-belt" or stack.name == "fast-underground-belt" 
+	      or stack.name == "express-underground-belt" or stack.name == "pipe-to-ground" then --Rotate undergrounds to match automatically
 		 local build_dir = players[pindex].building_direction * 2--laterdo get building directions to match the official defines
 		 local check_dist = 5
 		 if stack.name == "fast-underground-belt" then

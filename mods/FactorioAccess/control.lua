@@ -2960,7 +2960,72 @@ function read_coords(pindex, start_phrase)
          end
          printout(result .. math.floor(vehicle.position.x) .. ", " .. math.floor(vehicle.position.y), pindex)
       else
-         printout(result .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
+         --Check if there is an entity at the cursor
+		 local p = game.get_player(pindex)
+		 local x = players[pindex].cursor_pos.x
+		 local y = players[pindex].cursor_pos.y
+		 local ent = p.surface.find_entities_filtered{position = {x = x,y = y}}
+		 local north_same = false
+		 local south_same = false
+		 local east_same = false
+		 local west_same = false
+		 local location = "point"
+		 if #ent > 0 then
+		    --Report which part of the entity the cursor covers.
+			local ent_north = p.surface.find_entities_filtered{position = {x = x,y = y-1}}
+			if #ent_north > 0 and ent_north[1].unit_number == ent[1].unit_number then north_same = true end
+			local ent_south = p.surface.find_entities_filtered{position = {x = x,y = y+1}}
+			if #ent_south > 0 and ent_south[1].unit_number == ent[1].unit_number then south_same = true end
+			local ent_east = p.surface.find_entities_filtered{position = {x = x+1,y = y}}
+			if #ent_east > 0 and ent_east[1].unit_number == ent[1].unit_number then east_same = true end
+			local ent_west = p.surface.find_entities_filtered{position = {x = x-1,y = y}}
+			if #ent_west > 0 and ent_west[1].unit_number == ent[1].unit_number then west_same = true end
+			
+			if north_same and south_same then
+			   if east_same and west_same then
+			      location = "center"
+			   elseif east_same and not west_same then
+			      location = "west edge"
+			   elseif not east_same and west_same then
+			      location = "east edge"
+			   elseif not east_same and not west_same then
+			      location = "middle"
+			   end
+			elseif north_same and not south_same then
+			   if east_same and west_same then
+			      location = "south edge"
+			   elseif east_same and not west_same then
+			      location = "southwest corner"
+			   elseif not east_same and west_same then
+			      location = "southeast corner"
+			   elseif not east_same and not west_same then
+			      location = "south tip"
+			   end
+			elseif not north_same and south_same then
+			   if east_same and west_same then
+			      location = "north edge"
+			   elseif east_same and not west_same then
+			      location = "northwest corner"
+			   elseif not east_same and west_same then
+			      location = "northeast corner"
+			   elseif not east_same and not west_same then
+			      location = "north tip"
+			   end
+			elseif not north_same and not south_same then
+			   if east_same and west_same then
+			      location = "middle"
+			   elseif east_same and not west_same then
+			      location = "west tip"
+			   elseif not east_same and west_same then
+			      location = "east tip"
+			   elseif not east_same and not west_same then
+			      location = "center"
+			   end
+			end
+		 end
+		 --Simply give coords
+		 printout(result .. " " .. location .. ", at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
+		 --p.print(result .. " " .. location .. ", at " .. (players[pindex].cursor_pos.x) .. ", " .. (players[pindex].cursor_pos.y))--**
       end
    elseif players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
       local x = players[pindex].inventory.index %10
@@ -5585,7 +5650,7 @@ function build_item_in_hand(pindex, offset_val)
 		 local candidates = game.get_player(pindex).surface.find_entities_filtered{ name = stack.name, position = position, radius = check_dist, direction = {build_dir,(build_dir + dirs.south) % (2 * dirs.south)} } 
 		 if #candidates > 0 then
 		    for i,cand in ipairs(candidates) do
-			rendering.draw_circle{color = {1, 1, 0},radius = 3,width = 3,target = cand.position,surface = cand.surface,time_to_live = 100}
+			--rendering.draw_circle{color = {1, 1, 0},radius = 3,width = 3,target = cand.position,surface = cand.surface,time_to_live = 100}
 			   if cand.neighbours == nil and cand.direction == build_dir 
 			   and (get_direction_of_that_from_this(p,cand) == build_dir) then --Keep if opposite direction, flip if same direction. laterdo update build_dir
 			      rendering.draw_circle{color = {0, 1, 0},radius = 3,width = 3,target = cand.position,surface = cand.surface,time_to_live = 100}

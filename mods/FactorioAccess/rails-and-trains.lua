@@ -466,7 +466,7 @@ function get_train_state_info(train)
    return train_state_text
 end
 
---Look up and translate the signal state. -test**
+--Look up and translate the signal state.
 function get_signal_state_info(signal)
    local state_id = 0
    local state_lookup = nil
@@ -711,37 +711,6 @@ function get_opposite_rail_direction(dir)
       return defines.rail_direction.front
    end
 end
-
---For testing: Report where object A is with respect to object B
-function where_is_a_for_b(a,b)
-   local to_the_north = false
-   local to_the_east  = false
-   local to_the_south = false
-   local to_the_west  = false
-   local message = "It is to the "
-   
-   if a.position.y - b.position.y > 0.9 then
-      to_the_south = true
-      message = message .. "south"
-   elseif a.position.y - b.position.y < -0.9 then
-      to_the_north = true
-      message = message .. "north"
-   end
-   if a.position.x - b.position.x > 0.9 then
-      to_the_east = true
-      message = message .. "east"
-   elseif a.position.x - b.position.x < -0.9 then
-      to_the_west = true
-      message = message .. "west"
-   end
-   
-   if not to_the_east and not to_the_north and not to_the_south and not to_the_west then
-      message = "The entity is nearby "
-   end
-   message = message .. ", " .. math.floor(math.abs(util.distance(a.position,b.position))) .. " tiles away."
-   return message
-end
-
 
 --Checks if the train is all in one segment, which means the front and back rails are in the same segment.
 function train_is_all_in_one_segment(train)
@@ -3233,7 +3202,7 @@ function set_temporary_train_stop(train,pindex)
 	  local new_record = {wait_conditions = {wait_condition_1}, station = stop.backer_name, temporary = true}
 	  
 	  local schedule = train.schedule
-	  if schedule == nil then--**
+	  if schedule == nil then
 	     schedule = {current = 1, records = {new_record}}
 		 game.get_player(pindex).print("made new schedule")
 	  else

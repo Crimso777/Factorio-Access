@@ -620,6 +620,15 @@ function ent_info(pindex, ent, description)
       end
    end
    
+   --For underground belts, note whether entrance or Exited
+   if ent.type == "underground-belt" then
+      if ent.belt_to_ground_type == "input" then
+	     result = result .. ", entrance "
+	  elseif ent.belt_to_ground_type == "output" then
+	     result = result .. ", exit "
+	  end
+   end
+   
    --Explain the recipe of a machine without pause and before the direction
    pcall(function()
       if ent.get_recipe() ~= nil then
@@ -803,6 +812,9 @@ function ent_info(pindex, ent, description)
 	  power = power * 60
 	  capacity = capacity * 60
 	  result = result .. get_power_string(power) .. " being produced out of " .. get_power_string(capacity) .. " capacity, "
+   end
+   if ent.name == "rail-signal" or ent.name == "rail-chain-signal" then
+      result = result .. ", " .. get_signal_state_info(ent)
    end
    if ent.drop_position ~= nil then
       local position = table.deepcopy(ent.drop_position)
@@ -2800,6 +2812,7 @@ function read_tile(pindex)
          end
          table.sort(poles, function(k1, k2) return k1.max_wire_distance < k2.max_wire_distance end)
          local check = false
+		 local wire_count = 0
          for i, pole in ipairs(poles) do
             names = {}
             for i1 = i, #poles, 1 do
@@ -2810,8 +2823,10 @@ function read_tile(pindex)
                radius = pole.max_wire_distance,
                name = names
             }
-            if #surf.find_entities_filtered(T) > 0 then
+			local found = surf.find_entities_filtered(T)
+            if #found > 0 then
                check = true
+			   wire_count = #found
                break
             end
          if stack.name == pole.name then
@@ -2820,6 +2835,11 @@ function read_tile(pindex)
       end
          if check then
             result = result .. " " .. "connected"
+			if wire_count == 2 then
+			   result = result .. " twice "
+			elseif wire_count > 2 then
+			   result = result .. " " .. wire_count .. " times "
+			end
          else
             result = result .. "Not Connected"
          end
@@ -5549,7 +5569,28 @@ function build_item_in_hand(pindex, offset_val)
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             return
          end
-      end
+      elseif stack.prototype.type == "underground-belt" or stack.name == "pipe-to-ground" then --Rotate undergrounds to match automatically
+		 local build_dir = players[pindex].building_direction * 2--laterdo get building directions to match the official defines
+		 local check_dist = 5
+		 if stack.name == "fast-underground-belt" then
+		    check_dist = 7
+		 elseif stack.name == "express-underground-belt" then --**todo test and fix, check names and values
+		    check_dist = 9
+		 elseif stack.name == "pipe-to-ground" then
+		    check_dist = 11
+		 end
+		 --Find any neighborless matching underground of the same name and same/opposite direction
+		 local candidates = game.get_player(pindex).surface.find_entities_filtered{ name = stack.name, position = position, radius = check_dist, direction = {build_dir,(build_dir + dirs.south) % (2 * dirs.south)} } 
+		 if #candidates > 0 then
+		    for i,cand in ipairs(candidates) do
+			   if cand.neighbours == nil and cand.direction == build_dir then --Keep if opposite direction, flip if same direction. laterdo update build_dir
+			      rendering.draw_circle{color = {0, 1, 0},radius = 3,width = 3,target = cand.position,surface = cand.surface,time_to_live = 100}
+				  players[pindex].building_direction = (players[pindex].building_direction + 2) % 4
+			   end
+            end			
+		 end
+	  end
+	  --Build it
       local building = {
          position = position,
          direction = players[pindex].building_direction * 2,
@@ -5944,10 +5985,17 @@ script.on_event("right-click", function(event)
          --Print status if it exists
          ent_status_text = status_lookup[ent_status_id]
          printout(" " .. ent_status_text ,pindex)
-      else
+      else--No status cases
 	     --When there is no status, for entities with fuel inventories, read that out instead. This is typical for vehicles.
 	     if ent.get_fuel_inventory() ~= nil then
 		    printout(" " .. fuel_inventory_info(ent),pindex)
+		 elseif ent.type == "electric-pole" then
+		    --For electric poles with no power flow, report the nearest electric pole with a power flow.
+			if get_electricity_satisfaction(ent) > 0 then
+			   printout("Has power with " .. get_electricity_satisfaction(ent) .. " percent network satisfaction.",pindex)
+			else
+			   printout("No power, " .. report_nearest_supplied_electric_pole(ent) ,pindex)
+			end
 		 else
             printout("No status." ,pindex)
 		 end
@@ -6140,20 +6188,22 @@ script.on_event("item-info", function(event)
 end
 )
 
+--Gives in-game time. The night darkness is from 11 to 13, and peak daylight hours are 18 to 6.
+--For realism, if we adjust by 12 hours, we get 23 to 1 as midnight and 6 to 18 as peak solar.
 script.on_event("time", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
    local surf = game.get_player(pindex).surface
-   local hour = math.floor(24*surf.daytime)
-   local minute = math.floor((24* surf.daytime - hour) * 60)
+   local hour = math.floor((24*surf.daytime + 12) % 24)
+   local minute = math.floor((24* surf.daytime - math.floor(24*surf.daytime)) * 60)
    local progress = math.floor(game.get_player(pindex).force.research_progress* 100)
    local tech = game.get_player(pindex).force.current_research
    if tech ~= nil then
-      printout("The time is " .. hour .. ":" .. string.format("%02d", minute) .. " Researching " .. game.get_player(pindex).force.current_research.name .. " " .. progress .. "%", pindex)
+      printout("The local time is " .. hour .. ":" .. string.format("%02d", minute) .. ", Researching " .. game.get_player(pindex).force.current_research.name .. " " .. progress .. "%", pindex)
    else
-      printout("The time is " .. hour .. ":" .. string.format("%02d", minute), pindex)
+      printout("The local time is " .. hour .. ":" .. string.format("%02d", minute), pindex)
    end
 end)
 
@@ -6771,9 +6821,10 @@ script.on_event("control-g-key", function(event)
       --
    end
    if ent ~= nil and ent.valid and ent.train ~= nil then
-      set_temporary_train_stop(ent.train,pindex)
+      --set_temporary_train_stop(ent.train,pindex)
 	  --sub_automatic_travel_to_other_stop(ent.train)
    end
+   
    
 end)
 
@@ -7114,6 +7165,40 @@ script.on_event(defines.events.on_train_changed_state,function(event)
    end
 end)
 
+--Returns the direction of that entity from this entity based on the ratios of the x and y distances. Returns 1 of 8 main directions.
+function get_direction_of_that_from_this(that,this)
+   local diff_x = that.position.x - this.position.x
+   local diff_y = that.position.y - this.position.y
+   local dir = -1
+   
+   if math.abs(diff_x) > 2 * math.abs(diff_y) then --along east-west
+      if diff_x > 0 then 
+	     dir = defines.direction.east 
+	  else 
+	     dir = defines.direction.west 
+	  end
+   elseif math.abs(diff_y) > 2 * math.abs(diff_x) then --along north-south
+      if diff_y > 0 then 
+	     dir = defines.direction.south 
+	  else 
+	     dir = defines.direction.north 
+	  end
+   else --along diagonals
+      if diff_x > 0 and diff_y > 0 then
+	     dir = defines.direction.southeast
+      elseif diff_x > 0 and diff_y < 0 then
+	     dir = defines.direction.northeast
+      elseif diff_x < 0 and diff_y > 0 then
+	     dir = defines.direction.southwest
+	  elseif diff_x < 0 and diff_y < 0 then
+	     dir = defines.direction.northwest
+	  else
+	     dir = -2
+	  end
+   end
+   return dir
+end
+
 --Spawns a lamp at the electric pole and uses its energy level to approximate the network satisfaction percentage with high accuracy
 function get_electricity_satisfaction(electric_pole)
    local satisfaction = -1
@@ -7123,3 +7208,75 @@ function get_electricity_satisfaction(electric_pole)
    return satisfaction
 end
 
+--Finds the neearest electric pole with power flowing through its network.
+function find_nearest_supplied_electric_pole(ent, radius)
+   local nearest = nil
+   local retry = retry or 0
+   local min_dist = 11000
+   local poles = nil
+   local radius = radius or 10
+   
+   --Scan nearby for electric poles, expand radius if not successful
+   local poles = ent.surface.find_entities_filtered{ type = "electric-pole" , position = ent.position , radius = radius, force = ent.force}
+   if poles == nil or #poles == 0 then
+      if radius < 100 then
+	     radius = 100
+		 return find_nearest_supplied_electric_pole(ent, radius)
+	  elseif radius < 1000 then	 
+	     radius = 1000
+		 return find_nearest_supplied_electric_pole(ent, radius)
+	  elseif radius < 10000 then
+	     radius = 10000
+		 return find_nearest_supplied_electric_pole(ent, radius)
+	  else
+	     return nil --Nothing within 10000 tiles!
+	  end
+   end
+   
+   --Find the nearest among the poles with electric networks
+   for i,pole in ipairs(poles) do
+      --Check if the pole's network has power.
+	  local has_power = get_electricity_satisfaction(pole) > 0
+	  local dist = 0
+	  if has_power then
+	     dist = math.ceil(util.distance(ent.position, pole.position))
+		 --Set as nearest if valid
+		 if dist < min_dist then
+		    min_dist = dist
+			nearest = pole
+		 end
+	  end
+   end
+   --Return the nearst found, possibly nil
+   if nearest == nil then
+      if radius < 100 then
+	     radius = 100
+		 return find_nearest_supplied_electric_pole(ent, radius)
+	  elseif radius < 1000 then	 
+	     radius = 1000
+		 return find_nearest_supplied_electric_pole(ent, radius)
+	  elseif radius < 10000 then
+	     radius = 10000
+		 return find_nearest_supplied_electric_pole(ent, radius)
+	  else
+	     return nil --Nothing within 10000 tiles!
+	  end
+   end
+   return nearest, min_dist
+end
+
+
+--Returns an info string on the nearest supplied electric pole for this entity.
+function report_nearest_supplied_electric_pole(ent)
+   local result = ""
+   local pole, dist = find_nearest_supplied_electric_pole(ent, 10)
+   local dir = -1
+   if pole ~= nil then
+      dir = get_direction_of_that_from_this(pole,ent)
+      result = "The nearest supplied electric pole is " .. dist .. " tiles to the " .. direction_lookup(dir)
+	  rendering.draw_circle{color = {1, 1, 0}, radius = 3, width = 3, target = pole.position, surface = pole.surface, time_to_live = 100}
+   else
+      result = "Error: There are no supplied electric poles within ten thousand tiles."
+   end
+   return result
+end

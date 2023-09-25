@@ -4002,6 +4002,17 @@ function on_tick(event)
       global.scheduled_events[event.tick] = nil
    end
    move_characters(event)
+   
+   --Play train track warning sounds at appropriate frequencies
+   if event.tick % 15 == 0 then
+      play_train_track_alert_sounds(3)
+      if event.tick % 30 == 0 then
+         play_train_track_alert_sounds(2)
+         if event.tick % 60 == 0 then
+            play_train_track_alert_sounds(1)
+		 end
+	  end
+   end
 end
 script.on_event(defines.events.on_tick,on_initial_joining_tick)
 
@@ -6833,7 +6844,7 @@ script.on_event("control-g-key", function(event)
    if ent ~= nil and ent.valid and ent.train ~= nil then
       --set_temporary_train_stop(ent.train,pindex)
 	  --sub_automatic_travel_to_other_stop(ent.train)
-	  instant_schedule(ent.train,pindex)
+	  --instant_schedule(ent.train)
    end
    
    
@@ -7173,6 +7184,26 @@ script.on_event(defines.events.on_train_changed_state,function(event)
 	        localised_print{"","out ",str}
 		 end
       end
+   elseif event.train.state == defines.train_state.on_the_path then
+      --Announce station to players on the train
+	  for i,player in ipairs(event.train.passengers) do
+         local stop = event.train.path_end_stop
+		 if stop ~= nil then
+		    str = " Heading to station " .. stop.backer_name .. " "
+			players[player.index].last = str
+	        localised_print{"","out ",str}
+		 end
+      end
+   elseif event.train.state == defines.train_state.wait_signal then
+      --Announce the wait to players on the train
+	  for i,player in ipairs(event.train.passengers) do
+         local stop = event.train.path_end_stop
+		 if stop ~= nil then
+		    str = " Waiting at signal. "
+			players[player.index].last = str
+	        localised_print{"","out ",str}
+		 end
+      end
    end
 end)
 
@@ -7360,4 +7391,3 @@ function get_entity_part_at_cursor(pindex)
 	 end
 	 return location
 end
-

@@ -9,7 +9,7 @@ Updated in September of 2023.
   * Pressing L while inside a vehicle will provide additional information about it. For cars, the fuel stocks are stated. For trains, basic info is given while the train menu has detailed info.
   * You can refuel a vehicle by dropping a stack in hand into it via CONTROL + LEFT BRACKET.
 
-- Phases 0 and 1 and 2 of Trains Implementation. In general, we made it accessible to build rail lines, analyze rail segments, build train stations, build and examine trains, and drive trains manually or sub-automatically.
+- Phases 0 through 3 of Trains Implementation. In general, we made it accessible to build rail lines, analyze rail segments, build train stations, build and examine trains, and drive trains manually or automatically between two stations.
   * Added info support for rails. There is now distinction between end rails, station rails, etc. and the directions of rails are given.
   * Added support for building and renaming train stops.
   * Added train station rail information tool. When you look at a rail behind a train stop, you get information of which section of which rail vehicle would be positioned there when a train stops at the station.
@@ -22,12 +22,16 @@ Updated in September of 2023.
   * Information about a train can be read from its menu including name, length, vehicle counts, cargo item counts, etc.
   * Rail analyzer tool: Press J inside a train to learn the nearest structure ahead on the rails and the distance to it. Press SHIFT + J to check the opposite direction.
   * Rail analyzer tool works on foot as well.
-  * Subautomatic travel added: You can select an option from the train menu to make a train go by itself to the other station on a rail line with 2 stations.
-  * Subautomatic trains announce to any passengers their next station and arriving station.
+  * Subautomatic travel added: You can select an option from the train menu to make a train go by itself to a far away station and wait until all passengers get off.
+  * Automatic travel via instant train scheduler added. An instant automatic schedule rotates between every reachable train stop and waits at each for 5 minutes.
+  * Trains announce to passengers their next stations when departing or arriving.
+  * Trains announce to passengers when waiting at rail signals.
+  * Rail crossing alert tool added. Slow beep means a train moving somewhere within 200 tiles. Fast beep means an automatic train within 100 tiles is heading towards your general direction. Frantic fast alarm bells mean that you need to get off that rail ASAP!
   * Rail chain signal placement designed to be same as in Vanilla. You need to craft any signals you place and they are refunded when mined.
   * Other additions all across the code to support trains.
-  * Note 1: Parallel rail lines should be at least 4 tiles apart. This is partially enforced for the rail appender tool.
-  * Note 2: Partially and fully automated train support are goals for later updates. See Chapter 16 of the wiki for more info.
+  * Note 1: In terms of missing features, there is currently no support for rail forks, one-way rails, and fine control over train schedules.
+  * Note 2: Parallel rail lines should be at least 4 tiles apart. This is partially enforced for the rail appender tool.
+  * Note 3: See Chapter 16 of the wiki for more info.
 
 - Improved electric pole support with new features.
   * Electric network demand satisfaction percentages are now reported. Check with RIGHT BRACKET.

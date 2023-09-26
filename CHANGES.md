@@ -57,6 +57,8 @@ Updated in September of 2023.
 
 - Added support for wearing or swapping armor. Press SHIFT + LEFT BRACKET to equip an armor in your hand, but only when the inventory screen by itself is open. 
 
+- Added support for nuclear power buildings: Temperature readings and other relevant information is provided with entity info.
+
 ## Changes
 - Changed the keybind for disconnecting rail vehicles from "V" to "SHIFT + G".
 
@@ -76,6 +78,8 @@ Updated in September of 2023.
 
 - Minor changes
   * Entity ghosts are now better identified.
+  * Items on the ground are now better identified.
+  * Boilers and heat exchangers report their fluid contents.
   * Beacon contents are now read.
   * Containers now report top 2 items at first look, instead of 1. 
   * For entities containing fluids, any extra fluids are also reported.

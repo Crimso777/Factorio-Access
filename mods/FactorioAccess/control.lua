@@ -533,7 +533,7 @@ function ent_info(pindex, ent, description)
       
    end  
    --Explain the contents of a pipe or storage tank or etc.
-   if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" then
+   if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" or ent.name == "boiler" or ent.name == "heat-exchanger" then
       local dict = ent.get_fluid_contents()
       local fluids = {}
       for name, count in pairs(dict) do
@@ -545,7 +545,7 @@ function ent_info(pindex, ent, description)
       if #fluids > 0 then
          result = result .. " containing " .. fluids[1].name .. " "
 		 if #fluids > 1 then
-            result = result .. "mostly, and also some " .. fluids[2].name .. " "--laterdo check amount order.
+            result = result .. " and " .. fluids[2].name .. ", "
 		 end
 		 if #fluids > 2 then
             result = result .. ", and other fluids "
@@ -767,7 +767,7 @@ function ent_info(pindex, ent, description)
          end
       end
    end
-	if ent.name == "cargo-wagon" then
+   if ent.name == "cargo-wagon" then
       --Explain contents
       local itemset = ent.get_inventory(defines.inventory.cargo_wagon).get_contents()
       local itemtable = {}
@@ -788,8 +788,7 @@ function ent_info(pindex, ent, description)
             result = result .. "and other items "
          end
       end
-   end
-   if ent.type == "electric-pole" then
+   elseif ent.type == "electric-pole" then
       result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, "
 	  result = result .. ", " .. get_electricity_satisfaction(ent) .. " percent network satisfaction, with "
 	  --Get network electricity production
@@ -812,8 +811,7 @@ function ent_info(pindex, ent, description)
 	  power = power * 60
 	  capacity = capacity * 60
 	  result = result .. get_power_string(power) .. " being produced out of " .. get_power_string(capacity) .. " capacity, "
-   end
-   if ent.name == "rail-signal" or ent.name == "rail-chain-signal" then
+   elseif ent.name == "rail-signal" or ent.name == "rail-chain-signal" then
       result = result .. ", " .. get_signal_state_info(ent)
    end
    if ent.drop_position ~= nil then
@@ -885,8 +883,7 @@ function ent_info(pindex, ent, description)
       local level = math.ceil(ent.energy / 50000) --In percentage
       local charge = math.ceil(ent.energy / 1000) --In kilojoules
       result = result .. ", " .. level .. " percent full, containing " .. charge .. " kilojoules. "
-   end
-   if ent.type == "solar-panel" then
+   elseif ent.type == "solar-panel" then
       local s_time = ent.surface.daytime*24 --We observed 18 = peak solar start, 6 = peak solar end, 11 = night start, 13 = night end
       local solar_status = ""
       if s_time > 13 and s_time <= 18 then
@@ -916,6 +913,19 @@ function ent_info(pindex, ent, description)
       elseif modules.get_item_count() > 2 then
 	     result = result .. " with " .. modules[1].name .. " and " .. modules[2].name .. " and other modules "
       end
+   elseif ent.name == "nuclear-reactor" or ent.name == "heat-pipe" or ent.name == "heat-exchanger" then
+      result = result .. ", temperature " .. math.floor(ent.temperature) .. " degrees C "
+	  if ent.name == "nuclear-reactor" then
+	     if ent.temperature > 900 then
+	        result = result .. ", danger "
+		 end
+		 if ent.energy > 0 then
+	        result = result .. ", consuming fuel cell "
+		 end
+	     result = result .. ", neighbour bonus " .. ent.neighbour_bonus * 100 .. " percent "
+	  end
+   elseif ent.name == "item-on-ground" then
+      result = result .. ", " .. ent.stack.name 
    end
    return result
 end

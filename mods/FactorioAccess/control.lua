@@ -2413,41 +2413,7 @@ function tile_cycle(pindex)
       if players[pindex].tile.ents[players[pindex].tile.index - 1].valid then
          result = ""
          local ent = players[pindex].tile.ents[players[pindex].tile.index - 1]
-         result = ent.name
-         result = result .. " " .. ent.type .. " "
-         if ent.type == "resource" then
-            result = result .. " x " .. ent.amount
-         end
-         if ent.prototype.is_building and ent.supports_direction then
-            result = result .. "Facing "
-            if ent.direction == 0 then 
-               result = result .. "North "
-            elseif ent.direction == 4 then
-               result = result .. "South "
-            elseif ent.direction == 6 then
-               result = result .. "West "
-            elseif ent.direction == 2 then
-               result = result .. "East "
-            end
-         end
-         if ent.prototype.type == "generator" then
-            local power1 = ent.energy_generated_last_tick * 60
-            local power2 = ent.prototype.max_energy_production * 60
-            if power2 ~= nil then
-               result = result .. " " .. get_power_string(power) .. " being produced out of " .. get_power_string(capacity) .. " capacity, "
-            else
-               result = result .. " " .. get_power_string(power) .. " being produced."
-            end
-         end
-         if ent.prototype.type == "underground-belt" and ent.neighbours ~= nil then
-            result = result .. distance(ent.position, ent.neighbours.position) .. " " .. direction(ent.position, ent.neighbours.position)
-         elseif (ent.prototype.type  == "pipe" or ent.prototype.type == "pipe-to-ground") and ent.neighbours ~= nil then
-            for i, v in pairs(ent.neighbours) do
-               for i1, v1 in pairs(v) do
-                  result = result .. distance(ent.position, v1.position) .. " " .. direction(ent.position, v1.position)
-               end
-            end
-         end
+         result = ent_info(pindex, ent, "")
          printout(result, pindex)
 
 

@@ -2807,65 +2807,55 @@ function read_tile(pindex)
    printout(result, pindex)
 end
 
---For a player's cursor stack that is holding a building preview, returns appropriate custom info about the building spot.
+--Cursor building preview checks. NOTE: Only 1 by 1 entities for now
 function build_preview_checks_info(stack, pindex)
    if stack == nil or not stack.valid_for_read or not stack.valid then
       return "invalid stack"
    end
    local surf = game.get_player(pindex).surface
+   local pos = table.deepcopy(players[pindex].cursor_pos)
    local result = ""
    local ent = stack.prototype.place_result 
    if ent == nil or not ent.valid then
       return "invalid entity"
    end
    
-   --Notify before all else if surface/player cannot place this entity**
+   --Notify before all else if surface/player cannot place this entity. **todo add this check by copying over build offset stuff
    
-   --For electric poles, ***
+   --For electric poles, report the directions of up to 5 wire-connectible electric poles that can connect
    if ent.type == "electric-pole" then
-         local position = table.deepcopy(players[pindex].cursor_pos)
-         local dict = game.get_filtered_entity_prototypes{{filter = "type", type = "electric-pole"}}
-         local poles = {}
-         for i, v in pairs(dict) do
-            table.insert(poles, v)
-         end
-         table.sort(poles, function(k1, k2) return k1.max_wire_distance < k2.max_wire_distance end)
-         local check = false
-		 local wire_count = 0
-         for i, pole in ipairs(poles) do
-            names = {}
-            for i1 = i, #poles, 1 do
-               table.insert(names, poles[i1].name)
-            end
-            local T = {
-               position = position,
-               radius = pole.max_wire_distance,
-               name = names
-            }
-			local found = surf.find_entities_filtered(T)
-            if #found > 0 then
-               check = true
-			   wire_count = #found
-               break
-            end
-         if stack.name == pole.name then
-            break
-         end
-      end
-         if check then
-            result = result .. " " .. "connected"
-			if wire_count == 2 then
-			   result = result .. " twice "
-			elseif wire_count > 2 then
-			   result = result .. " " .. wire_count .. " times "
+      local pole_dict = surf.find_entities_filtered{type = "electric-pole", position = pos, radius = ent.max_wire_distance}
+	  local poles = {}
+	  for i, v in pairs(pole_dict) do
+	     if v.prototype.max_wire_distance ~= nil and v.prototype.max_wire_distance >= ent.max_wire_distance then --Select only the poles that can connect back
+		    table.insert(poles, v)
+		 end
+	  end
+	  if #poles > 0 then
+	     --List the first 4 poles within range
+		 result = result .. " Wires connecting "
+	     for i, pole in ipairs(poles) do
+		    if i < 5 then
+			   local dist = math.ceil(util.distance(pole.position,pos))
+			   local dir = get_direction_of_that_from_this(pole.position,pos)
+			   result = result .. dist .. " tiles " .. direction_lookup(dir) .. ", "
 			end
-         else
-            result = result .. "Not Connected"
-         end
+	     end
+	  else
+	     --Notify if no connections and state nearest electric pole
+	     result = result .. " No wire connections, "
+		 local nearest_pole, min_dist = find_nearest_electric_pole(nil,false,50,surf,pos)
+		 if min_dist == nil or min_dist >= 1000 then
+		    result = result .. " no electric poles within 1000 tiles, "
+		 else
+		    local dir = get_direction_of_that_from_this(nearest_pole.position,pos)
+		    result = result .. math.ceil(min_dist) .. " tiles " .. direction_lookup(dir) .. " to nearest electric pole, "
+		 end
+	  end
    end
-   --For all electric powered entities ***
+   --For all electric powered entities, note whether powered, and from which direction. Otherwise report the nearest power pole.
    if ent.electric_energy_source_prototype ~= nil then
-         local position = table.deepcopy(players[pindex].cursor_pos)
+         local position = pos
          if players[pindex].cursor then
                position.x = position.x + math.ceil(2*ent.selection_box.right_bottom.x)/2 - .5
                position.y = position.y + math.ceil(2*ent.selection_box.right_bottom.y)/2 - .5
@@ -2902,29 +2892,49 @@ function build_preview_checks_info(stack, pindex)
          end
          table.sort(poles, function(k1, k2) return k1.supply_area_distance < k2.supply_area_distance end)
          local check = false
+		 local found_pole = nil
          for i, pole in ipairs(poles) do
             local names = {}
             for i1 = i, #poles, 1 do
                table.insert(names, poles[i1].name)
             end
+			local supply_dist = pole.supply_area_distance
+			if supply_dist > 15 then
+			   supply_dist = supply_dist - 2
+			end
             local area = {
-               left_top = {(position.x + math.ceil(ent.selection_box.left_top.x) - pole.supply_area_distance), (position.y + math.ceil(ent.selection_box.left_top.y) - pole.supply_area_distance)},
-               right_bottom = {position.x + math.floor(ent.selection_box.right_bottom.x) + pole.supply_area_distance, position.y + math.floor(ent.selection_box.right_bottom.y) + pole.supply_area_distance},
+               left_top = {(position.x + math.ceil(ent.selection_box.left_top.x) - supply_dist), (position.y + math.ceil(ent.selection_box.left_top.y) - supply_dist)},
+               right_bottom = {(position.x + math.floor(ent.selection_box.right_bottom.x) + supply_dist), (position.y + math.floor(ent.selection_box.right_bottom.y) + supply_dist)},
                orientation = players[pindex].building_direction/4
-           }
+           }--**todo a little buggy, need to trim and tune, maybe re-enable direction based offset?
             local T = {
                area = area,
                name = names
             }
-            if #surf.find_entities_filtered(T) > 0 then
+			local supplier_poles = surf.find_entities_filtered(T)
+            if #supplier_poles > 0 then
                check = true
+			   found_pole = supplier_poles[1]
                break
             end
          end
          if check then
-            result = result .. " " .. "connected"
+            result = result .. " Power connected "
+			if found_pole.valid then
+			   local dist = math.ceil(util.distance(found_pole.position,pos))
+			   local dir = get_direction_of_that_from_this(found_pole.position,pos)
+			   result = result .. " from " .. dist .. " tiles " .. direction_lookup(dir) .. ", "
+			end
          else
-            result = result .. "Not Connected"
+             result = result .. " Power Not Connected, "
+			 --Notify if no connections and state nearest electric pole
+			 local nearest_pole, min_dist = find_nearest_electric_pole(nil,false,50,surf,pos)
+			 if min_dist == nil or min_dist >= 1000 then
+				result = result .. " no electric poles within 1000 tiles, "
+			 else
+				local dir = get_direction_of_that_from_this(nearest_pole.position,pos)
+				result = result .. math.ceil(min_dist) .. " tiles " .. direction_lookup(dir) .. " to nearest electric pole, "
+			 end
          end
    end
    
@@ -5680,7 +5690,7 @@ function build_item_in_hand(pindex, offset_val)
 		    for i,cand in ipairs(candidates) do
 			--rendering.draw_circle{color = {1, 1, 0},radius = 3,width = 3,target = cand.position,surface = cand.surface,time_to_live = 100}
 			   if cand.neighbours == nil and cand.direction == build_dir 
-			   and (get_direction_of_that_from_this(p,cand) == build_dir) then --Keep if opposite direction, flip if same direction. laterdo update build_dir
+			   and (get_direction_of_that_from_this(p.position,cand.position) == build_dir) then --Keep if opposite direction, flip if same direction. laterdo update build_dir
 			      rendering.draw_circle{color = {0, 1, 0},radius = 3,width = 3,target = cand.position,surface = cand.surface,time_to_live = 100}
 				  players[pindex].building_direction = (players[pindex].building_direction + 2) % 4
 			   end
@@ -7325,9 +7335,9 @@ script.on_event(defines.events.on_train_changed_state,function(event)
 end)
 
 --Returns the direction of that entity from this entity based on the ratios of the x and y distances. Returns 1 of 8 main directions.
-function get_direction_of_that_from_this(that,this)
-   local diff_x = that.position.x - this.position.x
-   local diff_y = that.position.y - this.position.y
+function get_direction_of_that_from_this(pos_that,pos_this)
+   local diff_x = pos_that.x - pos_this.x
+   local diff_y = pos_that.y - pos_this.y
    local dir = -1
    
    if math.abs(diff_x) > 2 * math.abs(diff_y) then --along east-west
@@ -7367,28 +7377,38 @@ function get_electricity_satisfaction(electric_pole)
    return satisfaction
 end
 
---Finds the neearest electric pole with power flowing through its network.
-function find_nearest_supplied_electric_pole(ent, radius)
+--Finds the neearest electric pole. Can be set to determine whether to check only for poles with electricity flow. Can call using only the first two parameters.
+function find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
    local nearest = nil
    local retry = retry or 0
-   local min_dist = 11000
+   local min_dist = 99999
    local poles = nil
+   local require_supplied = require_supplied or false
    local radius = radius or 10
+   local surface = nil
+   local pos = nil
+   if ent ~= nil and ent.valid then
+      surface = ent.surface
+	  pos = ent.position
+   else
+      surface = alt_surface
+	  pos = alt_pos
+   end
    
    --Scan nearby for electric poles, expand radius if not successful
-   local poles = ent.surface.find_entities_filtered{ type = "electric-pole" , position = ent.position , radius = radius, force = ent.force}
+   local poles = surface.find_entities_filtered{ type = "electric-pole" , position = pos , radius = radius}
    if poles == nil or #poles == 0 then
       if radius < 100 then
 	     radius = 100
-		 return find_nearest_supplied_electric_pole(ent, radius)
+		 return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
 	  elseif radius < 1000 then	 
 	     radius = 1000
-		 return find_nearest_supplied_electric_pole(ent, radius)
+		 return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
 	  elseif radius < 10000 then
 	     radius = 10000
-		 return find_nearest_supplied_electric_pole(ent, radius)
+		 return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
 	  else
-	     return nil --Nothing within 10000 tiles!
+	     return nil, nil --Nothing within 10000 tiles!
 	  end
    end
    
@@ -7397,8 +7417,8 @@ function find_nearest_supplied_electric_pole(ent, radius)
       --Check if the pole's network has power.
 	  local has_power = get_electricity_satisfaction(pole) > 0
 	  local dist = 0
-	  if has_power then
-	     dist = math.ceil(util.distance(ent.position, pole.position))
+	  if has_power or (not require_supplied) then
+	     dist = math.ceil(util.distance(pos, pole.position))
 		 --Set as nearest if valid
 		 if dist < min_dist then
 		    min_dist = dist
@@ -7410,15 +7430,15 @@ function find_nearest_supplied_electric_pole(ent, radius)
    if nearest == nil then
       if radius < 100 then
 	     radius = 100
-		 return find_nearest_supplied_electric_pole(ent, radius)
+		 return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
 	  elseif radius < 1000 then	 
 	     radius = 1000
-		 return find_nearest_supplied_electric_pole(ent, radius)
+		 return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
 	  elseif radius < 10000 then
 	     radius = 10000
-		 return find_nearest_supplied_electric_pole(ent, radius)
+		 return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
 	  else
-	     return nil --Nothing within 10000 tiles!
+	     return nil, nil --Nothing within 10000 tiles!
 	  end
    end
    return nearest, min_dist
@@ -7428,10 +7448,10 @@ end
 --Returns an info string on the nearest supplied electric pole for this entity.
 function report_nearest_supplied_electric_pole(ent)
    local result = ""
-   local pole, dist = find_nearest_supplied_electric_pole(ent, 10)
+   local pole, dist = find_nearest_electric_pole(ent, true)
    local dir = -1
    if pole ~= nil then
-      dir = get_direction_of_that_from_this(pole,ent)
+      dir = get_direction_of_that_from_this(pole.position,ent.position)
       result = "The nearest supplied electric pole is " .. dist .. " tiles to the " .. direction_lookup(dir)
 	  rendering.draw_circle{color = {1, 1, 0}, radius = 3, width = 3, target = pole.position, surface = pole.surface, time_to_live = 100}
    else

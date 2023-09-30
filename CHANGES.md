@@ -36,6 +36,8 @@ Updated in September of 2023.
 - Improved electric pole support with new features.
   * Electric network demand satisfaction percentages are now reported. Check with RIGHT BRACKET.
   * If an electric pole has no power flowing (as in 0 satisfaction), the nearest supplied electric pole is reported.  
+  * When placing an electric pole, all connectible electric poles around it are listed. If there are none, the nearest electric pole is listed.
+  * When placing a power consumer, if power is connected, an electric pole that supplies it is listed. If not, the nearest electric pole is listed. Note that this feature is a little inaccurate around supply area boundaries except when in cursor mode.
 
 - Improved underground belt support with new features.
   * Underground belts can now be identified as entrances or exits, explaining whether items are flowing into the ground or out from it.

@@ -3373,7 +3373,7 @@ function play_train_track_alert_sounds(step)
    for pindex, player in pairs(players) do
       --Check if the player is standing on a rail
 	  local p = game.get_player(pindex)
-      local floor_ents = p.surface.find_entities_filtered{position = p.position, limit = 1}[1]
+      local floor_ent = p.surface.find_entities_filtered{position = p.position, limit = 1}[1]
 	  local facing_ent = players[p.index].tile.ents[1]
 	  local found_rail = nil
 	  local skip = false

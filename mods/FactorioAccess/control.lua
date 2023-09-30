@@ -2441,8 +2441,8 @@ function printout(str, pindex)
       players[pindex].last = str
    end
    localised_print{"","out ",str}
-   if game.players[pindex].name == "SirFendi" then 
-      --game.get_player(pindex).print(str)--**Print to in game console
+   if str ~= "" and (game.players[pindex].name == "SirFendi") then 
+      --game.get_player(pindex).print(str)--**Print all to in game console
    end
 end
 
@@ -2772,7 +2772,7 @@ function read_tile(pindex)
       players[pindex].tile.previous = nil
       result = players[pindex].tile.tile
 
-   else
+   else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       local ent = players[pindex].tile.ents[1]
       result = ent_info(pindex, ent)
       players[pindex].tile.previous = players[pindex].tile.ents[#players[pindex].tile.ents]
@@ -2781,8 +2781,48 @@ function read_tile(pindex)
    end
    if next(players[pindex].tile.ents) == nil or players[pindex].tile.ents[1].type == "resource" then
       local stack = game.get_player(pindex).cursor_stack
-      if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "electric-pole" then
-         local ent = stack.prototype.place_result
+	  --Run build preview checks
+	  if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
+	     result = build_preview_checks_info(stack,pindex)
+		 --game.get_player(pindex).print(result)--**
+	  end
+      
+   end
+     
+   --If the build lock is on and the player is holding a cut or copy tool, every entity being read gets mined as soon as you read a new tile.
+   local stack = game.get_player(pindex).cursor_stack
+   if stack.valid_for_read and stack.name == "cut-paste-tool" then
+	  local ent = players[pindex].tile.ents[1]
+	  local ent_name = "Ent"
+	  if ent ~= nil and ent.valid then 
+	     ent_name = ent.name
+	  end
+	  game.get_player(pindex).play_sound{path = "Mine-Building"}
+	  if try_to_mine_with_sound(ent,pindex) then
+	     result = ent_name .. " mined."
+	  end
+	  return
+   end
+   
+   printout(result, pindex)
+end
+
+--For a player's cursor stack that is holding a building preview, returns appropriate custom info about the building spot.
+function build_preview_checks_info(stack, pindex)
+   if stack == nil or not stack.valid_for_read or not stack.valid then
+      return "invalid stack"
+   end
+   local surf = game.get_player(pindex).surface
+   local result = ""
+   local ent = stack.prototype.place_result 
+   if ent == nil or not ent.valid then
+      return "invalid entity"
+   end
+   
+   --Notify before all else if surface/player cannot place this entity**
+   
+   --For electric poles, ***
+   if ent.type == "electric-pole" then
          local position = table.deepcopy(players[pindex].cursor_pos)
          local dict = game.get_filtered_entity_prototypes{{filter = "type", type = "electric-pole"}}
          local poles = {}
@@ -2822,8 +2862,9 @@ function read_tile(pindex)
          else
             result = result .. "Not Connected"
          end
-      elseif stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and  stack.prototype.place_result.electric_energy_source_prototype ~= nil then
-         local ent = stack.prototype.place_result
+   end
+   --For all electric powered entities ***
+   if ent.electric_energy_source_prototype ~= nil then
          local position = table.deepcopy(players[pindex].cursor_pos)
          if players[pindex].cursor then
                position.x = position.x + math.ceil(2*ent.selection_box.right_bottom.x)/2 - .5
@@ -2885,25 +2926,11 @@ function read_tile(pindex)
          else
             result = result .. "Not Connected"
          end
-      end
    end
-   printout(result, pindex)
    
-   --If the build lock is on and the player is holding a cut eor copy tool, every entity being read gets mined.
-   local stack = game.get_player(pindex).cursor_stack
-   if stack.valid_for_read and stack.name == "cut-paste-tool" then
-	  local ent = players[pindex].tile.ents[1]
-	  local ent_name = "Ent"
-	  if ent ~= nil and ent.valid then 
-	     ent_name = ent.name
-	  end
-	  game.get_player(pindex).play_sound{path = "Mine-Building"}
-	  if try_to_mine_with_sound(ent,pindex) then
-	     printout(ent_name .. " mined.",pindex)
-	  end
-	  return
-   end
+   return result
 end
+
 
 --Turns off the cut paste tool if already held
 script.on_event("control-x", function(event)

@@ -76,7 +76,7 @@ Updated in September of 2023.
 - Added support for nuclear power buildings: Temperature readings and other relevant information is provided with entity info.
 
 ## Changes
-- You are now able to walk over pipes and under electric poles. This change reflects both what popular mods support already. Also tip: In smooth walking mode, you can already squeeze around inserters and chests or in between most side-by-side buildings.
+- You are now able to walk over pipes and under small or medium electric poles. This change reflects both what popular mods support already. Also tip: In smooth walking mode, you can already squeeze around inserters and chests or in between most side-by-side buildings.
 
 - The intermediate walking mode has been removed so that you can easily switch between telestep and smooth walking. When in game mod settings are supported in the future, we plan to bring it back.
 

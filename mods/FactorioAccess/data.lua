@@ -17,16 +17,19 @@ resource_map_node["picture"] = {
 	direction_count = 1
 }
 
---Remove player collision for key onjects
+--Changes to Vanilla Objects (Mostly removal of collisions with the player)
 local pipe = data.raw.pipe["pipe"]
 pipe.collision_mask = {"object-layer", "floor-layer", "water-tile"}
 
---local pipeToGround = data.raw.pipe["pipe-to-ground"]--***todo fix
---pipeToGround.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+local pipe_to_ground = data.raw["pipe-to-ground"]["pipe-to-ground"]
+pipe_to_ground.collision_mask = {"object-layer", "floor-layer", "water-tile"}
 
---local electricPole = data.raw.pipe["electric-pole"]
---electricPole.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+local small_electric_pole = data.raw["electric-pole"]["small-electric-pole"]
+small_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-tile"}
 
+
+local medium_electric_pole = data.raw["electric-pole"]["medium-electric-pole"]
+medium_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-tile"}
 
 
 data:extend({

@@ -2475,6 +2475,9 @@ function printout(str, pindex)
       players[pindex].last = str
    end
    localised_print{"","out ",str}
+   if game.players[pindex].name == "SirFendi" then 
+      --game.get_player(pindex).print(str)--**Print to in game console
+   end
 end
 
 function repeat_last_spoken (pindex)

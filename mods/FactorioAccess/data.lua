@@ -17,6 +17,15 @@ resource_map_node["picture"] = {
 	direction_count = 1
 }
 
+--Remove player collision for key onjects
+local pipe = data.raw.pipe["pipe"]
+pipe.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+
+--local pipeToGround = data.raw.pipe["pipe-to-ground"]--***todo fix
+--pipeToGround.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+
+--local electricPole = data.raw.pipe["electric-pole"]
+--electricPole.collision_mask = {"object-layer", "floor-layer", "water-tile"}
 
 
 
@@ -544,6 +553,27 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "shift-r",
+    key_sequence = "SHIFT + R",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "control-r",
+    key_sequence = "CONTROL + R",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "control-shift-r",
+    key_sequence = "CONTROL + SHIFT + R",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "prompt",
     key_sequence = "SPACE",
     consuming = "none"
@@ -664,6 +694,13 @@ data:extend({
     type = "custom-input",
     name = "control-g-key",
     key_sequence = "CONTROL + G",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "control-shift-g-key",
+    key_sequence = "CONTROL + SHIFT + G",
     consuming = "none"
 },
 

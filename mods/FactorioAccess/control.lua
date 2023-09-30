@@ -2434,9 +2434,9 @@ function tile_cycle(pindex)
             local power1 = ent.energy_generated_last_tick * 60
             local power2 = ent.prototype.max_energy_production * 60
             if power2 ~= nil then
-               result = result .. "Producing " .. get_power_string(power1) .. " / " .. get_power_string(power2) .. " "
+               result = result .. " " .. get_power_string(power) .. " being produced out of " .. get_power_string(capacity) .. " capacity, "
             else
-               result = result .. "Producing " .. get_power_string(power1) .. " "
+               result = result .. " " .. get_power_string(power) .. " being produced."
             end
          end
          if ent.prototype.type == "underground-belt" and ent.neighbours ~= nil then
@@ -4894,6 +4894,76 @@ script.on_event("switch-menu", function(event)
 
       end
    end
+   
+   --Gun related changes
+   local p = game.get_player(pindex)
+   local gun_index = p.character.selected_gun_index
+   local guns_inv = p.get_inventory(defines.inventory.character_guns)
+   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+   local stack = guns_inv[gun_index]
+   local guns_count  = #guns_inv - guns_inv.count_empty_stacks()
+   local ammos_count = #ammo_inv - ammo_inv.count_empty_stacks()
+   local result = ""
+   
+   if not players[pindex].in_menu then
+      --Increment the selected weapon
+	  if gun_index >= guns_count then
+	     gun_index = 1
+	  else
+	     gun_index = gun_index + 1
+	  end
+	  stack = guns_inv[gun_index]
+	  
+	  --Select weapon
+	  if stack ~= nil and stack.valid_for_read and stack.valid then
+	     result = stack.name
+	  else
+	     result = " weapon name error 1"
+	  end
+	  
+	  --Check if need to skip due to no ammo
+	  if guns_count ~= ammos_count then
+	     --Cycle forward until the first filled ammo slot (as the game does)
+		 result = " weapon name error 2 "
+		 local ammo_stack = ammo_inv[gun_index]
+		 local tries = 0
+		 while tries < 4 and not (ammo_stack ~= nil and ammo_stack.valid_for_read and ammo_stack.valid) do
+		    if gun_index >= guns_count then
+	           gun_index = 1
+	        else
+	           gun_index = gun_index + 1
+	        end
+			tries = tries + 1
+			stack = guns_inv[gun_index]
+			ammo_stack = ammo_inv[gun_index]
+		 end
+		 --Now try the name
+		 if stack ~= nil and stack.valid_for_read and stack.valid then
+	        result = stack.name
+		 else
+		    result = " weapon name error 3"
+		 end
+	  end
+	  --Declare the selected weapon
+	  stack = guns_inv[gun_index]
+	  if stack ~= nil and stack.valid_for_read and stack.valid then
+	     result = stack.name
+		 if ammo_inv[gun_index] ~= nil and ammo_inv[gun_index].valid and ammo_inv[gun_index].valid_for_read then
+	        result = result .. " with " .. ammo_inv[gun_index].count .. " " .. ammo_inv[gun_index].name .. "s "
+	     end
+	  else
+	     result = " missing or unknown weapon "
+	  end
+	  --p.print(result)
+	  printout(result,pindex)
+   else
+      --Re-apply the previous gun index so that weapons do not switch when in a menu
+	  if p.character.selected_gun_index == 1 then
+	     p.character.selected_gun_index = guns_count
+	  else
+	     p.character.selected_gun_index = p.character.selected_gun_index - 1
+	  end
+   end
 end)
 
 script.on_event("reverse-switch-menu", function(event)
@@ -5725,7 +5795,8 @@ script.on_event("shift-click", function(event)
          end
       elseif players[pindex].menu == "building" then
          if players[pindex].building.sector <= #players[pindex].building.sectors and #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0 and players[pindex].building.sectors[players[pindex].building.sector].name ~= "Fluid" then
-            local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
+            --Transfer stack from building to player inventory
+			local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
             if stack.valid and stack.valid_for_read then
                if game.get_player(pindex).can_insert(stack) then
                   game.get_player(pindex).play_sound{path = "utility/inventory_move"}
@@ -5735,7 +5806,11 @@ script.on_event("shift-click", function(event)
                   result = "Moved " .. inserted .. " " .. result .. " to player's inventory."
                   printout(result, pindex)
                else
-                  printout("Cannot insert " .. stack.name .. " to player's inventory.", pindex)
+                  local result = "Cannot insert " .. stack.name .. " to player's inventory, "
+				  if game.get_player(pindex).get_main_inventory().count_empty_stacks() == 0 then
+				     result = result .. "because it is full."
+				  end
+				  printout(result,pindex)
                end
             end
          else
@@ -5744,6 +5819,7 @@ script.on_event("shift-click", function(event)
                offset = offset + 1
             end
             if players[pindex].building.sector == #players[pindex].building.sectors + offset then
+		       --Transfer stack from player inventory to buidling
                local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
                if stack.valid and stack.valid_for_read then
                   if players[pindex].building.ent.can_insert(stack) then
@@ -5754,23 +5830,18 @@ script.on_event("shift-click", function(event)
                      result = "Moved " .. inserted .. " " .. result .. " to " .. players[pindex].building.ent.name
                      printout(result, pindex)
                   else
-                     printout("Cannot insert " .. stack.name .. " to " .. players[pindex].building.ent.name, pindex)
+					 local result = "Cannot insert " .. stack.name .. " to " .. players[pindex].building.ent.name
+				     printout(result,pindex)
                   end
                end
             end
          end
       elseif players[pindex].menu == "inventory" then
-         --Equip armor in hand
+         --Equip item grabbed in hand
 		 local stack = game.get_player(pindex).cursor_stack
-	     if stack.valid_for_read and stack.valid and stack.is_armor then
-		    local armor = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
-		    if armor.is_empty() then
-			   printout(" Equipped " .. stack.name, pindex)
-		    else
-			   printout(" Equipped " .. stack.name .. " and removed " .. armor[1].name .. " to hand.", pindex)
-		    end
-		    stack.swap_stack(armor[1])
-	     end
+	     local result = equip_it(stack,pindex)
+	     --game.get_player(pindex).print(result)--
+	     printout(result,pindex)
       end
    else
       local ent = players[pindex].tile.ents[1]
@@ -6104,6 +6175,11 @@ script.on_event("rotate-building", function(event)
       else
          print("not a valid stack for rotating", pindex)
       end
+   elseif players[pindex].menu == "inventory" then
+      --Read Weapon data
+	  local result = read_weapons_and_ammo(pindex)
+	  --game.get_player(pindex).print(result)--
+	  printout(result,pindex)
    end
 end
 )
@@ -6417,7 +6493,12 @@ script.on_event("toggle-walk",function(event)
    if not check_for_player(pindex) then
       return
    end
-   players[pindex].walk = (players[pindex].walk + 1) % 3
+   if players[pindex].walk == 0 then --Mode 1 (walk-by-step) is temporarily disabled until it comes back as an in game setting.
+      players[pindex].walk = 2
+   else
+      players[pindex].walk = 0
+   end
+   --players[pindex].walk = (players[pindex].walk + 1) % 3
    printout(walk_type_speech[players[pindex].walk +1], pindex)
 end)
 
@@ -6790,7 +6871,13 @@ script.on_event("g-key", function(event)
             printout("Nothing was connected.", pindex)
          end
       end
-   end  
+   end
+
+   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+	  local result = read_armor_stats(pindex)
+	  --game.get_player(pindex).print(result)--
+	  printout(result,pindex)
+   end   
 end)
 
 
@@ -6836,6 +6923,12 @@ script.on_event("shift-g-key", function(event)
       end
    end
    
+   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+	  local result = read_equipment_list(pindex)
+	  --game.get_player(pindex).print(result)--
+	  printout(result,pindex)
+   end 
+   
 end)
 
 
@@ -6860,6 +6953,24 @@ script.on_event("control-g-key", function(event)
    
 end)
 
+--
+script.on_event("control-shift-g-key", function(event)
+   local pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
+   local vehicle = nil
+   if not check_for_player(pindex) then
+      return
+   end
+   
+   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+	  local result = remove_equipment_and_armor(pindex)
+	  --game.get_player(pindex).print(result)--
+	  printout(result,pindex)
+   end 
+   
+end)
+
+
 --Attempt to launch a rocket
 script.on_event("prompt", function(event)
    local pindex = event.player_index
@@ -6868,7 +6979,7 @@ script.on_event("prompt", function(event)
       return
    end
    --For rocket entities, return the silo instead
-   if ent ~= nil and ent.valid and ent.name == "rocket-silo-rocket-shadow" or ent.name == "rocket-silo-rocket" then
+   if ent ~= nil and ent.valid and (ent.name == "rocket-silo-rocket-shadow" or ent.name == "rocket-silo-rocket") then
       local ents = ent.surface.find_entities_filtered{position = ent.position, radius = 20, name = "rocket-silo"}
 	  for i,silo in ipairs(ents) do
 	     ent = silo
@@ -7401,3 +7512,336 @@ function get_entity_part_at_cursor(pindex)
 	 end
 	 return location
 end
+
+--Tries to equip a stack. For now called only for a stack in hand when the only the inventory is open.
+function equip_it(stack,pindex)
+   local message = "no message"
+   
+   if stack == nil or not stack.valid_for_read or not stack.valid then
+      return "Nothing in hand to equip."
+   end
+   
+   if stack.is_armor then
+      local armor = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
+      if armor.is_empty() then
+         message = " Equipped " .. stack.name
+      else
+         message = " Equipped " .. stack.name .. " and took in hand " .. armor[1].name
+      end
+      stack.swap_stack(armor[1])
+   elseif stack.type == "gun" then
+      --Equip gun ("arms")
+	  local gun_inv = game.get_player(pindex).get_inventory(defines.inventory.character_guns)
+	  if gun_inv.can_insert(stack) then
+	     local inserted = gun_inv.insert(stack)
+		 message = " Equipped " .. stack.name
+		 stack.count = stack.count - inserted
+	  else
+	     if gun_inv.count_empty_stacks() == 0 then 
+		    message = "All gun slots full."
+		 else
+		    message = "Cannot insert " .. stack.name
+		 end
+	  end
+   elseif stack.type == "ammo" then
+      --Equip ammo
+	  local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+	  if ammo_inv.can_insert(stack) then
+	     local inserted = ammo_inv.insert(stack)
+		 message = "Reloaded with " .. stack.name
+		 stack.count = stack.count - inserted
+	  else
+	     if ammo_inv.count_empty_stacks() == 0 then 
+		    message = "All gun slots full."
+		 else
+		    message = "Cannot insert " .. stack.name
+		 end
+	  end
+   elseif stack.prototype.place_as_equipment_result ~= nil then
+      --Equip equipment ("gear")
+      local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
+	  if armor_inv.is_empty() then
+	     return "Equipment requires armor with an equipment grid."
+	  end
+	  if armor_inv[1].grid == nil or not armor_inv[1].grid.valid  then
+	     return "Equipment requires armor with an equipment grid."
+	  end
+	  local grid = armor_inv[1].grid
+	  --Iterate across the whole grid, trying to place the item. 
+	  local placed = nil
+	  for i = 0, grid.width-1, 1 do
+	     for j = 0, grid.height-1, 1 do
+		    placed = grid.put{name = stack.name, position = {i,j}, by_player = pindex}
+			if placed ~= nil then
+			   break
+			end
+		 end
+		 if placed ~= nil then
+		   break
+		 end
+	  end    
+      local slots_left = count_empty_equipment_slots(grid)
+	  if placed ~= nil then
+	     message = "Equipped " .. stack.name .. ", " .. slots_left .. " empty slots remaining."
+		 stack.count = stack.count - 1
+	  else
+	     --Check if the grid is full 
+		 if slots_left == 0 then
+		    message = "All armor equipment slots are full."
+		 else
+		    message = "This equipment does not fit in the remaining ".. slots_left .. " slots."
+		 end
+	  end
+   else
+      message = stack.name .. " cannot be equipped. "
+   end
+   
+   return message
+end
+
+
+function count_empty_equipment_slots(grid)
+    local slots_left = 0
+	for i = 0, grid.width-1, 1 do
+	   for j = 0, grid.height-1, 1 do
+		  local check = grid.get({i,j})
+		  if check == nil then
+			 slots_left = slots_left + 1
+	      end
+	   end
+    end
+    return slots_left
+end
+
+--Returns info on weapons and ammo
+function read_weapons_and_ammo(pindex)
+   local guns_inv = game.get_player(pindex).get_inventory(defines.inventory.character_guns)
+   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+   local guns_count  = #guns_inv - guns_inv.count_empty_stacks()
+   local ammos_count = #ammo_inv - ammo_inv.count_empty_stacks()
+   local result = "Weapons, "
+   
+   for i = 1, guns_count, 1 do
+      if i > 1 then
+	    result = result .. " and "
+	  end
+	  result = result .. guns_inv[i].name
+	  if ammo_inv[i] ~= nil and ammo_inv[i].valid and ammo_inv[i].valid_for_read then
+	     result = result .. " with " .. ammo_inv[i].count .. " " .. ammo_inv[i].name .. "s, "
+	  else
+	     result = result .. " with no ammunition, "
+	  end
+   end
+   if guns_count == 0 then
+      result = " No weapons equipped."
+   end
+   
+   return result
+end
+
+--Reload all ammo possible from the inventory. Existing stacks have priority over fuller stacks.
+function reload_weapons(pindex)
+   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+   local main_inv = game.get_player(pindex).get_inventory(defines.inventory.character_main)
+   --Apply an inventory transfer to the ammo inventory.
+   local res, full = transfer_inventory{from = main_inv, to = ammo_inv}
+   
+   local result = "Reloaded weapons with any available ammunition. "--laterdo fail condition message, and maybe add sound?
+   return result
+end
+
+--Move all weapons and ammo back to inventory
+function remove_weapons_and_ammo(pindex)
+   local guns_inv = game.get_player(pindex).get_inventory(defines.inventory.character_guns)
+   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+   local main_inv = game.get_player(pindex).get_inventory(defines.inventory.character_main)
+   local guns_count  = #guns_inv - guns_inv.count_empty_stacks()
+   local ammos_count = #ammo_inv - ammo_inv.count_empty_stacks()
+   local expected_remove_count = guns_count + ammos_count
+   local resulted_remove_count = 0
+   local message = ""
+   
+   --Remove all ammo
+   for i = 1, ammos_count, 1 do
+      if main_inv.can_insert(ammo_inv[i]) then
+	     local inserted = main_inv.insert(ammo_inv[i])--laterdo recover the uninserted if cannot insert (which is only when inv full) or maybe fails to remove anyway?
+	     resulted_remove_count = resulted_remove_count + math.ceil(ammo_inv.remove(ammo_inv[i]) / 1000 )--we just want to count stacks
+	  end
+   end
+   
+   --Remove all guns
+   for i = 1, guns_count, 1 do
+      if main_inv.can_insert(guns_inv[i]) then
+	     local inserted = main_inv.insert(guns_inv[i])--laterdo recover the uninserted if cannot insert (which is only when inv full) or maybe fails to remove anyway?
+	     resulted_remove_count = resulted_remove_count + math.ceil(guns_inv.remove(guns_inv[i]) / 1000)--we just want to count stacks
+	  end
+   end
+   
+   message = "Collected " .. resulted_remove_count .. " of " .. expected_remove_count .. " item stacks,"
+   if game.get_player(pindex).get_main_inventory().count_empty_stacks() == 0 then 
+      message = message .. " Inventory full. "
+   end
+   
+   return message
+end
+
+--Read armor stats such as type and bonuses
+function read_armor_stats(pindex)
+   local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
+   local result = ""
+   if armor_inv.is_empty() then
+      return "No armor equipped."
+   end
+   if armor_inv[1].grid == nil or not armor_inv[1].grid.valid  then
+      return armor_inv[1].name .. " equipped, with no equipment grid."
+   end
+   --Armor with Equipment
+   result = armor_inv[1].name .. " equipped, "
+   local grid = armor_inv[1].grid
+   if grid.count() == 0 then
+      return result .. " no armor equipment installed. "
+   end
+   --Read shield level
+   if grid.max_shield > 0 then
+      if grid.shield == grid.max_shield then
+	     result = " shields full, "
+	  else
+	     result = result .. " shields at " .. math.ceil(100 * grid.shield / grid.max_shield) .. " percent, "
+	  end
+   end
+   --Read battery level
+   if grid.battery_capacity > 0 then
+      if grid.available_in_batteries == grid.battery_capacity then
+	     result = result .. " batteries full, "
+	  elseif grid.available_in_batteries == 0 then
+	     result = result .. " batteries empty "
+	  else
+	     result = result .. " batteries at " .. math.ceil(100 * grid.available_in_batteries / grid.battery_capacity) .. " percent, "
+	  end
+   else
+      result = result .. " no batteries, "
+   end   
+   --Energy Producers
+   if grid.generator_energy > 0 or grid.max_solar_energy > 0 then
+      result = result .. " generating "
+	  if grid.generator_energy > 0 then
+	     result = result .. get_power_string(grid.generator_energy*60) .. " nonstop, "
+	  end
+	  if grid.max_solar_energy > 0 then
+	     result = result .. get_power_string(grid.max_solar_energy*60) .. " at daytime, "
+	  end
+   end
+   
+   --Movement bonus
+   if grid.count("exoskeleton-equipment") > 0 then
+      result = result .. " movement bonus " .. grid.count("exoskeleton-equipment") * 30 .. " percent for " .. get_power_string(grid.count("exoskeleton-equipment")*200000)
+   end
+   
+   return result
+end
+
+--List armor equipment
+function read_equipment_list(pindex)
+   local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
+   local result = ""
+   if armor_inv.is_empty() then
+      return "No armor equipped."
+   end
+   if armor_inv[1].grid == nil or not armor_inv[1].grid.valid  then
+      return "No equipment grid."
+   end
+   --Armor with Equipment
+   result = "Equipped, "
+   local grid = armor_inv[1].grid
+   if grid.equipment == nil or grid.equipment == {} then
+      return " No armor equipment installed. "
+   end
+   --Read Equipment List
+   result = "Equipped, "
+   local contents = grid.get_contents() 
+   local itemtable = {}
+   for name, count in pairs(contents) do
+      table.insert(itemtable, {name = name, count = count})
+   end
+   if #itemtable == 0 then
+      result = result .. " nothing, "
+   else
+      for i = 1, #itemtable, 1 do
+         result = result .. itemtable[i].count .. " " .. itemtable[i].name .. ", "
+      end
+   end
+   
+   result = result .. count_empty_equipment_slots(grid) .. " empty slots remaining "
+   
+   return result
+end
+
+--Remove equipment and then armor. laterdo inv full checks
+function remove_equipment_and_armor(pindex)
+   local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
+   local result = ""
+   if armor_inv.is_empty() then
+      return "No armor."
+   end
+   
+   local grid = armor_inv[1].grid
+   if grid ~= nil and grid.valid then 
+       local e_count = grid.count()
+	   --Take all items
+	   for i = 0, grid.width-1, 1 do
+	      for j = 0, grid.height-1, 1 do
+		     local check = grid.get({i,j})
+			 local inv = game.get_player(pindex).get_main_inventory()
+		     if check ~= nil and inv.can_insert({name = check.name}) then
+			    inv.insert({name = check.name})
+				grid.take{position = {i,j}}
+	         end
+	      end
+       end
+	   result = "Collected " .. e_count - grid.count() .. " of " .. e_count .. " items, "
+   end
+   
+   --Remove armor
+   if game.get_player(pindex).get_inventory(defines.inventory.character_main).count_empty_stacks() == 0 then
+      return "Inventory full."
+   else
+      result = result .. "removed " .. armor_inv[1].name
+	  game.get_player(pindex).clear_cursor()
+	  local stack2 = game.get_player(pindex).cursor_stack
+	  stack2.swap_stack(armor_inv[1])
+      game.get_player(pindex).clear_cursor()
+      return result
+   end
+   
+   return result
+end
+
+
+
+script.on_event("shift-r", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].menu == "inventory" then
+      --Reload weapons
+	  local result = reload_weapons(pindex)
+	  --game.get_player(pindex).print(result)
+	  printout(result,pindex)
+   end
+end
+)
+
+script.on_event("control-shift-r", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].menu == "inventory" then
+	  local result = remove_weapons_and_ammo(pindex)
+	  --game.get_player(pindex).print(result)
+	  printout(result,pindex)
+   end
+end
+)
+

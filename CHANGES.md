@@ -55,11 +55,31 @@ Updated in September of 2023.
 
 - Added support for throwing capsule items, including cliff explosives, defender drones, and grenades. Note: Grenades will damage everything including you while cliff explosives affect only cliffs.
 
-- Added support for wearing or swapping armor. Press SHIFT + LEFT BRACKET to equip an armor in your hand, but only when the inventory screen by itself is open. 
+- Added support for wearing or swapping armor. When the inventory (alone) is open, press LEFT BRACKET to pick up the item stack and then press SHIFT + LEFT BRACKET to equip it.
+
+- Added support for armor equipment.
+  * NOTE: All the following controls apply when the inventory (alone) is open, meaning that no buildings are open.
+  * Press LEFT BRACKET to pick up the item stack and then press SHIFT + LEFT BRACKET to equip it.
+  * Press G to read armor name and equipment statistics, if any. "G" is for "Gear".
+  * Press SHIFT + G to read the list of equipment.
+  * Press CONTROL + SHIFT + G to remove all equipment and armor.
+  
+
+- Added support for hand weapons.
+  * Your weapons inventory can hold up to three weapons. You cycle between them by pressing TAB when not in a menu. You also have three corresponsing ammo slots.
+  * NOTE: All the following controls apply when the inventory (alone) is open, meaning that no buildings are open.
+  * Press LEFT BRACKET to pick up the weapon or ammo stack and then press SHIFT + LEFT BRACKET to equip it.
+  * Press R to read current weapons and ammunition counts. "R" is for "arms" or "reloading".
+  * Press SHIFT + R to reload all weapon ammunition slots from your inventory. Note that existing ammo stacks will be prefered over fuller ammo stacks of different types.
+  * Press CONTROL + SHIFT + R to remove all weapons and ammunition.
 
 - Added support for nuclear power buildings: Temperature readings and other relevant information is provided with entity info.
 
 ## Changes
+- You are now able to walk over pipes and under electric poles. This change reflects both what popular mods support already. Also tip: In smooth walking mode, you can already squeeze around inserters and chests or in between most side-by-side buildings.
+
+- The intermediate walking mode has been removed so that you can easily switch between telestep and smooth walking. When in game mod settings are supported in the future, we plan to bring it back.
+
 - Changed the keybind for disconnecting rail vehicles from "V" to "SHIFT + G".
 
 - Teleporting is disabled while riding a vehicle.
@@ -82,6 +102,7 @@ Updated in September of 2023.
   * Boilers and heat exchangers report their fluid contents.
   * Beacon contents are now read.
   * Containers now report top 2 items at first look, instead of 1. 
+  * If the player inventory being full prevents an item transfer, this should be announced correctly.
   * For entities containing fluids, any extra fluids are also reported.
   * Added information reporting for entities facing diagonal directions.
   * Added new sound effects for the cursor reaching the borders of inventories.

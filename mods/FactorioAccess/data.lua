@@ -719,6 +719,20 @@ data:extend({
     name = "control-right",
     key_sequence = "CONTROL + RIGHT",
     consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "shift-left",
+    key_sequence = "SHIFT + LEFT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "shift-right",
+    key_sequence = "SHIFT + RIGHT",
+    consuming = "none"
 }
 
 })

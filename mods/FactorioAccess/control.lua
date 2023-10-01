@@ -5135,7 +5135,7 @@ end
 
 script.on_event("left-click", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
    if players[pindex].in_menu then
@@ -5158,8 +5158,6 @@ script.on_event("left-click", function(event)
             printout("Not enough materials", pindex)
          end
 
-
-
       elseif players[pindex].menu == "crafting_queue" then
          load_crafting_queue(pindex)
          if players[pindex].crafting_queue.max >= 1 then
@@ -5170,8 +5168,8 @@ script.on_event("left-click", function(event)
             game.get_player(pindex).cancel_crafting(T)
             load_crafting_queue(pindex)
             read_crafting_queue(pindex)
-
          end
+         
       elseif players[pindex].menu == "building" then
          if players[pindex].building.sector <= #players[pindex].building.sectors and #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0  then
             if players[pindex].building.sectors[players[pindex].building.sector].name == "Fluid" then
@@ -5213,8 +5211,6 @@ script.on_event("left-click", function(event)
                      printout("Filter set.", pindex)
                      players[pindex].building.item_selection = false
                      players[pindex].item_selection = false
-
-
                   end
                else
                   players[pindex].item_selector.group = 0
@@ -5225,7 +5221,6 @@ script.on_event("left-click", function(event)
                   players[pindex].item_cache = get_iterable_array(game.item_group_prototypes)
                      prune_item_groups(players[pindex].item_cache)                  
                   read_item_selector_slot(pindex)
-
                end
                return
             end
@@ -5281,6 +5276,7 @@ script.on_event("left-click", function(event)
             end
 
          end
+         
       elseif players[pindex].menu == "technology" then
          local techs = {}
          if players[pindex].technology.category == 1 then
@@ -5298,6 +5294,7 @@ script.on_event("left-click", function(event)
                printout("Research locked, first complete the prerequisites.", pindex)
             end
          end
+         
       elseif players[pindex].menu == "pump" then
          if players[pindex].pump.index == 0 then
             printout("Move up and down to select a location.", pindex)
@@ -5308,6 +5305,7 @@ script.on_event("left-click", function(event)
          players[pindex].in_menu = false
          players[pindex].menu = "none"
          printout("Pump placed.", pindex)
+         
       elseif players[pindex].menu == "warnings" then
          local warnings = {}
          if players[pindex].warnings.sector == 1 then
@@ -5375,6 +5373,7 @@ input.select(1, 0)
             input.focus()
 input.select(1, 0)
          end
+         
       elseif players[pindex].menu == "structure-travel" then
          local tar = nil
          local network = players[pindex].structure_travel.network
@@ -5416,8 +5415,11 @@ input.select(1, 0)
       elseif players[pindex].menu == "train_stop_menu" then
          train_stop_menu(players[pindex].train_stop_menu.index, pindex, true)
       end
+      
    else
+      --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
+      local ent = players[pindex].tile.ents[1] 
       if stack.valid_for_read and stack.valid and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
          local offset = 0
          if not players[pindex].cursor then
@@ -5428,7 +5430,8 @@ input.select(1, 0)
          build_offshore_pump_in_hand(pindex)
       elseif stack.valid and stack.valid_for_read then
 	     local p = game.get_player(pindex)
-	     p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use it 3 tiles in front of the player instead.
+	     p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use the item 3 tiles in front of the player instead.
+      --No more stack related checks after this point
       elseif game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
          train_menu_open(pindex)
       elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
@@ -5880,9 +5883,21 @@ script.on_event("control-click", function(event)
       end
    else
       local stack = game.get_player(pindex).cursor_stack
-      if stack.valid and stack.valid_for_read and stack.name == "rail" then
+      local ent = players[pindex].tile.ents[1]
+      if stack == nil or not stack.valid_for_read or not stack.valid then
+         if ent ~= nil and ent.valid and ent.name == "splitter" then
+            --Clear the filter
+            local result = set_splitter_priority(ent, nil, nil, nil, true)
+            printout(result,pindex)
+         end
+         return
+      elseif stack.name == "rail" then
          --Straight rail free placement
          build_item_in_hand(pindex, 1.337)--Uses sentinel value
+      elseif ent ~= nil and ent.valid and ent.name == "splitter" then
+         --Set the filter
+         local result = set_splitter_priority(ent, nil, nil, stack)
+         printout(result,pindex)
       end
    end
 end
@@ -6813,26 +6828,38 @@ end)
 
 script.on_event("control-left", function(event)
    local pindex = event.player_index
-   local ent = players[pindex].tile.ents[1]
    if not check_for_player(pindex) then
       return
    end
+   local ent = players[pindex].tile.ents[1]
+   if ent == nil or not ent.valid then
+      return
+   end
    --Build left turns on end rails
-   if ent ~= nil and ent.valid and ent.name == "straight-rail" then
+   if ent.name == "straight-rail" then
       build_rail_turn_left_45_degrees(ent, pindex)
+   elseif ent.name == "splitter" then
+      local result = set_splitter_priority(ent, false, true, nil)
+      printout(result,pindex)
    end
 end)
 
 
 script.on_event("control-right", function(event)
    local pindex = event.player_index
-   local ent = players[pindex].tile.ents[1]
    if not check_for_player(pindex) then
       return
    end
-   --Build right turns on end rails
-   if ent ~= nil and ent.valid and ent.name == "straight-rail" then
+   local ent = players[pindex].tile.ents[1]
+   if ent == nil or not ent.valid then
+      return
+   end
+   --Build left turns on end rails
+   if ent.name == "straight-rail" then
       build_rail_turn_right_45_degrees(ent, pindex)
+   elseif ent.name == "splitter" then
+      local result = set_splitter_priority(ent, false, false, nil)
+      printout(result,pindex)
    end
 end)
 
@@ -7861,3 +7888,110 @@ script.on_event("control-shift-r", function(event)
 end
 )
 
+
+--Set the input priority or the output priority or filter for a splitter
+function set_splitter_priority(splitter, is_input, is_left, filter_item_stack, clear)
+   local clear = clear or false
+   local result = "no message"
+   local filter = splitter.splitter_filter
+   
+   if clear then
+      splitter.splitter_filter = nil
+      filter = splitter.splitter_filter
+      result = "Cleared splitter filter"
+      splitter.splitter_output_priority = "none"
+   elseif filter_item_stack ~= nil and filter_item_stack.valid_for_read then
+      splitter.splitter_filter = filter_item_stack.prototype
+      filter = splitter.splitter_filter
+      result = "filter set to " .. filter_item_stack.name
+      if splitter.splitter_output_priority == "none" then
+         splitter.splitter_output_priority = "left"
+         result = result .. ", from the left"
+      end
+   elseif is_input and     is_left then
+      if splitter.splitter_input_priority == "left" then
+         splitter.splitter_input_priority = "none"
+         result = "equal input priority"
+      else
+         splitter.splitter_input_priority = "left"
+         result = "left input priority"
+      end
+   elseif is_input and not is_left then
+      if splitter.splitter_input_priority == "right" then
+         splitter.splitter_input_priority = "none"
+         result = "equal input priority"
+      else
+         splitter.splitter_input_priority = "right"
+         result = "right input priority"
+      end
+   elseif not is_input and is_left then
+      if splitter.splitter_output_priority == "left" then
+         if filter == nil then
+            splitter.splitter_output_priority = "none"
+            result = "equal output priority"
+         else
+            result = "left filter output"
+         end
+      else
+         if filter == nil then
+            splitter.splitter_output_priority = "left"
+            result = "left output priority"
+         else
+            splitter.splitter_output_priority = "left"
+            result = "left filter output"
+         end
+      end
+   elseif not is_input and not is_left then
+      if splitter.splitter_output_priority == "right" then
+         if filter == nil then
+            splitter.splitter_output_priority = "none"
+            result = "equal output priority"
+         else
+            result = "right filter output"
+         end
+      else
+         if filter == nil then
+            splitter.splitter_output_priority = "right"
+            result = "right output priority"
+         else
+            splitter.splitter_output_priority = "right"
+            result = "right filter output"
+         end
+      end
+   else
+      result = "Splitter config error"
+   end
+   
+   return result
+end
+
+
+script.on_event("shift-left", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = players[pindex].tile.ents[1]
+   if ent == nil or not ent.valid then
+      return
+   elseif ent.name == "splitter" then
+      local result = set_splitter_priority(ent, true, true, nil)
+      printout(result,pindex)
+   end
+end
+)
+
+script.on_event("shift-right", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = players[pindex].tile.ents[1]
+   if ent == nil or not ent.valid then
+      return
+   elseif ent.name == "splitter" then
+      local result = set_splitter_priority(ent, true, false, nil)
+      printout(result,pindex)
+   end
+end
+)

@@ -43,6 +43,19 @@ Updated in September of 2023.
   * Underground belts can now be identified as entrances or exits, explaining whether items are flowing into the ground or out from it.
   * Building assistance was added to auto-rotate new exits to pair with neighbourless entrances. For example, 
 
+- Added support for splitter priority settings.
+  * Press SHIFT + LEFT ARROW to set the INPUT priority to the left side, meaning that the splitter will take from the right only when it cannot from the left.
+  * Similarly press SHIFT + RIGHT ARROW to set the INPUT priority to the right side.
+  * To clear the input priority, try to set the same side again.
+  * Press CONTROL + LEFT ARROW to set the OUTPUT priority to the left side, meaning that the splitter will output to the right only when it cannot to the left.
+  * Similarly press CONTROL + RIGHT ARROW to set the OUTPUT priority to the right side.
+  * To clear the output priority, try to set the same side again.
+  
+- Added support for splitter filter mode.
+  * With an item in hand, press CONTROL + LEFT BRACKET on a splitter to set its output filter to the item. When there is a filtered item, it goes out one side and every other item goes out the other side.
+  * By default the filter output goes left. To change the filter output side, press CONTROL + ARROW KEY accordingly. There is no equal distribution in filter mode.
+  * To clear the filter, with an empty hand press CONTROL + LEFT BRACKET on the splitter. 
+  
 - Entity part identification added: When you press K with the cursor hovering over an entity, its selected part will be reported, such as the southeast corner or the center.
 
 - Rocket silo support added: Silos can now report rocket part counts and launch rockets (press SPACE on it when ready).

@@ -562,6 +562,8 @@ function ent_info(pindex, ent, description)
       local outload_count = 0
       local inputs = ent.belt_neighbours["inputs"]
       local outputs = ent.belt_neighbours["outputs"]
+      local outload_dir = nil
+      local this_dir = ent.direction
       for i, belt in pairs(inputs) do
          if ent.direction ~= belt.direction then
             sideload_count = sideload_count + 1
@@ -571,22 +573,10 @@ function ent_info(pindex, ent, description)
       end
       for i, belt in pairs(outputs) do
          outload_count = outload_count + 1
+         outload_dir = belt.direction--Note: there should be only one of these belts anyway.
       end
-      if sideload_count == 0 and backload_count == 1 and outload_count == 1 then
-         result = result --middle (no need to specify)
-      elseif sideload_count == 0 and backload_count == 0 and outload_count == 0 then
-         result = result .. " unit "
-      elseif sideload_count == 0 and backload_count == 0 and outload_count == 1 then
-         result = result .. " start "
-      elseif sideload_count == 0 and backload_count == 1 and outload_count == 0 then
-         result = result .. " end "
-      elseif sideload_count == 1 and backload_count == 0 and outload_count == 0 then
-         result = result .. " end corner "
-      elseif sideload_count == 1 and backload_count == 0 and outload_count == 1 then
-         result = result .. " corner "
-      elseif sideload_count + backload_count > 1 then
-         result = result .. " junction " --maybe different junction types will be worth specifying in the future
-      end
+      --Check what the neighbor info reveals about the belt
+      result = result .. transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir)
       
       --Check contents
       local left = ent.get_transport_line(1).get_contents()
@@ -926,6 +916,43 @@ function ent_info(pindex, ent, description)
 	  end
    elseif ent.name == "item-on-ground" then
       result = result .. ", " .. ent.stack.name 
+   end
+   return result
+end
+
+--Explain whether the belt is some type of corner or sideloaded junction or etc.
+function transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir)--todo test new types***
+   local result = ""
+   if sideload_count == 0 and backload_count == 1 and outload_count == 1 then
+      result = result --middle (no need to specify)
+   elseif sideload_count == 0 and backload_count == 0 and outload_count == 0 then
+      result = result .. " unit "
+   elseif sideload_count == 0 and backload_count == 0 and outload_count == 1 and this_dir == outload_dir then
+      result = result .. " start "
+   elseif sideload_count == 0 and backload_count == 1 and outload_count == 0 then
+      result = result .. " end "
+   elseif sideload_count == 1 and backload_count == 0 and outload_count == 0 then
+      result = result .. " end corner "
+   elseif sideload_count == 1 and backload_count == 0 and outload_count == 1 then
+      result = result .. " corner "
+   elseif sideload_count == 1 and backload_count == 1 and (outload_count == 0 or (outload_count == 1 and this_dir == outload_dir)) then
+      result = result .. " sideloading junction , only one lane is loaded "
+   elseif sideload_count == 2 and backload_count == 0 and (outload_count == 0 or (outload_count == 1 and this_dir == outload_dir)) then
+      result = result .. " safe double sideloading junction with clear back, lanes never mix "
+   elseif sideload_count == 2 and backload_count == 1 and (outload_count == 0 or (outload_count == 1 and this_dir == outload_dir)) then
+      result = result .. " double sideloading and backloading junction "
+   elseif sideload_count == 0 and backload_count == 0 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " pouring end or entering a corner, depends on whether belt in front is backloaded "
+   elseif sideload_count == 1 and backload_count == 0 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " corner belt, pouring end or entering a corner, depends on whether belt in front is backloaded "
+   elseif sideload_count + backload_count > 1 and (outload_count == 0 or (outload_count == 1 and this_dir == outload_dir)) then
+      result = result .. " unidentified merging junction "--this should not be reachable any more
+   elseif sideload_count + backload_count > 1 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " unidentified merging junction, pouring end or entering a corner, depends on whether belt in front is backloaded "
+   elseif outload_count > 1 then
+      result = result .. " multiple outputs "--unexpected case
+   else
+      result = result .. " unknown connections "--unexpected case
    end
    return result
 end
@@ -2820,8 +2847,39 @@ function build_preview_checks_info(stack, pindex)
       return "invalid entity"
    end
    
-   --Notify before all else if surface/player cannot place this entity. **todo add this check by copying over build offset stuff
+   --Notify before all else if surface/player cannot place this entity. **latertodo extend this check by copying over build offset stuff
+   if ent.get_radius() < 1 and not surf.can_place_entity{name = ent.name, position = pos, force = ent.force} then
+      return " cannot place this here "--**todo test
+   end
    
+   --For belt types, check if it would form a corner or junction here. Laterdo include underground exits.
+   if ent.type == "transport-belt" then
+      local ents_north = p.surface.find_entities_filtered{position = {x = x,y = y-1}, type = "transport-belt"}
+		local ents_south = p.surface.find_entities_filtered{position = {x = x,y = y+1}, type = "transport-belt"}
+		local ents_east  = p.surface.find_entities_filtered{position = {x = x+1,y = y}, type = "transport-belt"}
+		local ents_west  = p.surface.find_entities_filtered{position = {x = x-1,y = y}, type = "transport-belt"}
+      local build_dir = players[pindex].building_direction * 2--laterdo get building directions to match the official defines
+      local belts = table_concat(ents_north, ents_south)
+      belts = table_concat(belts, ents_east)
+      belts = table_concat(belts, ents_west)
+      if #belts > 0 then
+         local sideload_count = 0
+         local backload_count = 0
+         local  outload_count = 0
+         local this_dir = ent.direction
+         local outload_dir = nil
+         --Identify sideloads, backloads, outloads
+         for i,neighbor in ipairs(belts) do --todo***
+            local n_facing = neighbor.direction
+            local n_at = get_direction_of_that_from_this(neighbor.position,pos)
+            
+         end
+         --Determine expected junction info
+         if sideload_count + backload_count + outload_count > 0 then--Skips "unit" because it is obvious
+            result = ", belt becomes " .. transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir)
+         end
+      end
+   end
    --For electric poles, report the directions of up to 5 wire-connectible electric poles that can connect
    if ent.type == "electric-pole" then
       local pole_dict = surf.find_entities_filtered{type = "electric-pole", position = pos, radius = ent.max_wire_distance}

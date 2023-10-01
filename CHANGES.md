@@ -95,6 +95,10 @@ Updated in September of 2023.
 
 - The intermediate walking mode has been removed so that you can easily switch between telestep and smooth walking. When in game mod settings are supported in the future, we plan to bring it back.
 
+- Transport belt junction types are better identified now.
+
+- For small entities, the build preview will warn if the item cannot be placed at the previewed tile.
+ 
 - Changed the keybind for disconnecting rail vehicles from "V" to "SHIFT + G".
 
 - Teleporting is disabled while riding a vehicle.

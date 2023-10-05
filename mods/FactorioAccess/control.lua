@@ -4821,7 +4821,7 @@ script.on_event("jump-to-scan", function(event)
             scan_index(pindex)
             return
          end
-         ent = {name = name, position = table.deepcopy(entry.position), group = entry.group}
+         ent = {name = name, position = table.deepcopy(entry.position), force = entry.force}--**beta**
          end
       if players[pindex].cursor then
          players[pindex].cursor_pos = center_of_tile(ent.position)
@@ -7550,7 +7550,7 @@ script.on_event(defines.events.on_chunk_charted,function(event)
                new_group = math.min(new_group, resource_group)
             end
             for resource_group, b in pairs(resource_groups) do
-               if new_group < resource_group and players[pindex].resources[i].patches[resource_group] ~= nil then
+               if new_group < resource_group and players[pindex].resources[i].patches[resource_group] ~= nil and islands[i] ~= nil and islands[i].resources[p] ~= nil then--**beta**
                   for i1, pos in pairs(players[pindex].resources[i].patches[resource_group].positions) do
                      players[pindex].resources[i].positions[pos] = new_group
                      players[pindex].resources[i].count = islands[i].resources[p].count
@@ -7678,9 +7678,9 @@ script.on_event(defines.events.on_entity_destroyed,function(event)
       adj[pos2str({x = math.floor(ent.area.left_top.x/32),y = math.floor(ent.area.right_bottom.y/32)})] = true
       adj[pos2str({x = math.floor(ent.area.right_bottom.x/32),y = math.floor(ent.area.right_bottom.y/32)})] = true
       for pos, val in pairs(adj) do
-         players[pindex].tree_chunks[pos].count = players[pindex].tree_chunks[pos].count - 1
+         --players[pindex].tree_chunks[pos].count = players[pindex].tree_chunks[pos].count - 1--**beta**
       end
-         players[pindex].tree_positions[str] = nil
+         --players[pindex].tree_positions[str] = nil--**beta**
    end
    players[pindex].destroyed[event.registration_number] = nil
 end)

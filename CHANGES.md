@@ -41,13 +41,10 @@ Updated in October of 2023.
   * If an electric pole has no power flowing (as in 0 satisfaction), the nearest supplied electric pole is reported.  
   * When placing an electric pole, all connectible electric poles around it are listed. If there are none, the nearest electric pole is listed. This context info allows better understanding of electric networks.
 
-- Improved underground belt support with new features.
-  * Underground belts can now be identified as entrances or exits, explaining whether items are flowing into the ground or out from it.
-  * Building assistance was added to auto-rotate new exits to pair with neighbourless entrances. For example, 
-
 - Added building preview information for several structures. This information is based on the cursor location while an item to be built is held in hand.
   * For small buildings, the preview can warn when building is not possible.
   * For transport belt types, the belt junction type that would form by placing the belt there is stated.
+  * For underground belts, whether and where the current tile will connect is stated.
   * For pipe units, the expected fluid pipe connections around are stated, and there is a warning about potentially mixing fluids.
   * For electric powered machines, if power is connected, an electric pole that supplies it is listed. If not, the nearest electric pole is listed. Note that this feature is a little inaccurate around supply area boundaries except when in cursor mode.
   * Other similar changes.
@@ -108,6 +105,8 @@ Updated in October of 2023.
   * Note that a "pouring end" could either be sideloading onto a different belt, or continuing into a belt corner which preserves the lanes.
   * Safe merging junctions (also called T-junctions) are identified as a belt unit that is double sideloaded but empty at the back so that the lanes will be entirely predictable.
  
+- Underground belts can now be identified as entrances or exits, explaining whether items are flowing into the ground or out from it.
+
 - Teleporting is disabled while riding a vehicle.
 
 - Reported local time has been shifted by twelve hours so that daytime is 6 to 18 and midnight is around 24.
@@ -139,6 +138,7 @@ Updated in October of 2023.
 - New helper functions (Todo: copy over the precise names)**
   * get_direction_of_that_from_this - reports the direction of that position according to this position. Reports 8 main directions, with perfect alignment not being necessary to declare the four cardinal directions.
   * direction_lookup - convert direction defines integer to a text.
+  * rotate_90 and rotate_180, for changing direcitons
   * mine_trees_and_rocks 
   * get_entity_part_at_cursor 
 

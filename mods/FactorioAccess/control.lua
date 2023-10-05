@@ -667,9 +667,13 @@ function ent_info(pindex, ent, description)
          result = result .. "Producing " .. get_power_string(power1) .. " "
       end
    end
-   if ent.prototype.type == "underground-belt" and ent.neighbours ~= nil then
-      result = result .. ", Connected to " ..distance(ent.position, ent.neighbours.position) .. " " .. direction(ent.position, ent.neighbours.position)
-   elseif (ent.prototype.type  == "pipe" or ent.prototype.type == "pipe-to-ground") and ent.neighbours ~= nil then
+   if ent.type == "underground-belt" then
+      if ent.neighbours ~= nil then
+         result = result .. ", Connected to " .. math.floor(distance(ent.position, ent.neighbours.position)) .. " " .. direction(ent.position, ent.neighbours.position)
+      else
+         result = result .. ", not connected " 
+      end
+   elseif (ent.name  == "pipe" or ent.name == "pipe-to-ground") and ent.neighbours ~= nil then
       result = result .. ", connected to "
       for i, v in pairs(ent.neighbours) do
          for i1, v1 in pairs(v) do
@@ -704,11 +708,11 @@ function ent_info(pindex, ent, description)
                if ent.type == "assembling-machine" and ent.get_recipe() ~= nil then
                   if ent.name == "oil-refinery" and ent.get_recipe().name == "basic-oil-processing" then
                      if i == 2 then
-                        result = result .. ", crude-oil Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
+                        result = result .. ", crude-oil Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                      elseif i == 5 then
-                        result = result .. ", petroleum-gas Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
+                        result = result .. ", petroleum-gas Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                      else
-                        result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
+                        result = result .. ", " .. "Unused" .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                      end
                   else
                      if pipe.type == "input" then
@@ -724,9 +728,9 @@ function ent_info(pindex, ent, description)
                               i3 = #inputs
                            end
                            local filter = inputs[i3]
-                           result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
+                           result = result .. ", " .. filter.name .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                         else
-                           result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
+                           result = result .. ", " .. "Unused" .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                         end
                      else
                         local outputs = ent.get_recipe().products
@@ -741,9 +745,9 @@ function ent_info(pindex, ent, description)
                               i3 = #outputs
                            end
                            local filter = outputs[i3]
-                           result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
+                           result = result .. ", " .. filter.name .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                         else
-                           result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
+                           result = result .. ", " .. "Unused" .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                         end
 
                      end
@@ -751,7 +755,7 @@ function ent_info(pindex, ent, description)
 
                else
                   local filter = box.filter or {name = ""}
-                  result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
+                  result = result .. ", " .. filter.name .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                end
             end
          end
@@ -2835,7 +2839,7 @@ function read_tile(pindex)
    else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       local ent = players[pindex].tile.ents[1]
       result = ent_info(pindex, ent)
-      --game.get_player(pindex).print(result)--
+      --game.get_player(pindex).print(result)--***
       players[pindex].tile.previous = players[pindex].tile.ents[#players[pindex].tile.ents]
 
       players[pindex].tile.index = 2
@@ -2877,6 +2881,7 @@ function build_preview_checks_info(stack, pindex)
    local surf = game.get_player(pindex).surface
    local pos = table.deepcopy(players[pindex].cursor_pos)
    local result = ""
+   local build_dir = players[pindex].building_direction * 2--laterdo get building directions to match the official defines
    local ent_p = stack.prototype.place_result --it is an entity prototype!
    if ent_p == nil or not ent_p.valid then
       return "invalid entity"
@@ -2898,8 +2903,6 @@ function build_preview_checks_info(stack, pindex)
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y+1}, surface = p.surface, time_to_live = 30}
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x-1 ,y = pos.y-0}, surface = p.surface, time_to_live = 30}
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+1 ,y = pos.y-0}, surface = p.surface, time_to_live = 30}
-      
-      local build_dir = players[pindex].building_direction * 2--laterdo get building directions to match the official defines
 
       if #ents_north > 0 or #ents_south > 0 or #ents_east > 0 or #ents_west > 0 then
          local sideload_count = 0
@@ -2968,6 +2971,34 @@ function build_preview_checks_info(stack, pindex)
          if sideload_count + backload_count + outload_count > 0 then--Skips "unit" because it is obvious
             result = ", forms belt " .. transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir, true)
          end
+      end
+   end
+   
+   --For underground belts, state the potential neighbor: any neighborless matching underground of the same name and same/opposite direction, and along the correct axis
+	if ent_p.type == "underground-belt" then
+      local connected = false
+      local check_dist = 5
+		if stack.name == "fast-underground-belt" then
+		   check_dist = 7
+		elseif stack.name == "express-underground-belt" then
+		   check_dist = 9
+		end
+      local candidates = game.get_player(pindex).surface.find_entities_filtered{ name = stack.name, position = pos, radius = check_dist, direction = rotate_180(build_dir) } 
+		if #candidates > 0 then
+		   for i,cand in ipairs(candidates) do
+			   rendering.draw_circle{color = {1, 1, 0},radius = 0.5,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
+            local dist_x = cand.position.x - pos.x
+            local dist_y = cand.position.y - pos.y
+			   if cand.neighbours == nil and cand.direction == rotate_180(build_dir)
+			   and (get_direction_of_that_from_this(cand.position,pos) == build_dir) and (dist_x == 0 or dist_y == 0) then
+			      rendering.draw_circle{color = {0, 1, 0},radius = 1.0,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
+               result = result .. " connects " .. direction_lookup(build_dir) .. " with " .. math.floor(util.distance(cand.position,pos)) - 1 .. " tiles underground"
+               connected = true
+			   end
+         end			
+		end
+      if not connected then
+         result = result .. " not connected "
       end
    end
    
@@ -5726,7 +5757,7 @@ input.select(1, 0)
          build_offshore_pump_in_hand(pindex)
       elseif stack.valid and stack.valid_for_read then
 	     local p = game.get_player(pindex)
-	     p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use the item 3 tiles in front of the player instead.
+	     p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use an item 3 tiles in front of the player instead.
       --No more stack related checks after this point
       elseif game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
          train_menu_open(pindex)
@@ -5970,31 +6001,7 @@ function build_item_in_hand(pindex, offset_val)
          if not (all_beyond_6_5 and any_connects) then
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             return
-         end
-      elseif stack.name == "underground-belt" or stack.name == "fast-underground-belt" 
-	      or stack.name == "express-underground-belt" then --Rotate undergrounds to match automatically
-		 local p = game.get_player(pindex)
-		 local build_dir = players[pindex].building_direction * 2--laterdo get building directions to match the official defines
-		 local check_dist = 6
-		 if stack.name == "fast-underground-belt" then
-		    check_dist = 8
-		 elseif stack.name == "express-underground-belt" then
-		    check_dist = 10
-		 elseif stack.name == "pipe-to-ground" then --laterdo this entity has different neighbour rules, so adjust for it later.
-		    check_dist = 12
-		 end
-		 --Find any neighborless matching underground of the same name and same/opposite direction, and along the correct axis
-		 local candidates = game.get_player(pindex).surface.find_entities_filtered{ name = stack.name, position = position, radius = check_dist, direction = {build_dir,(build_dir + dirs.south) % (2 * dirs.south)} } 
-		 if #candidates > 0 then
-		    for i,cand in ipairs(candidates) do
-			--rendering.draw_circle{color = {1, 1, 0},radius = 3,width = 3,target = cand.position,surface = cand.surface,time_to_live = 100}
-			   if cand.neighbours == nil and cand.direction == build_dir 
-			   and (get_direction_of_that_from_this(p.position,cand.position) == build_dir) then --Keep if opposite direction, flip if same direction. laterdo update build_dir
-			      rendering.draw_circle{color = {0, 1, 0},radius = 3,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
-				  players[pindex].building_direction = (players[pindex].building_direction + 2) % 4
-			   end
-            end			
-		 end
+         end 
 	  end
 	  --Build it
       local building = {
@@ -7087,7 +7094,7 @@ function mine_trees_and_rocks_in_circle(position, radius, pindex)
    local resources = surf.find_entities_filtered{position = position, radius = radius, name = {"rock-big","rock-huge","sand-rock-big"}}
    for i,resource_ent in ipairs(resources) do
       if resource_ent ~= nil and resource_ent.valid then
-         --game.get_player(pindex).mine_entity(resource_ent,true) --tolaterdo bug with rock mining
+         --game.get_player(pindex).mine_entity(resource_ent,true) --tolaterdo bug with rock group mining or all rock mining?
 		 rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = resource_ent.position,surface = resource_ent.surface,time_to_live = 60}
 		 rocks_cleared = rocks_cleared + 1
       end
@@ -8344,3 +8351,11 @@ script.on_event("shift-right", function(event)
    end
 end
 )
+
+function rotate_90(dir)
+   return (dir + dirs.east) % (2 * dirs.south)
+end
+
+function rotate_180(dir)
+   return (dir + dirs.south) % (2 * dirs.south)
+end

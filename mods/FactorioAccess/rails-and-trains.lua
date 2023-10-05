@@ -428,7 +428,7 @@ function vehicle_info(pindex)
    if train == nil then
       --This is a type of car or tank.
       result = "Driving " .. vehicle.name .. ", " .. fuel_inventory_info(vehicle)
-      --laterdo: can add more info here? For example health or ammo or trunk contents
+      --laterdo**: car info: health, ammo contents, trunk contents
       return result
    else
       --This is a type of locomotive or wagon.
@@ -440,10 +440,10 @@ function vehicle_info(pindex)
       result = result .. get_train_state_info(train) .. ", "
       
       --Declare destination if any. Note: Not tested yet. laterdo
-      --if train.has_path and train.path_end_stop ~= nil then 
-      --   result = result .. " heading to train stop " .. train.path_end_stop.backer_name .. ", "
+      if train.path_end_stop ~= nil then
+         result = result .. " heading to station " .. train.path_end_stop.backer_name .. ", "
       --   result = result .. " traveled a distance of " .. train.path.travelled_distance .. " out of " train.path.total_distance " distance, "
-      --end
+      end
       
       --Note that more info and options are found in the train menu
       if vehicle.name == "locomotive" then
@@ -2582,6 +2582,8 @@ function direction_lookup(dir)
       reading = "West"
    elseif dir == dirs.northwest then
       reading = "Northwest"
+   elseif dir == 99 then --Internally defined
+      reading = "Here"
    else
       reading = "direction error 2"
    end      

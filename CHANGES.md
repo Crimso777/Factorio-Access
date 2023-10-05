@@ -36,7 +36,8 @@ Updated in October of 2023.
   * Note 3: See Chapter 16 of the wiki for more info.
 
 - Improved electric pole support with new features.
-  * Electric network demand satisfaction percentages are now reported. Check with RIGHT BRACKET.
+  * Selecting an electric pole now lists all the wire connection distances, and counts the energy consumers and producers within its supply area.
+  * The pole's electric network's demand satisfaction percentages are now reported, as well as the network flow rate and capacity. Check with RIGHT BRACKET.
   * If an electric pole has no power flowing (as in 0 satisfaction), the nearest supplied electric pole is reported.  
   * When placing an electric pole, all connectible electric poles around it are listed. If there are none, the nearest electric pole is listed. This context info allows better understanding of electric networks.
 
@@ -46,6 +47,7 @@ Updated in October of 2023.
 
 - Added building preview information for several structures. This information is based on the cursor location while an item to be built is held in hand.
   * For small buildings, the preview can warn when building is not possible.
+  * For transport belt types, the belt junction type that would form by placing the belt there is stated.
   * For electric powered machines, if power is connected, an electric pole that supplies it is listed. If not, the nearest electric pole is listed. Note that this feature is a little inaccurate around supply area boundaries except when in cursor mode.
   * Other similar changes.
   
@@ -102,6 +104,8 @@ Updated in October of 2023.
 - The intermediate walking mode has been removed so that you can easily switch between telestep and smooth walking. When in game mod settings are supported in the future, we plan to bring it back.
 
 - Transport belt junction types are now better identified.
+  * Note that a "pouring end" could either be sideloading onto a different belt, or continuing into a belt corner which preserves the lanes.
+  * Safe merging junctions (also called T-junctions) are identified as a belt unit that is double sideloaded but empty at the back so that the lanes will be entirely predictable.
  
 - Teleporting is disabled while riding a vehicle.
 

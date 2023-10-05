@@ -606,7 +606,7 @@ function ent_info(pindex, ent, description)
          end
 
       else
-         result = result .. " carrying Nothing"
+         result = result .. " carrying nothing"
       end
    end
    
@@ -779,31 +779,44 @@ function ent_info(pindex, ent, description)
          end
       end
    elseif ent.type == "electric-pole" then
-      result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, "
-	  result = result .. ", " .. get_electricity_satisfaction(ent) .. " percent network satisfaction, with "
-	  --Get network electricity production
-      local power = 0
-      local capacity = 0
-      for i, v in pairs(ent.electric_network_statistics.output_counts) do
-         power = power + (ent.electric_network_statistics.get_flow_count{name = i, input = false, precision_index = defines.flow_precision_index.five_seconds})
-         local cap_add = 0
-         for _, power_ent in pairs(ent.surface.find_entities_filtered{name=i,force = ent.force}) do
-            if power_ent.electric_network_id == ent.electric_network_id then
-               cap_add = cap_add + 1
+      --List connected electric poles
+      if #ent.neighbours.copper == 0 then
+         result = result .. " with no connections, "
+      else
+         result = result .. " connected to "
+         for i,pole in ipairs(ent.neighbours.copper) do
+            local dir = get_direction_of_that_from_this(pole.position,ent.position)
+            local dist = util.distance(pole.position,ent.position)
+            if i > 1 then
+               result = result .. " and "
             end
+            result = result .. math.ceil(dist) .. " tiles " .. direction_lookup(dir) .. ", "
          end
-         cap_add = cap_add * game.entity_prototypes[i].max_energy_production
-         if game.entity_prototypes[i].type == "solar-panel" then
-            cap_add = cap_add * ent.surface.solar_power_multiplier * (1-ent.surface.darkness)
-         end
-         capacity = capacity + cap_add   
       end
-	  power = power * 60
-	  capacity = capacity * 60
-	  result = result .. get_power_string(power) .. " being produced out of " .. get_power_string(capacity) .. " capacity, "
+      --Count number of entities being supplied within supply area.
+      local pos = ent.position
+      local sdist = ent.prototype.supply_area_distance
+      local supply_area = {{pos.x - sdist, pos.y - sdist}, {pos.x + sdist, pos.y + sdist}}
+      local supplied_ents = ent.surface.find_entities_filtered{area = supply_area}
+      local supplied_count = 0
+      local producer_count = 0
+      for i, ent2 in ipairs(supplied_ents) do
+         if ent2.prototype.max_energy_usage ~= nil and ent2.prototype.max_energy_usage > 0 then
+            supplied_count = supplied_count + 1
+         elseif ent2.prototype.max_energy_production ~= nil and ent2.prototype.max_energy_production > 0 then
+            producer_count = producer_count + 1
+         end
+      end
+      result = result .. " supplying " .. supplied_count .. " buildings, " 
+      if producer_count > 0 then
+         result = result .. " drawing from " .. producer_count .. " buildings, " 
+      end
+      result = result .. "Check status for power flow information. "
+      
    elseif ent.name == "rail-signal" or ent.name == "rail-chain-signal" then
       result = result .. ", " .. get_signal_state_info(ent)
    end
+   --Give drop position (like for inserters)
    if ent.drop_position ~= nil then
       local position = table.deepcopy(ent.drop_position)
       local direction = ent.direction /2
@@ -920,42 +933,62 @@ function ent_info(pindex, ent, description)
    return result
 end
 
---Explain whether the belt is some type of corner or sideloaded junction or etc.
-function transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir)--todo test new types***
+--Explain whether the belt is some type of corner or sideloading junction or etc.
+function transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir, say_middle)
+   local say_middle = say_middle or false
    local result = ""
-   if sideload_count == 0 and backload_count == 1 and outload_count == 1 then
-      result = result --middle (no need to specify)
-   elseif sideload_count == 0 and backload_count == 0 and outload_count == 0 then
+   if     sideload_count == 0 and backload_count == 0 and outload_count == 0 then
       result = result .. " unit "
+   elseif sideload_count == 0 and backload_count == 1 and outload_count == 0 then
+      result = result .. " stopping end "
+   elseif sideload_count == 1 and backload_count == 0 and outload_count == 0 then
+      result = result .. " stopping end corner "
+   elseif sideload_count == 1 and backload_count == 1 and outload_count == 0 then
+      result = result .. " sideloading stopping end "
+   elseif sideload_count == 2 and backload_count == 1 and outload_count == 0 then
+      result = result .. " double sideloading stopping end "
+   elseif sideload_count == 2 and backload_count == 0 and outload_count == 0 then
+      result = result .. " safe merging stopping end "
    elseif sideload_count == 0 and backload_count == 0 and outload_count == 1 and this_dir == outload_dir then
       result = result .. " start "
-   elseif sideload_count == 0 and backload_count == 1 and outload_count == 0 then
-      result = result .. " end "
-   elseif sideload_count == 1 and backload_count == 0 and outload_count == 0 then
-      result = result .. " end corner "
-   elseif sideload_count == 1 and backload_count == 0 and outload_count == 1 then
+   elseif sideload_count == 0 and backload_count == 1 and outload_count == 1 and this_dir == outload_dir then
+      if say_middle then
+         result = result .. " middle "
+      else
+         result = result .. " " 
+      end
+   elseif sideload_count == 1 and backload_count == 0 and outload_count == 1 and this_dir == outload_dir then
       result = result .. " corner "
-   elseif sideload_count == 1 and backload_count == 1 and (outload_count == 0 or (outload_count == 1 and this_dir == outload_dir)) then
-      result = result .. " sideloading junction , only one lane is loaded "
-   elseif sideload_count == 2 and backload_count == 0 and (outload_count == 0 or (outload_count == 1 and this_dir == outload_dir)) then
-      result = result .. " safe double sideloading junction with clear back, lanes never mix "
-   elseif sideload_count == 2 and backload_count == 1 and (outload_count == 0 or (outload_count == 1 and this_dir == outload_dir)) then
-      result = result .. " double sideloading and backloading junction "
+   elseif sideload_count == 1 and backload_count == 1 and outload_count == 1 and this_dir == outload_dir then
+      result = result .. " sideloading junction "
+   elseif sideload_count == 2 and backload_count == 1 and outload_count == 1 and this_dir == outload_dir then
+      result = result .. " double sideloading junction "
+   elseif sideload_count == 2 and backload_count == 0 and outload_count == 1 and this_dir == outload_dir then
+      result = result .. " safe merging junction "
    elseif sideload_count == 0 and backload_count == 0 and outload_count == 1 and this_dir ~= outload_dir then
-      result = result .. " pouring end or entering a corner, depends on whether belt in front is backloaded "
+      result = result .. " unit pouring end "
+   elseif sideload_count == 0 and backload_count == 1 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " pouring end "
    elseif sideload_count == 1 and backload_count == 0 and outload_count == 1 and this_dir ~= outload_dir then
-      result = result .. " corner belt, pouring end or entering a corner, depends on whether belt in front is backloaded "
+      result = result .. " corner pouring end "
+   elseif sideload_count == 1 and backload_count == 1 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " sideloading pouring end "
+   elseif sideload_count == 2 and backload_count == 1 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " double sideloading pouring end "
+   elseif sideload_count == 2 and backload_count == 0 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " safe merging pouring end "
    elseif sideload_count + backload_count > 1 and (outload_count == 0 or (outload_count == 1 and this_dir == outload_dir)) then
-      result = result .. " unidentified merging junction "--this should not be reachable any more
+      result = result .. " unidentified junction "--this should not be reachable any more
    elseif sideload_count + backload_count > 1 and outload_count == 1 and this_dir ~= outload_dir then
-      result = result .. " unidentified merging junction, pouring end or entering a corner, depends on whether belt in front is backloaded "
+      result = result .. " unidentified pouring end "
    elseif outload_count > 1 then
-      result = result .. " multiple outputs "--unexpected case
+      result = result .. " multiple outputs " --unexpected case
    else
-      result = result .. " unknown connections "--unexpected case
+      result = result .. " unknown state " --unexpected case
    end
    return result
 end
+--Notes for the wiki: A pouring end either pours into a sideloading something, or into a corner. Lanes are preserved if corner.
 
 function compile_building_network (ent, radius)
    local ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius, type = building_types}
@@ -2802,6 +2835,7 @@ function read_tile(pindex)
    else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       local ent = players[pindex].tile.ents[1]
       result = ent_info(pindex, ent)
+      --game.get_player(pindex).print(result)--**
       players[pindex].tile.previous = players[pindex].tile.ents[#players[pindex].tile.ents]
 
       players[pindex].tile.index = 2
@@ -2810,7 +2844,7 @@ function read_tile(pindex)
       local stack = game.get_player(pindex).cursor_stack
 	  --Run build preview checks
 	  if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
-	     result = build_preview_checks_info(stack,pindex)
+	     result = result .. build_preview_checks_info(stack,pindex)
 		 --game.get_player(pindex).print(result)--**
 	  end
       
@@ -2839,59 +2873,194 @@ function build_preview_checks_info(stack, pindex)
    if stack == nil or not stack.valid_for_read or not stack.valid then
       return "invalid stack"
    end
+   local p = game.get_player(pindex)
    local surf = game.get_player(pindex).surface
    local pos = table.deepcopy(players[pindex].cursor_pos)
    local result = ""
-   local ent = stack.prototype.place_result 
-   if ent == nil or not ent.valid then
+   local ent_p = stack.prototype.place_result --it is an entity prototype!
+   if ent_p == nil or not ent_p.valid then
       return "invalid entity"
    end
    
-   --Notify before all else if surface/player cannot place this entity. **latertodo extend this check by copying over build offset stuff
-   if ent.get_radius() < 1 and not surf.can_place_entity{name = ent.name, position = pos, force = ent.force} then
-      return " cannot place this here "--**todo test
+   --Notify before all else if surface/player cannot place this entity. **laterdo extend this check by copying over build offset stuff
+   if ent_p.tile_width <= 1 and ent_p.tile_height <= 1 and not surf.can_place_entity{name = stack.name, position = pos} then
+      return " cannot place this here "
    end
    
    --For belt types, check if it would form a corner or junction here. Laterdo include underground exits.
-   if ent.type == "transport-belt" then
-      local ents_north = p.surface.find_entities_filtered{position = {x = x,y = y-1}, type = "transport-belt"}
-		local ents_south = p.surface.find_entities_filtered{position = {x = x,y = y+1}, type = "transport-belt"}
-		local ents_east  = p.surface.find_entities_filtered{position = {x = x+1,y = y}, type = "transport-belt"}
-		local ents_west  = p.surface.find_entities_filtered{position = {x = x-1,y = y}, type = "transport-belt"}
+   if ent_p.type == "transport-belt" then
+      local ents_north = p.surface.find_entities_filtered{position = {x = pos.x+0 ,y = pos.y-1}, type = "transport-belt"}
+		local ents_south = p.surface.find_entities_filtered{position = {x = pos.x+0 ,y = pos.y+1}, type = "transport-belt"}
+		local ents_east  = p.surface.find_entities_filtered{position = {x = pos.x+1 ,y = pos.y+0}, type = "transport-belt"}
+		local ents_west  = p.surface.find_entities_filtered{position = {x = pos.x-1 ,y = pos.y+0}, type = "transport-belt"}
+      
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y-1}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y+1}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x-1 ,y = pos.y-0}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+1 ,y = pos.y-0}, surface = p.surface, time_to_live = 30}
+      
       local build_dir = players[pindex].building_direction * 2--laterdo get building directions to match the official defines
-      local belts = table_concat(ents_north, ents_south)
-      belts = table_concat(belts, ents_east)
-      belts = table_concat(belts, ents_west)
-      if #belts > 0 then
+
+      if #ents_north > 0 or #ents_south > 0 or #ents_east > 0 or #ents_west > 0 then
          local sideload_count = 0
          local backload_count = 0
          local  outload_count = 0
-         local this_dir = ent.direction
+         local this_dir = build_dir
          local outload_dir = nil
-         --Identify sideloads, backloads, outloads
-         for i,neighbor in ipairs(belts) do --todo***
-            local n_facing = neighbor.direction
-            local n_at = get_direction_of_that_from_this(neighbor.position,pos)
-            
+         
+         --Find the outloading belt and its direction, if any 
+         if this_dir == dirs.north and ents_north[1] ~= nil and ents_north[1].valid then
+            rendering.draw_circle{color = {0.5, 0.5, 1},radius = 0.3,width = 2,target = ents_north[1].position,surface = ents_north[1].surface,time_to_live = 30}
+            outload_dir = ents_north[1].direction
+            outload_count = 1
+         elseif this_dir == dirs.east and ents_east[1] ~= nil and ents_east[1].valid then
+            rendering.draw_circle{color = {0.5, 0.5, 1},radius = 0.3,width = 2,target = ents_east[1].position,surface = ents_east[1].surface,time_to_live = 30}
+            outload_dir = ents_east[1].direction
+            outload_count = 1
+         elseif this_dir == dirs.south and ents_south[1] ~= nil and ents_south[1].valid then
+            rendering.draw_circle{color = {0.5, 0.5, 1},radius = 0.3,width = 2,target = ents_south[1].position,surface = ents_south[1].surface,time_to_live = 30}
+            outload_dir = ents_south[1].direction
+            outload_count = 1
+         elseif this_dir == dirs.west and ents_west[1] ~= nil and ents_west[1].valid then
+            rendering.draw_circle{color = {0.5, 0.5, 1},radius = 0.3,width = 2,target = ents_west[1].position,surface = ents_west[1].surface,time_to_live = 30}
+            outload_dir = ents_west[1].direction
+            outload_count = 1
          end
+         
+         --Find the backloading and sideloading belts, if any
+         if ents_north[1] ~= nil and ents_north[1].valid and ents_north[1].direction == dirs.south then
+            rendering.draw_circle{color = {1, 1, 0.2},radius = 0.2,width = 2,target = ents_north[1].position,surface = ents_north[1].surface,time_to_live = 30}
+            if this_dir == dirs.east or this_dir == dirs.west then
+               sideload_count = sideload_count + 1
+            elseif this_dir == dirs.south then
+               backload_count = 1
+            end
+         end
+         
+         if ents_south[1] ~= nil and ents_south[1].valid and ents_south[1].direction == dirs.north then
+            rendering.draw_circle{color = {1, 1, 0.4},radius = 0.2,width = 2,target = ents_south[1].position,surface = ents_south[1].surface,time_to_live = 30}
+            if this_dir == dirs.east or this_dir == dirs.west then
+               sideload_count = sideload_count + 1
+            elseif this_dir == dirs.north then
+               backload_count = 1
+            end
+         end
+         
+         if ents_east[1] ~= nil and ents_east[1].valid and ents_east[1].direction == dirs.west then
+            rendering.draw_circle{color = {1, 1, 0.6},radius = 0.2,width = 2,target = ents_east[1].position,surface = ents_east[1].surface,time_to_live = 30}
+            if this_dir == dirs.north or this_dir == dirs.south then
+               sideload_count = sideload_count + 1
+            elseif this_dir == dirs.west then
+               backload_count = 1
+            end
+         end
+         
+         if ents_west[1] ~= nil and ents_west[1].valid and ents_west[1].direction == dirs.east then
+            rendering.draw_circle{color = {1, 1, 0.8},radius = 0.2,width = 2,target = ents_west[1].position,surface = ents_west[1].surface,time_to_live = 30}
+            if this_dir == dirs.north or this_dir == dirs.south then
+               sideload_count = sideload_count + 1
+            elseif this_dir == dirs.east then
+               backload_count = 1
+            end
+         end
+            
          --Determine expected junction info
          if sideload_count + backload_count + outload_count > 0 then--Skips "unit" because it is obvious
-            result = ", belt becomes " .. transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir)
+            result = ", forms belt " .. transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir, true)
          end
       end
    end
+   
+   --For pipes, read the fluids in fluidboxes of surrounding entities, if any. Also warn if there are multiple fluids, hence a mixing error.
+   --NOTE: There is no API support for giving the fluidbox locations of connected entities, and so fluidbox locations need to be inferred by hardcoding. Ugh.
+   if stack.name == "pipe" then
+      local ents_north = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y-1}, name == {"pipe","pipe-to-ground"} }--laterdo add support here for fluid tanks. Maybe even chemical plants and refineries. but those are easier to figure out anyway.
+      local ents_south = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y+1}, name == {"pipe","pipe-to-ground"} }
+      local ents_east  = p.surface.find_entities_filtered{position = {x = pos.x+1, y = pos.y+0}, name == {"pipe","pipe-to-ground"} }
+      local ents_west  = p.surface.find_entities_filtered{position = {x = pos.x-1, y = pos.y+0}, name == {"pipe","pipe-to-ground"} }
+      local relevant_fluid_north = nil
+      local relevant_fluid_east  = nil
+      local relevant_fluid_south = nil
+      local relevant_fluid_west  = nil
+      
+      --Run checks to see if we have any fluidboxes that are relevant
+      -- if ents_north[1] ~= nil and ents_north[1].valid then
+         -- if (ents_north[1].name == "pipe") or (ents_north[1].name == "pipe-to-ground" and ents_north[1].direction == dirs.south) then --need to check pipe-to-ground dirs
+            -- local dict = ents_north[1].get_fluid_contents()
+            -- local fluids = {}
+            -- for name, count in pairs(dict) do
+               -- table.insert(fluids, {name = name, count = count})
+            -- end
+            -- table.sort(fluids, function(k1, k2)
+               -- return k1.count > k2.count
+            -- end)
+            -- local fluid = fluids[1].name
+            -- if fluid == nil then fluid = "empty pipe varient" end
+            -- relevant_fluid_east = fluid
+            -- relevant_fluid_north = fluid
+         -- end
+      -- end
+      
+      if ents_east[1] ~= nil and ents_east[1].valid then 
+         --Check if the entity has any relevant (connectable) fluidboxes
+         local relevant_fluidbox = nil
+         --todo*** here: check all the pipe connection targets for all fluidboxes of this ent, and if target == cursor_pos then relevant fluid is in the fluidbox
+         if (relevant_fluidbox ~= nil) then 
+            local dict = relevant_fluidbox.get_fluid_contents()
+            local fluids = {}
+            for name, count in pairs(dict) do
+               table.insert(fluids, {name = name, count = count})
+            end
+            table.sort(fluids, function(k1, k2)
+               return k1.count > k2.count
+            end)
+            local fluid = fluids[1].name
+            if fluid == nil then fluid = "empty pipe varient" end
+            relevant_fluid_east = fluid
+         end
+      end
+      
+      --Assuming empty fluidboxes return nil, we need to check if all none-nil boxes are equal...
+      if relevant_fluid_north ~= nil or relevant_fluid_east ~= nil or relevant_fluid_soutth ~= nil or relevant_fluid_west ~= nil then
+         local count = 0
+         result = result .. " pipe connects to "
+         
+         if relevant_fluid_north ~= nil then
+            result = result .. relevant_fluid_north .. " at north, "
+            count = count + 1
+         end
+         if relevant_fluid_east ~= nil then
+            result = result .. relevant_fluid_north .. " at east, "
+            count = count + 1
+         end
+         if relevant_fluid_south ~= nil then
+            result = result .. relevant_fluid_north .. " at south, "
+            count = count + 1
+         end
+         if relevant_fluid_west ~= nil then
+            result = result .. relevant_fluid_north .. " at west, "
+            count = count + 1
+         end
+         
+         if count > 1 then
+            result = result .. " note that if any of the mentioned fluids are different types, this pipe cannot be placed because it would mix different fluids. "--todo test here
+         end
+      end
+      
+   end
+   
    --For electric poles, report the directions of up to 5 wire-connectible electric poles that can connect
-   if ent.type == "electric-pole" then
-      local pole_dict = surf.find_entities_filtered{type = "electric-pole", position = pos, radius = ent.max_wire_distance}
+   if ent_p.type == "electric-pole" then
+     local pole_dict = surf.find_entities_filtered{type = "electric-pole", position = pos, radius = ent_p.max_wire_distance}
 	  local poles = {}
 	  for i, v in pairs(pole_dict) do
-	     if v.prototype.max_wire_distance ~= nil and v.prototype.max_wire_distance >= ent.max_wire_distance then --Select only the poles that can connect back
+	     if v.prototype.max_wire_distance ~= nil and v.prototype.max_wire_distance >= ent_p.max_wire_distance then --Select only the poles that can connect back
 		    table.insert(poles, v)
 		 end
 	  end
 	  if #poles > 0 then
 	     --List the first 4 poles within range
-		 result = result .. " Wires connecting "
+		 result = result .. " connecting "
 	     for i, pole in ipairs(poles) do
 		    if i < 5 then
 			   local dist = math.ceil(util.distance(pole.position,pos))
@@ -2901,7 +3070,7 @@ function build_preview_checks_info(stack, pindex)
 	     end
 	  else
 	     --Notify if no connections and state nearest electric pole
-	     result = result .. " No wire connections, "
+	     result = result .. " not connected, "
 		 local nearest_pole, min_dist = find_nearest_electric_pole(nil,false,50,surf,pos)
 		 if min_dist == nil or min_dist >= 1000 then
 		    result = result .. " no electric poles within 1000 tiles, "
@@ -2912,35 +3081,35 @@ function build_preview_checks_info(stack, pindex)
 	  end
    end
    --For all electric powered entities, note whether powered, and from which direction. Otherwise report the nearest power pole.
-   if ent.electric_energy_source_prototype ~= nil then
+   if ent_p.electric_energy_source_prototype ~= nil then
          local position = pos
          if players[pindex].cursor then
-               position.x = position.x + math.ceil(2*ent.selection_box.right_bottom.x)/2 - .5
-               position.y = position.y + math.ceil(2*ent.selection_box.right_bottom.y)/2 - .5
+               position.x = position.x + math.ceil(2*ent_p.selection_box.right_bottom.x)/2 - .5
+               position.y = position.y + math.ceil(2*ent_p.selection_box.right_bottom.y)/2 - .5
          elseif players[pindex].player_direction == defines.direction.north then
             if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
-               position.y = position.y + math.ceil(2* ent.selection_box.left_top.y)/2 + .5
+               position.y = position.y + math.ceil(2* ent_p.selection_box.left_top.y)/2 + .5
             elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
-            position.y = position.y + math.ceil(2* ent.selection_box.left_top.x)/2 + .5
+            position.y = position.y + math.ceil(2* ent_p.selection_box.left_top.x)/2 + .5
             end
          elseif players[pindex].player_direction == defines.direction.south then
             if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
-               position.y = position.y + math.ceil(2* ent.selection_box.right_bottom.y)/2 - .5
+               position.y = position.y + math.ceil(2* ent_p.selection_box.right_bottom.y)/2 - .5
             elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
-               position.y = position.y + math.ceil(2* ent.selection_box.right_bottom.x)/2 - .5
+               position.y = position.y + math.ceil(2* ent_p.selection_box.right_bottom.x)/2 - .5
             end
          elseif players[pindex].player_direction == defines.direction.west then
             if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
-               position.x = position.x + math.ceil(2* ent.selection_box.left_top.x)/2 + .5
+               position.x = position.x + math.ceil(2* ent_p.selection_box.left_top.x)/2 + .5
             elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
-               position.x = position.x + math.ceil(2* ent.selection_box.left_top.y)/2 + .5
+               position.x = position.x + math.ceil(2* ent_p.selection_box.left_top.y)/2 + .5
             end
 
          elseif players[pindex].player_direction == defines.direction.east then
             if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
-               position.x = position.x + math.ceil(2* ent.selection_box.right_bottom.x)/2 - .5
+               position.x = position.x + math.ceil(2* ent_p.selection_box.right_bottom.x)/2 - .5
             elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
-               position.x = position.x + math.ceil(2* ent.selection_box.right_bottom.y)/2 - .5
+               position.x = position.x + math.ceil(2* ent_p.selection_box.right_bottom.y)/2 - .5
             end
          end
          local dict = game.get_filtered_entity_prototypes{{filter = "type", type = "electric-pole"}}
@@ -2961,10 +3130,10 @@ function build_preview_checks_info(stack, pindex)
 			   supply_dist = supply_dist - 2
 			end
             local area = {
-               left_top = {(position.x + math.ceil(ent.selection_box.left_top.x) - supply_dist), (position.y + math.ceil(ent.selection_box.left_top.y) - supply_dist)},
-               right_bottom = {(position.x + math.floor(ent.selection_box.right_bottom.x) + supply_dist), (position.y + math.floor(ent.selection_box.right_bottom.y) + supply_dist)},
+               left_top = {(position.x + math.ceil(ent_p.selection_box.left_top.x) - supply_dist), (position.y + math.ceil(ent_p.selection_box.left_top.y) - supply_dist)},
+               right_bottom = {(position.x + math.floor(ent_p.selection_box.right_bottom.x) + supply_dist), (position.y + math.floor(ent_p.selection_box.right_bottom.y) + supply_dist)},
                orientation = players[pindex].building_direction/4
-           }--**todo a little buggy, need to trim and tune, maybe re-enable direction based offset?
+           }--**todo "connected" check is a little buggy at the supply area edges, need to trim and tune, maybe re-enable direction based offset?
             local T = {
                area = area,
                name = names
@@ -5752,7 +5921,7 @@ function build_item_in_hand(pindex, offset_val)
 			--rendering.draw_circle{color = {1, 1, 0},radius = 3,width = 3,target = cand.position,surface = cand.surface,time_to_live = 100}
 			   if cand.neighbours == nil and cand.direction == build_dir 
 			   and (get_direction_of_that_from_this(p.position,cand.position) == build_dir) then --Keep if opposite direction, flip if same direction. laterdo update build_dir
-			      rendering.draw_circle{color = {0, 1, 0},radius = 3,width = 3,target = cand.position,surface = cand.surface,time_to_live = 100}
+			      rendering.draw_circle{color = {0, 1, 0},radius = 3,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
 				  players[pindex].building_direction = (players[pindex].building_direction + 2) % 4
 			   end
             end			
@@ -6152,35 +6321,41 @@ script.on_event("right-click", function(event)
       build_item_in_hand(pindex, 0)
    elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
       --Print out the status of a machine, if it exists.
+      local result = ""
       local ent = players[pindex].tile.ents[1]
       local ent_status_id = ent.status
       local ent_status_text = ""
       local status_lookup = into_lookup(defines.entity_status)
       if ent.name == "cargo-wagon" then
          --Instead of status, read contents   
-         printout(" " .. cargo_wagon_top_contents_info(ent),pindex)
+         result = " " .. cargo_wagon_top_contents_info(ent)
       elseif ent.name == "fluid-wagon" then
          --Instead of status, read contents   
-         printout(" " .. fluid_contents_info(ent),pindex)
+         result =  " " .. fluid_contents_info(ent)
       elseif ent_status_id ~= nil then
          --Print status if it exists
          ent_status_text = status_lookup[ent_status_id]
-         printout(" " .. ent_status_text ,pindex)
-      else--No status cases
-	     --When there is no status, for entities with fuel inventories, read that out instead. This is typical for vehicles.
-	     if ent.get_fuel_inventory() ~= nil then
-		    printout(" " .. fuel_inventory_info(ent),pindex)
-		 elseif ent.type == "electric-pole" then
+         result =  " " .. ent_status_text
+      else--There is no status
+	      --When there is no status, for entities with fuel inventories, read that out instead. This is typical for vehicles.
+	      if ent.get_fuel_inventory() ~= nil then
+		      printout(" " .. fuel_inventory_info(ent),pindex)
+		   elseif ent.type == "electric-pole" then
 		    --For electric poles with no power flow, report the nearest electric pole with a power flow.
-			if get_electricity_satisfaction(ent) > 0 then
-			   printout("Has power with " .. get_electricity_satisfaction(ent) .. " percent network satisfaction.",pindex)
-			else
-			   printout("No power, " .. report_nearest_supplied_electric_pole(ent) ,pindex)
-			end
-		 else
-            printout("No status." ,pindex)
-		 end
+            if get_electricity_satisfaction(ent) > 0 then
+               result = get_electricity_satisfaction(ent) .. " percent network satisfaction, with " .. get_electricity_flow_info(ent)
+            else
+               result = "No power, " .. report_nearest_supplied_electric_pole(ent)
+            end
+         else
+            result = "No status."
+         end
       end
+      if result == "" then
+         result = "result error"
+      end
+      printout(result ,pindex)
+      --game.get_player(pindex).print(result)--**
    end
 end
 )
@@ -6834,7 +7009,7 @@ function mine_trees_and_rocks_in_circle(position, radius, pindex)
    --Find and mine trees
    local trees = surf.find_entities_filtered{position = position, radius = radius, type = "tree"}
    for i,tree_ent in ipairs(trees) do
-      rendering.draw_circle{color = {1, 0, 0},radius = 1,width = 1,target = tree_ent.position,surface = tree_ent.surface,time_to_live = 100}
+      rendering.draw_circle{color = {1, 0, 0},radius = 1,width = 1,target = tree_ent.position,surface = tree_ent.surface,time_to_live = 60}
       game.get_player(pindex).mine_entity(tree_ent,true)
 	  trees_cleared = trees_cleared + 1
    end
@@ -6844,14 +7019,14 @@ function mine_trees_and_rocks_in_circle(position, radius, pindex)
    for i,resource_ent in ipairs(resources) do
       if resource_ent ~= nil and resource_ent.valid then
          --game.get_player(pindex).mine_entity(resource_ent,true) --tolaterdo bug with rock mining
-		 rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = resource_ent.position,surface = resource_ent.surface,time_to_live = 100}
+		 rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = resource_ent.position,surface = resource_ent.surface,time_to_live = 60}
 		 rocks_cleared = rocks_cleared + 1
       end
    end
    if trees_cleared + rocks_cleared > 0 then
       comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks. "
    end
-   rendering.draw_circle{color = {0, 1, 0},radius = radius,width = radius,target = position,surface = surf,time_to_live = 100}
+   rendering.draw_circle{color = {0, 1, 0},radius = radius,width = radius,target = position,surface = surf,time_to_live = 60}
    return outcome, comment
 end
 
@@ -7396,7 +7571,7 @@ script.on_event(defines.events.on_train_changed_state,function(event)
 	        localised_print{"","out ",str}
 		 end
       end
-   elseif event.train.state == defines.train_state.on_the_path then
+   elseif event.train.state == defines.train_state.on_the_path then --laterdo make this announce only when near another trainstop.
       --Announce station to players on the train
 	  for i,player in ipairs(event.train.passengers) do
          local stop = event.train.path_end_stop
@@ -7419,19 +7594,19 @@ script.on_event(defines.events.on_train_changed_state,function(event)
    end
 end)
 
---Returns the direction of that entity from this entity based on the ratios of the x and y distances. Returns 1 of 8 main directions.
+--Returns the direction of that entity from this entity based on the ratios of the x and y distances. Returns 1 of 8 main directions, with a bias towards the diagonals to make it easier to align with the cardinal directions.
 function get_direction_of_that_from_this(pos_that,pos_this)
    local diff_x = pos_that.x - pos_this.x
    local diff_y = pos_that.y - pos_this.y
    local dir = -1
    
-   if math.abs(diff_x) > 2 * math.abs(diff_y) then --along east-west
+   if math.abs(diff_x) > 4 * math.abs(diff_y) then --along east-west
       if diff_x > 0 then 
 	     dir = defines.direction.east 
 	  else 
 	     dir = defines.direction.west 
 	  end
-   elseif math.abs(diff_y) > 2 * math.abs(diff_x) then --along north-south
+   elseif math.abs(diff_y) > 4 * math.abs(diff_x) then --along north-south
       if diff_y > 0 then 
 	     dir = defines.direction.south 
 	  else 
@@ -7446,7 +7621,9 @@ function get_direction_of_that_from_this(pos_that,pos_this)
 	     dir = defines.direction.southwest
 	  elseif diff_x < 0 and diff_y < 0 then
 	     dir = defines.direction.northwest
-	  else
+	  elseif diff_x == 0 and diff_y == 0 then
+        dir = 99--case for "it is right here"
+     else
 	     dir = -2
 	  end
    end
@@ -7462,6 +7639,30 @@ function get_electricity_satisfaction(electric_pole)
    return satisfaction
 end
 
+function get_electricity_flow_info(ent)
+   local result = ""
+   local power = 0
+   local capacity = 0
+   for i, v in pairs(ent.electric_network_statistics.output_counts) do
+      power = power + (ent.electric_network_statistics.get_flow_count{name = i, input = false, precision_index = defines.flow_precision_index.five_seconds})
+      local cap_add = 0
+      for _, power_ent in pairs(ent.surface.find_entities_filtered{name=i,force = ent.force}) do
+         if power_ent.electric_network_id == ent.electric_network_id then
+            cap_add = cap_add + 1
+         end
+      end
+      cap_add = cap_add * game.entity_prototypes[i].max_energy_production
+      if game.entity_prototypes[i].type == "solar-panel" then
+         cap_add = cap_add * ent.surface.solar_power_multiplier * (1-ent.surface.darkness)
+      end
+      capacity = capacity + cap_add   
+   end
+  power = power * 60
+  capacity = capacity * 60
+  result = result .. get_power_string(power) .. " being produced out of " .. get_power_string(capacity) .. " capacity, "
+  return result
+end
+
 --Finds the neearest electric pole. Can be set to determine whether to check only for poles with electricity flow. Can call using only the first two parameters.
 function find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
    local nearest = nil
@@ -7474,7 +7675,7 @@ function find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, 
    local pos = nil
    if ent ~= nil and ent.valid then
       surface = ent.surface
-	  pos = ent.position
+	   pos = ent.position
    else
       surface = alt_surface
 	  pos = alt_pos
@@ -7484,32 +7685,38 @@ function find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, 
    local poles = surface.find_entities_filtered{ type = "electric-pole" , position = pos , radius = radius}
    if poles == nil or #poles == 0 then
       if radius < 100 then
-	     radius = 100
-		 return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
-	  elseif radius < 1000 then	 
-	     radius = 1000
-		 return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
-	  elseif radius < 10000 then
-	     radius = 10000
-		 return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
-	  else
-	     return nil, nil --Nothing within 10000 tiles!
-	  end
+         radius = 100
+         return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
+      elseif radius < 1000 then	 
+         radius = 1000
+         return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
+      elseif radius < 10000 then
+         radius = 10000
+         return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
+      else
+         return nil, nil --Nothing within 10000 tiles!
+      end
    end
    
    --Find the nearest among the poles with electric networks
    for i,pole in ipairs(poles) do
-      --Check if the pole's network has power.
-	  local has_power = get_electricity_satisfaction(pole) > 0
-	  local dist = 0
-	  if has_power or (not require_supplied) then
-	     dist = math.ceil(util.distance(pos, pole.position))
-		 --Set as nearest if valid
-		 if dist < min_dist then
-		    min_dist = dist
-			nearest = pole
-		 end
-	  end
+      --Check if the pole's network has power producers
+	   local has_power = get_electricity_satisfaction(pole) > 0
+      local dict = pole.electric_network_statistics.output_counts
+      local network_producers = {}
+      for name, count in pairs(dict) do
+         table.insert(network_producers, {name = name, count = count})
+      end
+	   local network_producer_count = #network_producers --laterdo test again if this is working, it should pick up even 0.001% satisfaction...
+      local dist = 0
+	   if has_power or network_producer_count > 0 or (not require_supplied) then
+	      dist = math.ceil(util.distance(pos, pole.position))
+		   --Set as nearest if valid
+		   if dist < min_dist then
+		      min_dist = dist
+			   nearest = pole
+		   end
+	   end
    end
    --Return the nearst found, possibly nil
    if nearest == nil then
@@ -7526,6 +7733,7 @@ function find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, 
 	     return nil, nil --Nothing within 10000 tiles!
 	  end
    end
+   rendering.draw_circle{color = {1, 1, 0}, radius = 2, width = 2, target = nearest.position, surface = nearest.surface, time_to_live = 60}
    return nearest, min_dist
 end
 
@@ -7537,10 +7745,9 @@ function report_nearest_supplied_electric_pole(ent)
    local dir = -1
    if pole ~= nil then
       dir = get_direction_of_that_from_this(pole.position,ent.position)
-      result = "The nearest supplied electric pole is " .. dist .. " tiles to the " .. direction_lookup(dir)
-	  rendering.draw_circle{color = {1, 1, 0}, radius = 3, width = 3, target = pole.position, surface = pole.surface, time_to_live = 100}
+      result = "The nearest powered electric pole is " .. dist .. " tiles to the " .. direction_lookup(dir)
    else
-      result = "Error: There are no supplied electric poles within ten thousand tiles."
+      result = "And there are no powered electric poles within ten thousand tiles. Generators may be out of energy."
    end
    return result
 end
@@ -7560,6 +7767,11 @@ function get_entity_part_at_cursor(pindex)
 	 local location = nil
 	 if #ents > 0 then
 		--Report which part of the entity the cursor covers.
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = x+0 ,y = y-1}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = x+0 ,y = y+1}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = x-1 ,y = y-0}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = x+1 ,y = y-0}, surface = p.surface, time_to_live = 30}
+      
 		local ent_north = p.surface.find_entities_filtered{position = {x = x,y = y-1}}
 		if #ent_north > 0 and ent_north[1].unit_number == ents[1].unit_number then north_same = true end
 		local ent_south = p.surface.find_entities_filtered{position = {x = x,y = y+1}}

@@ -48,6 +48,7 @@ Updated in October of 2023.
 - Added building preview information for several structures. This information is based on the cursor location while an item to be built is held in hand.
   * For small buildings, the preview can warn when building is not possible.
   * For transport belt types, the belt junction type that would form by placing the belt there is stated.
+  * For pipe units, the expected fluid pipe connections around are stated, and there is a warning about potentially mixing fluids.
   * For electric powered machines, if power is connected, an electric pole that supplies it is listed. If not, the nearest electric pole is listed. Note that this feature is a little inaccurate around supply area boundaries except when in cursor mode.
   * Other similar changes.
   

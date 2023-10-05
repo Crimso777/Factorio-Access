@@ -2215,7 +2215,7 @@ function read_building_slot(pindex, start_phrase)
       if fluid ~= nil then
          amount = fluid.amount
          name = fluid.name
-      end
+      end --laterdo** use fluidbox.get_locked_fluid(i) if needed.
 
       --Read the fluid ingredients & products
       --Note: We could have separated by input/output but right now the "type" is "input" for all fluids it seeems?
@@ -2835,7 +2835,7 @@ function read_tile(pindex)
    else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       local ent = players[pindex].tile.ents[1]
       result = ent_info(pindex, ent)
-      --game.get_player(pindex).print(result)--**
+      --game.get_player(pindex).print(result)--
       players[pindex].tile.previous = players[pindex].tile.ents[#players[pindex].tile.ents]
 
       players[pindex].tile.index = 2
@@ -2845,7 +2845,7 @@ function read_tile(pindex)
 	  --Run build preview checks
 	  if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
 	     result = result .. build_preview_checks_info(stack,pindex)
-		 --game.get_player(pindex).print(result)--**
+		 --game.get_player(pindex).print(result)--***
 	  end
       
    end
@@ -2972,8 +2972,11 @@ function build_preview_checks_info(stack, pindex)
    end
    
    --For pipes, read the fluids in fluidboxes of surrounding entities, if any. Also warn if there are multiple fluids, hence a mixing error.
-   --NOTE: There is no API support for giving the fluidbox locations of connected entities, and so fluidbox locations need to be inferred by hardcoding. Ugh.
    if stack.name == "pipe" then
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y-1}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y+1}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x-1 ,y = pos.y-0}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+1 ,y = pos.y-0}, surface = p.surface, time_to_live = 30}
       local ents_north = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y-1}, name == {"pipe","pipe-to-ground"} }--laterdo add support here for fluid tanks. Maybe even chemical plants and refineries. but those are easier to figure out anyway.
       local ents_south = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y+1}, name == {"pipe","pipe-to-ground"} }
       local ents_east  = p.surface.find_entities_filtered{position = {x = pos.x+1, y = pos.y+0}, name == {"pipe","pipe-to-ground"} }
@@ -2983,45 +2986,101 @@ function build_preview_checks_info(stack, pindex)
       local relevant_fluid_south = nil
       local relevant_fluid_west  = nil
       
-      --Run checks to see if we have any fluidboxes that are relevant
-      -- if ents_north[1] ~= nil and ents_north[1].valid then
-         -- if (ents_north[1].name == "pipe") or (ents_north[1].name == "pipe-to-ground" and ents_north[1].direction == dirs.south) then --need to check pipe-to-ground dirs
-            -- local dict = ents_north[1].get_fluid_contents()
-            -- local fluids = {}
-            -- for name, count in pairs(dict) do
-               -- table.insert(fluids, {name = name, count = count})
-            -- end
-            -- table.sort(fluids, function(k1, k2)
-               -- return k1.count > k2.count
-            -- end)
-            -- local fluid = fluids[1].name
-            -- if fluid == nil then fluid = "empty pipe varient" end
-            -- relevant_fluid_east = fluid
-            -- relevant_fluid_north = fluid
-         -- end
-      -- end
-      
-      if ents_east[1] ~= nil and ents_east[1].valid then 
-         --Check if the entity has any relevant (connectable) fluidboxes
-         local relevant_fluidbox = nil
-         --todo*** here: check all the pipe connection targets for all fluidboxes of this ent, and if target == cursor_pos then relevant fluid is in the fluidbox
-         if (relevant_fluidbox ~= nil) then 
-            local dict = relevant_fluidbox.get_fluid_contents()
-            local fluids = {}
-            for name, count in pairs(dict) do
-               table.insert(fluids, {name = name, count = count})
+      if ents_north[1] ~= nil and ents_north[1].valid and ents_north[1].fluidbox ~= nil then
+         rendering.draw_circle{color = {1, 1, 0},radius = 0.2,width = 2,target = ents_north[1].position, surface = p.surface, time_to_live = 30} 
+         --Run checks to see if we have any fluidboxes that are relevant
+         for i = 1, #ents_north[1].fluidbox, 1 do
+            --p.print("box " .. i .. ": " .. ents_north[1].fluidbox[i].name)
+            for j, con in ipairs(ents_north[1].fluidbox.get_pipe_connections(i)) do
+               local target_pos = con.target_position 
+               --p.print("new connection at: " .. target_pos.x .. "," .. target_pos.y)
+               rendering.draw_circle{color = {1, 0, 0},radius = 0.2,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+               if util.distance(target_pos, pos) < 0.3 and not (ents_north[1].name == "pipe-to-ground" and ents_north[1].direction == dirs.north) then
+                  rendering.draw_circle{color = {0, 1, 0},radius = 0.3,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+                  if ents_north[1].fluidbox[i] ~= nil then
+                     relevant_fluid_north = ents_north[1].fluidbox[i].name
+                  elseif ents_north[1].fluidbox.get_locked_fluid(i) ~= nil then
+                     relevant_fluid_north = ents_north[1].fluidbox.get_locked_fluid(i)
+                  else
+                     relevant_fluid_north = "empty pipe"
+                  end
+               end
             end
-            table.sort(fluids, function(k1, k2)
-               return k1.count > k2.count
-            end)
-            local fluid = fluids[1].name
-            if fluid == nil then fluid = "empty pipe varient" end
-            relevant_fluid_east = fluid
          end
       end
       
+      if ents_south[1] ~= nil and ents_south[1].valid and ents_south[1].fluidbox ~= nil then
+         rendering.draw_circle{color = {1, 1, 0},radius = 0.2,width = 2,target = ents_south[1].position, surface = p.surface, time_to_live = 30} 
+         --Run checks to see if we have any fluidboxes that are relevant
+         for i = 1, #ents_south[1].fluidbox, 1 do
+            --p.print("box " .. i .. ": " .. ents_south[1].fluidbox[i].name)
+            for j, con in ipairs(ents_south[1].fluidbox.get_pipe_connections(i)) do
+               local target_pos = con.target_position 
+               --p.print("new connection at: " .. target_pos.x .. "," .. target_pos.y)
+               rendering.draw_circle{color = {1, 0, 0},radius = 0.2,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+               if util.distance(target_pos, pos) < 0.3 and not (ents_south[1].name == "pipe-to-ground" and ents_south[1].direction == dirs.south) then
+                  rendering.draw_circle{color = {0, 1, 0},radius = 0.3,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+                  if ents_south[1].fluidbox[i] ~= nil then
+                     relevant_fluid_south = ents_south[1].fluidbox[i].name
+                  elseif ents_south[1].fluidbox.get_locked_fluid(i) ~= nil then
+                     relevant_fluid_south = ents_south[1].fluidbox.get_locked_fluid(i)
+                  else
+                     relevant_fluid_south = "empty pipe"
+                  end
+               end
+            end
+         end
+      end
+      
+      if ents_east[1] ~= nil and ents_east[1].valid and ents_east[1].fluidbox ~= nil then
+         rendering.draw_circle{color = {1, 1, 0},radius = 0.2,width = 2,target = ents_east[1].position, surface = p.surface, time_to_live = 30} 
+         --Run checks to see if we have any fluidboxes that are relevant
+         for i = 1, #ents_east[1].fluidbox, 1 do
+            --p.print("box " .. i .. ": " .. ents_east[1].fluidbox[i].name)
+            for j, con in ipairs(ents_east[1].fluidbox.get_pipe_connections(i)) do
+               local target_pos = con.target_position 
+               --p.print("new connection at: " .. target_pos.x .. "," .. target_pos.y)
+               rendering.draw_circle{color = {1, 0, 0},radius = 0.2,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+               if util.distance(target_pos, pos) < 0.3 and not (ents_east[1].name == "pipe-to-ground" and ents_east[1].direction == dirs.east) then
+                  rendering.draw_circle{color = {0, 1, 0},radius = 0.3,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+                  if ents_east[1].fluidbox[i] ~= nil then
+                     relevant_fluid_east = ents_east[1].fluidbox[i].name
+                  elseif ents_east[1].fluidbox.get_locked_fluid(i) ~= nil then
+                     relevant_fluid_east = ents_east[1].fluidbox.get_locked_fluid(i)
+                  else
+                     relevant_fluid_east = "empty pipe"
+                  end
+               end
+            end
+         end
+      end
+      
+      if ents_west[1] ~= nil and ents_west[1].valid and ents_west[1].fluidbox ~= nil then
+         rendering.draw_circle{color = {1, 1, 0},radius = 0.2,width = 2,target = ents_west[1].position, surface = p.surface, time_to_live = 30} 
+         --Run checks to see if we have any fluidboxes that are relevant
+         for i = 1, #ents_west[1].fluidbox, 1 do
+            --p.print("box " .. i .. ": " .. ents_west[1].fluidbox[i].name)
+            for j, con in ipairs(ents_west[1].fluidbox.get_pipe_connections(i)) do
+               local target_pos = con.target_position 
+               --p.print("new connection at: " .. target_pos.x .. "," .. target_pos.y)
+               rendering.draw_circle{color = {1, 0, 0},radius = 0.2,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+               if util.distance(target_pos, pos) < 0.3 and not (ents_west[1].name == "pipe-to-ground" and ents_west[1].direction == dirs.west) then
+                  rendering.draw_circle{color = {0, 1, 0},radius = 0.3,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+                  if ents_west[1].fluidbox[i] ~= nil then
+                     relevant_fluid_west = ents_west[1].fluidbox[i].name
+                  elseif ents_west[1].fluidbox.get_locked_fluid(i) ~= nil then
+                     relevant_fluid_west = ents_west[1].fluidbox.get_locked_fluid(i)
+                  else
+                     relevant_fluid_west = "empty pipe"
+                  end
+               end
+            end
+         end
+      end
+      
+      
       --Assuming empty fluidboxes return nil, we need to check if all none-nil boxes are equal...
-      if relevant_fluid_north ~= nil or relevant_fluid_east ~= nil or relevant_fluid_soutth ~= nil or relevant_fluid_west ~= nil then
+      if relevant_fluid_north ~= nil or relevant_fluid_east ~= nil or relevant_fluid_south ~= nil or relevant_fluid_west ~= nil then
          local count = 0
          result = result .. " pipe connects to "
          
@@ -3030,20 +3089,30 @@ function build_preview_checks_info(stack, pindex)
             count = count + 1
          end
          if relevant_fluid_east ~= nil then
-            result = result .. relevant_fluid_north .. " at east, "
+            result = result .. relevant_fluid_east  .. " at east, "
             count = count + 1
          end
          if relevant_fluid_south ~= nil then
-            result = result .. relevant_fluid_north .. " at south, "
+            result = result .. relevant_fluid_south .. " at south, "
             count = count + 1
          end
          if relevant_fluid_west ~= nil then
-            result = result .. relevant_fluid_north .. " at west, "
+            result = result .. relevant_fluid_west  .. " at west, "
             count = count + 1
          end
          
+         if relevant_fluid_north ~= nil and (relevant_fluid_north == relevant_fluid_south or relevant_fluid_north == relevant_fluid_east or relevant_fluid_north == relevant_fluid_west) then
+            count = count - 1
+         end
+         if relevant_fluid_east ~= nil and (relevant_fluid_east == relevant_fluid_south or relevant_fluid_east == relevant_fluid_west) then
+            count = count - 1
+         end
+         if relevant_fluid_south ~= nil and (relevant_fluid_south == relevant_fluid_west) then
+            count = count - 1
+         end
+         
          if count > 1 then
-            result = result .. " note that if any of the mentioned fluids are different types, this pipe cannot be placed because it would mix different fluids. "--todo test here
+            result = result .. " warning: there may be mixing fluids "
          end
       end
       
@@ -3133,7 +3202,7 @@ function build_preview_checks_info(stack, pindex)
                left_top = {(position.x + math.ceil(ent_p.selection_box.left_top.x) - supply_dist), (position.y + math.ceil(ent_p.selection_box.left_top.y) - supply_dist)},
                right_bottom = {(position.x + math.floor(ent_p.selection_box.right_bottom.x) + supply_dist), (position.y + math.floor(ent_p.selection_box.right_bottom.y) + supply_dist)},
                orientation = players[pindex].building_direction/4
-           }--**todo "connected" check is a little buggy at the supply area edges, need to trim and tune, maybe re-enable direction based offset?
+           }--**todo "connected" check is a little buggy at the supply area edges, need to trim and tune, maybe re-enable direction based offset? The offset could be due to the pole width: 1 vs 2
             local T = {
                area = area,
                name = names
@@ -6355,7 +6424,7 @@ script.on_event("right-click", function(event)
          result = "result error"
       end
       printout(result ,pindex)
-      --game.get_player(pindex).print(result)--**
+      --game.get_player(pindex).print(result)--
    end
 end
 )
@@ -7210,8 +7279,18 @@ script.on_event("control-g-key", function(event)
    if stack.valid_for_read and stack.valid then
       --
    end
-   if ent ~= nil and ent.valid and ent.train ~= nil then
-      --set_temporary_train_stop(ent.train,pindex)
+   if ent ~= nil and ent.valid and ent.fluidbox ~= nil then
+     -- p.print(#ent.fluidbox .. " fluids ")
+     -- for i = 1, #ent.fluidbox, 1 do
+        -- if ent.fluidbox[i] ~= nil then
+           -- p.print(ent.fluidbox[i].name) 
+           -- p.print(#ent.fluidbox.get_pipe_connections(i))
+        -- else
+           -- p.print("(nil) " .. i)
+           -- p.print(#ent.fluidbox.get_pipe_connections(i))
+        -- end
+     -- end     
+     --set_temporary_train_stop(ent.train,pindex)
 	  --sub_automatic_travel_to_other_stop(ent.train)
 	  --instant_schedule(ent.train)
    end

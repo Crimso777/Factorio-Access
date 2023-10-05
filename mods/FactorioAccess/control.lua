@@ -2525,7 +2525,7 @@ function printout(str, pindex)
       players[pindex].last = str
    end
    localised_print{"","out ",str}
-   if str ~= "" and (game.players[pindex].name == "SirFendi") then 
+   if str ~= "" and pindex > 0 and (game.players[pindex].name == "SirFendi") then 
       --game.get_player(pindex).print(str)--**Print all to in game console
    end
 end

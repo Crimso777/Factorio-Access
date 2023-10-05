@@ -669,16 +669,33 @@ function ent_info(pindex, ent, description)
    end
    if ent.type == "underground-belt" then
       if ent.neighbours ~= nil then
-         result = result .. ", Connected to " .. math.floor(distance(ent.position, ent.neighbours.position)) .. " " .. direction(ent.position, ent.neighbours.position)
+         result = result .. ", Connected to " .. math.floor(distance(ent.position, ent.neighbours.position)) .. " " .. direction(ent.position, ent.neighbours.position) .. " via underground "
       else
          result = result .. ", not connected " 
       end
-   elseif (ent.name  == "pipe" or ent.name == "pipe-to-ground") and ent.neighbours ~= nil then
+   elseif (ent.name  == "pipe") and ent.neighbours ~= nil then
       result = result .. ", connected to "
       for i, v in pairs(ent.neighbours) do
          for i1, v1 in pairs(v) do
             result = result .. ", " .. math.floor(distance(ent.position, v1.position)) .. " " .. direction(ent.position, v1.position)
          end
+      end
+   elseif (ent.name == "pipe-to-ground") and ent.neighbours ~= nil then
+      result = result .. ", connected to "
+      local connections = ent.fluidbox.get_pipe_connections(1)
+      local at_least_one = false
+      for i,con in ipairs(connections) do
+         if con.target ~= nil then
+            result = result .. math.ceil(util.distance(ent.position,con.target_position)) .. " " .. direction_lookup(get_direction_of_that_from_this(con.target_position,ent.position)) .. " "
+            if con.connection_type == "underground" then
+               result = result .. " via underground "
+            end
+            result = result .. ", "
+            at_least_one = true
+         end
+      end
+      if not at_least_one then
+         result = result .. " nothing "
       end
    elseif next(ent.prototype.fluidbox_prototypes) ~= nil then
       local relative_position = {x = players[pindex].cursor_pos.x - ent.position.x, y = players[pindex].cursor_pos.y - ent.position.y}
@@ -2219,7 +2236,7 @@ function read_building_slot(pindex, start_phrase)
       if fluid ~= nil then
          amount = fluid.amount
          name = fluid.name
-      end --laterdo** use fluidbox.get_locked_fluid(i) if needed.
+      end --laterdo use fluidbox.get_locked_fluid(i) if needed.
 
       --Read the fluid ingredients & products
       --Note: We could have separated by input/output but right now the "type" is "input" for all fluids it seeems?
@@ -2839,7 +2856,7 @@ function read_tile(pindex)
    else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       local ent = players[pindex].tile.ents[1]
       result = ent_info(pindex, ent)
-      --game.get_player(pindex).print(result)--***
+      game.get_player(pindex).print(result)--***
       players[pindex].tile.previous = players[pindex].tile.ents[#players[pindex].tile.ents]
 
       players[pindex].tile.index = 2
@@ -2849,7 +2866,7 @@ function read_tile(pindex)
 	  --Run build preview checks
 	  if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
 	     result = result .. build_preview_checks_info(stack,pindex)
-		 --game.get_player(pindex).print(result)--***
+		 game.get_player(pindex).print(result)--***
 	  end
       
    end
@@ -3008,10 +3025,10 @@ function build_preview_checks_info(stack, pindex)
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y+1}, surface = p.surface, time_to_live = 30}
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x-1 ,y = pos.y-0}, surface = p.surface, time_to_live = 30}
       rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+1 ,y = pos.y-0}, surface = p.surface, time_to_live = 30}
-      local ents_north = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y-1}, name == {"pipe","pipe-to-ground"} }--laterdo add support here for fluid tanks. Maybe even chemical plants and refineries. but those are easier to figure out anyway.
-      local ents_south = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y+1}, name == {"pipe","pipe-to-ground"} }
-      local ents_east  = p.surface.find_entities_filtered{position = {x = pos.x+1, y = pos.y+0}, name == {"pipe","pipe-to-ground"} }
-      local ents_west  = p.surface.find_entities_filtered{position = {x = pos.x-1, y = pos.y+0}, name == {"pipe","pipe-to-ground"} }
+      local ents_north = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y-1} }
+      local ents_south = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y+1} }
+      local ents_east  = p.surface.find_entities_filtered{position = {x = pos.x+1, y = pos.y+0} }
+      local ents_west  = p.surface.find_entities_filtered{position = {x = pos.x-1, y = pos.y+0} }
       local relevant_fluid_north = nil
       local relevant_fluid_east  = nil
       local relevant_fluid_south = nil
@@ -8175,7 +8192,7 @@ function read_equipment_list(pindex)
    return result
 end
 
---Remove equipment and then armor. laterdo inv full checks
+--Remove equipment and then armor. laterdo "inv full" checks
 function remove_equipment_and_armor(pindex)
    local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
    local result = ""

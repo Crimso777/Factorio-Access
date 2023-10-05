@@ -613,9 +613,9 @@ function ent_info(pindex, ent, description)
    --For underground belts, note whether entrance or Exited
    if ent.type == "underground-belt" then
       if ent.belt_to_ground_type == "input" then
-	     result = result .. ", entrance "
+	     result = result .. " entrance "
 	  elseif ent.belt_to_ground_type == "output" then
-	     result = result .. ", exit "
+	     result = result .. " exit "
 	  end
    end
    
@@ -669,7 +669,7 @@ function ent_info(pindex, ent, description)
    end
    if ent.type == "underground-belt" then
       if ent.neighbours ~= nil then
-         result = result .. ", Connected to " .. math.floor(distance(ent.position, ent.neighbours.position)) .. " " .. direction(ent.position, ent.neighbours.position) .. " via underground "
+         result = result .. ", Connected to " .. direction(ent.position, ent.neighbours.position) .. " via " .. math.floor(distance(ent.position, ent.neighbours.position)) - 1 .. " tiles underground, "
       else
          result = result .. ", not connected " 
       end
@@ -686,9 +686,12 @@ function ent_info(pindex, ent, description)
       local at_least_one = false
       for i,con in ipairs(connections) do
          if con.target ~= nil then
-            result = result .. math.ceil(util.distance(ent.position,con.target_position)) .. " " .. direction_lookup(get_direction_of_that_from_this(con.target_position,ent.position)) .. " "
+            local dist = math.ceil(util.distance(ent.position,con.target.get_pipe_connections(1)[1].position))
+            result = result .. direction_lookup(get_direction_of_that_from_this(con.target_position,ent.position)) .. " "
             if con.connection_type == "underground" then
-               result = result .. " via underground "
+               result = result .. " via " .. dist - 1 .. " tiles underground, "
+            else
+               result = result .. " by " .. dist .. " tiles, "
             end
             result = result .. ", "
             at_least_one = true
@@ -2856,7 +2859,7 @@ function read_tile(pindex)
    else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       local ent = players[pindex].tile.ents[1]
       result = ent_info(pindex, ent)
-      game.get_player(pindex).print(result)--***
+      --game.get_player(pindex).print(result)--***
       players[pindex].tile.previous = players[pindex].tile.ents[#players[pindex].tile.ents]
 
       players[pindex].tile.index = 2
@@ -2866,7 +2869,7 @@ function read_tile(pindex)
 	  --Run build preview checks
 	  if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
 	     result = result .. build_preview_checks_info(stack,pindex)
-		 game.get_player(pindex).print(result)--***
+		 --game.get_player(pindex).print(result)--***
 	  end
       
    end
@@ -3006,16 +3009,39 @@ function build_preview_checks_info(stack, pindex)
 			   rendering.draw_circle{color = {1, 1, 0},radius = 0.5,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
             local dist_x = cand.position.x - pos.x
             local dist_y = cand.position.y - pos.y
-			   if cand.neighbours == nil and cand.direction == rotate_180(build_dir)
+			   if cand.direction == rotate_180(build_dir)
 			   and (get_direction_of_that_from_this(cand.position,pos) == build_dir) and (dist_x == 0 or dist_y == 0) then
 			      rendering.draw_circle{color = {0, 1, 0},radius = 1.0,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
-               result = result .. " connects " .. direction_lookup(build_dir) .. " with " .. math.floor(util.distance(cand.position,pos)) - 1 .. " tiles underground"
+               result = result .. " connects " .. direction_lookup(build_dir) .. " with " .. math.floor(util.distance(cand.position,pos)) - 1 .. " tiles underground, "
                connected = true
 			   end
          end			
 		end
       if not connected then
          result = result .. " not connected "
+      end
+   end
+   
+   --For pipes to ground, state when connected 
+   if stack.name == "pipe-to-ground" then
+      local connected = false
+      local check_dist = 10
+      local candidates = game.get_player(pindex).surface.find_entities_filtered{ name = stack.name, position = pos, radius = check_dist, direction = rotate_180(build_dir) } 
+		if #candidates > 0 then
+		   for i,cand in ipairs(candidates) do
+			   rendering.draw_circle{color = {1, 1, 0},radius = 0.5,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
+            local dist_x = cand.position.x - pos.x
+            local dist_y = cand.position.y - pos.y
+			   if cand.direction == rotate_180(build_dir)
+			   and (get_direction_of_that_from_this(pos,cand.position) == build_dir) and (dist_x == 0 or dist_y == 0) then
+			      rendering.draw_circle{color = {0, 1, 0},radius = 1.0,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
+               result = result .. " connects " .. direction_lookup(rotate_180(build_dir)) .. " with " .. math.floor(util.distance(cand.position,pos)) - 1 .. " tiles underground, "
+               connected = true
+			   end
+         end			
+		end
+      if not connected then
+         result = result .. " not connected underground, "
       end
    end
    

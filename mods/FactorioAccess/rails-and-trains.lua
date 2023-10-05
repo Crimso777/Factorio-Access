@@ -3415,9 +3415,9 @@ function play_train_track_alert_sounds(step)
 			   rendering.draw_circle{color = {1, 1, 0},radius = 3,width = 3,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
 			end
 		 end
-	  --Condition for step 3: Any moving trains in the same rail block, and heading towards the player
+	  --Condition for step 3: Any moving trains in the same rail block, and heading towards the player OR if the block inbound signals are yellow
 	  elseif not skip and step == 3 then
-	     local trains = p.surface.get_trains()
+	    local trains = p.surface.get_trains()
 		 for i,train in ipairs(trains) do
 		    if   train.speed ~= 0 and (found_rail.is_rail_in_same_rail_block_as(train.front_rail) or found_rail.is_rail_in_same_rail_block_as(train.back_rail))
 			and ((train.speed > 0 and util.distance(p.position,train.front_stock.position) <= util.distance(p.position,train.back_stock.position)) 
@@ -3427,7 +3427,16 @@ function play_train_track_alert_sounds(step)
 			   rendering.draw_circle{color = {1, 0, 0},radius = 4,width = 4,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
 			end
 		 end
+       local signals = found_rail.get_inbound_signals()
+       for i,signal in ipairs(signals) do
+          if signal.signal_state == defines.signal_state.reserved then
+            p.play_sound{path = "utility/new_objective"}
+			   p.play_sound{path = "utility/new_objective"}
+			   rendering.draw_circle{color = {1, 0.3, 0},radius = 4,width = 4,target = found_rail.position,surface = found_rail.surface,time_to_live = 10}
+          end
+       end
 	  end
+     
    end
 end
 

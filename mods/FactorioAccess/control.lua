@@ -8402,3 +8402,4 @@ end
 function rotate_180(dir)
    return (dir + dirs.south) % (2 * dirs.south)
 end
+

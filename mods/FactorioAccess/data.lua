@@ -17,7 +17,19 @@ resource_map_node["picture"] = {
 	direction_count = 1
 }
 
+--Changes to Vanilla Objects (Mostly removal of collisions with the player)
+local pipe = data.raw.pipe["pipe"]
+pipe.collision_mask = {"object-layer", "floor-layer", "water-tile"}
 
+local pipe_to_ground = data.raw["pipe-to-ground"]["pipe-to-ground"]
+pipe_to_ground.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+
+local small_electric_pole = data.raw["electric-pole"]["small-electric-pole"]
+small_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-tile"}
+
+
+local medium_electric_pole = data.raw["electric-pole"]["medium-electric-pole"]
+medium_electric_pole.collision_mask = {"object-layer", "floor-layer", "water-tile"}
 
 
 data:extend({
@@ -144,6 +156,12 @@ data:extend({
 },
 {
     type = "custom-input",
+    name = "shift-j",
+    key_sequence = "SHIFT + J",
+    consuming = "none"
+},
+{
+    type = "custom-input",
     name = "teleport-to-cursor",
     key_sequence = "SHIFT + T",
     consuming = "none"
@@ -173,7 +191,7 @@ data:extend({
     type = "custom-input",
     name = "scan-up",
     key_sequence = "PAGEUP",
-    alternative_key_sequence = "UP",
+    --alternative_key_sequence = "UP",
     consuming = "none"
 },
 
@@ -181,7 +199,7 @@ data:extend({
     type = "custom-input",
     name = "scan-down",
     key_sequence = "PAGEDOWN",
-    alternative_key_sequence = "DOWN",
+    --alternative_key_sequence = "DOWN",
     consuming = "none"
 },
 
@@ -227,6 +245,20 @@ data:extend({
     name = "recalibrate",
     key_sequence = "CONTROL + END",
     alternative_key_sequence = "CONTROL + RCTRL",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "up-arrow",
+    key_sequence = "UP",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "down-arrow",
+    key_sequence = "DOWN",
     consuming = "none"
 },
 
@@ -436,6 +468,20 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "mine-group",
+    key_sequence = "SHIFT + X",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "control-x",
+    key_sequence = "CONTROL + X",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "switch-menu",
     key_sequence = "TAB",
     consuming = "none"
@@ -506,6 +552,27 @@ data:extend({
     key_sequence = "R",
     linked_game_control = "rotate",
     consuming = "game-only"
+},
+
+{
+    type = "custom-input",
+    name = "shift-r",
+    key_sequence = "SHIFT + R",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "control-r",
+    key_sequence = "CONTROL + R",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "control-shift-r",
+    key_sequence = "CONTROL + SHIFT + R",
+    consuming = "none"
 },
 
 {
@@ -609,6 +676,62 @@ data:extend({
     type = "custom-input",
     name = "open-structure-travel",
     key_sequence = "CONTROL + S",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "g-key",
+    key_sequence = "G",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "shift-g-key",
+    key_sequence = "SHIFT + G",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "control-g-key",
+    key_sequence = "CONTROL + G",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "control-shift-g-key",
+    key_sequence = "CONTROL + SHIFT + G",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "control-left",
+    key_sequence = "CONTROL + LEFT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "control-right",
+    key_sequence = "CONTROL + RIGHT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "shift-left",
+    key_sequence = "SHIFT + LEFT",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "shift-right",
+    key_sequence = "SHIFT + RIGHT",
     consuming = "none"
 }
 

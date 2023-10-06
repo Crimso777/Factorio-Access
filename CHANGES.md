@@ -1,3 +1,171 @@
+# Version 0.4.0 BETA
+
+Released on October 6th, 2023.
+
+Note, as a beta release, there may be more bugs and compatibility issues than usual. While we try to minimize these, it is important to protect your save files by saving under a new name as soon as you open a version 0.3 save file in version 0.4.
+
+## New Features
+
+- General vehicle support
+  * Entering and exiting a vehicle will notify you about the vehicle name.
+  * Press K inside a vehicle to learn the heading and coordinates.
+  * Pressing L while inside a vehicle will provide additional information about it. For cars, the fuel stocks are stated. For trains, basic info is given while the train menu has detailed info.
+  * You can refuel a vehicle by dropping a fuel item stack in hand into it via CONTROL + LEFT BRACKET.
+  * You can check the fuel inventory contents by pressing RIGHT BRACKET.
+
+- Trains Implementation. Phases 0 through 3, out of 5, are complete. In general, we made it accessible to build rail lines, analyze rail segments, build train stations, build and examine trains, and drive trains manually or automatically between two stations.
+  * Added info support for rails. There is now distinction between end rails, station rails, etc. and the directions of rails are given.
+  * Added support for building and renaming train stops.
+  * Added train station rail information tool. When you look at a rail behind a train stop, you get information of which section of which rail vehicle would be positioned there when a train stops at the station.
+  * Rail appender tool: Adds a straight rail to extend any straight end rail near the cursor.
+  * Rail structure building menu: Allows building correctly oriented railway structures based on a selected end rail as the anchor point. Also can add signals to mid rails.
+  * Functions added to build 45 degree turns and 90 degree turns as structures at end rails.
+  * Added support for building and naming trains.
+  * Allowed reading the fuel amount in a locomotive: check its status via RIGHT BRACKET.
+  * The contents of cargo wagons and fluid wagons can be checked via RIGHT BRACKET.
+  * Information about a train can be read from its menu including name, length, vehicle counts, cargo item counts, etc.
+  * Rail analyzer tool: Press J inside a train to learn the nearest structure ahead on the rails and the distance to it. Press SHIFT + J to check the opposite direction.
+  * Rail analyzer tool works on foot as well.
+  * Subautomatic travel added: You can select an option from the train menu to make a train go by itself to a far away station and wait until all passengers get off.
+  * Automatic travel via instant train scheduler added. An instant automatic schedule rotates between every reachable train stop and waits at each for 5 minutes.
+  * Trains announce to passengers their next stations when departing or arriving.
+  * Trains announce to passengers when waiting at rail signals.
+  * Rail crossing alert tool added. Slow beep means a train moving somewhere within 200 tiles. Fast beep means an automatic train within 100 tiles is heading towards your general direction. Frantic fast alarm bells mean that you need to get off that rail ASAP!
+  * Rail chain signal placement designed to be same as in Vanilla. You need to craft any signals you place and they are refunded when mined.
+  * Other additions all across the code to support trains.
+  * Note 1: In terms of missing features, there is currently no support for rail forks, one-way rails, and fine control over train schedules.
+  * Note 2: Parallel rail lines should be at least a few tiles apart. This is partially enforced for the rail appender tool.
+  * Note 3: See Chapter 16 of the wiki for more info.
+
+- Improved electric pole support with new features.
+  * Selecting an electric pole now lists all the wire connection distances, and counts the energy consumers and producers within its supply area.
+  * The pole's electric network's demand satisfaction percentages are now reported, as well as the network flow rate and capacity. Check with RIGHT BRACKET.
+  * If an electric pole has no power flowing (as in 0 satisfaction), the nearest supplied electric pole is reported.  
+  * When placing an electric pole, all connectible electric poles around it are listed. If there are none, the nearest electric pole is listed. This context info allows better understanding of electric networks.
+
+- Added building preview information for several structures. This information is based on the cursor location while an item to be built is held in hand.
+  * For small buildings, the preview can warn when building is not possible.
+  * For transport belt types, the belt junction type that would form by placing the belt there is stated.
+  * For underground belts and pipes to ground, whether and where the currently selected tile would connect is stated.
+  * For pipe units, the expected fluid pipe connections around are stated, and there is a warning about potentially mixing fluids.
+  * For electric powered machines, if power is connected, an electric pole that supplies it is listed. If not, the nearest electric pole is listed. Note that this feature is a little inaccurate around supply area boundaries except when in cursor mode.
+  * Other similar changes.
+  
+- Added support for splitter priority settings.
+  * Press SHIFT + LEFT ARROW to set the INPUT priority to the left side, meaning that the splitter will take from the right only when it cannot from the left.
+  * Similarly press SHIFT + RIGHT ARROW to set the INPUT priority to the right side.
+  * To clear the input priority, try to set the same side again.
+  * Press CONTROL + LEFT ARROW to set the OUTPUT priority to the left side, meaning that the splitter will output to the right only when it cannot to the left.
+  * Similarly press CONTROL + RIGHT ARROW to set the OUTPUT priority to the right side.
+  * To clear the output priority, try to set the same side again.
+  
+- Added support for splitter filter mode.
+  * With an item in hand, press CONTROL + LEFT BRACKET on a splitter to set its output filter to the item. When there is a filtered item, it goes out one side and every other item goes out the other side.
+  * By default the filter output goes left. To change the filter output side, press CONTROL + ARROW KEY accordingly. There is no equal distribution in filter mode.
+  * To clear the filter, with an empty hand press CONTROL + LEFT BRACKET on the splitter. 
+
+- Added support for armor and armor equipment modules.
+  * NOTE: All the following controls apply when the inventory (alone) is open, meaning that no buildings are open.
+  * Press LEFT BRACKET to pick up the item and then press SHIFT + LEFT BRACKET to equip it. Armor equipment requires wearing armor that can support it.
+  * Press G to read armor name and equipment statistics, if any. "G" is for "Gear".
+  * Press SHIFT + G to read the list of equipment.
+  * Press CONTROL + SHIFT + G to remove all equipment and armor.
+  
+- Added support for hand weapons / guns.
+  * Your weapons inventory can hold up to three weapons. You cycle between them by pressing TAB when not in a menu. You also have three corresponsing ammo slots.
+  * NOTE: All the following controls apply when the inventory (alone) is open, meaning that no buildings are open.
+  * Press LEFT BRACKET to pick up the weapon or ammo stack and then press SHIFT + LEFT BRACKET to equip it.
+  * Press R to read current weapons and ammunition counts. "R" is for "arms" or "reloading".
+  * Press SHIFT + R to reload all weapon ammunition slots from your inventory. Note that existing ammo stacks will be prefered over fuller ammo stacks of different types.
+  * Press CONTROL + SHIFT + R to remove all weapons and ammunition.
+  
+- Added entity part identification: When you press K with the cursor hovering over an entity, its selected part will be reported, such as the southeast corner or the center.
+
+- Added build lock smart placement for medium electric poles. They are placed to allow maxiumum continuous area coverage rather than maximum wire reach.
+
+- Group mining added for some groups: If you press SHIFT + X on a tree or a rail, it will mine all of them immediately around you instead of only one.
+
+- Mine lock added: Press CONTROL + X to hold the cut-and-paste tool. Every building the cursor touches while holding this tool will be mined instantly if possible. To disable to tool, empty your hand with SHIFT + Q.
+
+- Added support for placing stone bricks and concrete varients as paving tiles, for making pathways or decoration.
+
+- Added support for placing landfill over water. Note: This is not reversible.
+
+- Added support for throwing capsule items, including cliff explosives, defender drones, and grenades. Note: Grenades will damage everything including you while cliff explosives affect only cliffs.
+
+- Added support for nuclear power buildings: Temperature readings and other relevant information is now provided.
+
+- Added support for rocket silos. They can now report rocket part counts and launch rockets when ready.
+
+## Changes
+
+- You are now able to walk over pipes and under small or medium electric poles. This change reflects both what popular mods support already. Also tip: In smooth walking mode, you can already squeeze around inserters and chests or in between most side-by-side buildings.
+
+- The intermediate walking mode has been removed so that you can easily switch between telestep and smooth walking. When in game mod settings are supported in the future, we plan to bring it back.
+
+- Transport belt junction types are now better identified.
+  * Note that a "pouring end" could either be sideloading onto a different belt, or continuing into a belt corner which preserves the lanes.
+  * Safe merging junctions (also called T-junctions) are identified as a belt unit that is double sideloaded but empty at the back so that the lanes will be entirely predictable.
+ 
+- Underground belts can now be identified as entrances or exits, explaining whether items are flowing into the ground or out from it.
+
+- Teleporting is disabled while riding a vehicle.
+
+- Reported local time has been shifted by twelve hours so that daytime is 6 to 18 and midnight is around 24.
+
+- Minor changes
+  * Changed the keybind for disconnecting rail vehicles from "V" to "SHIFT + G".
+  * Entity ghosts are now better identified.
+  * Items on the ground are now better identified.
+  * Boilers and heat exchangers now report their fluid contents.
+  * For all entities reporting fluid contents, any extra fluids are also reported.
+  * Beacon contents are now read.
+  * Containers now report their top 2 items at first look, instead of 1. 
+  * If the player inventory being full prevents an item transfer, this should be announced correctly.
+  * Added new sound effects for the cursor reaching the borders of inventories.
+  
+## Known bugs
+
+- The scanner tool does not update correctly regarding forest patches.
+
+- Sometimes browsing the scanner list can cause crashes.
+
+- Extending a rail after building a train stop sometimes causes problems. For now, you should remove the train stop anyway because they need to be near the ends of rail tracks.  
+
+## Bugfixes
+
+- Fixed a bug where the inventory is opened directly when a Factorio Access menu is closed.
+
+- Fixed a bug where entities that have not started using their fuel are reported as out of fuel.
+
+- Fixed various crashes related to reading invalid items.
+
+- Corrected the information error where items cannot be transferred to another building. It is not necessarily because it is full.
+
+## Code Changes
+
+- Temporary fixes applied for sweeping scanner bug crashes under the carpet. The bugs will need to be revisted. They are marked with the word "beta" written between two pairs of asterisks.
+
+- New helper functions
+  * get_direction_of_that_from_this - Reports 8 main directions, intentionally biased towards reporting diagonals.
+  * direction_lookup - convert direction defines integer to a text.
+  * rotate_90 and rotate_180, for changing direcitons
+  * mine_trees_and_rocks 
+  * get_entity_part_at_cursor 
+
+- For several main functions, parts of them were taken out and made new functions that can be called from multiple places.
+
+- Added new file "rails-and-trains.lua" that houses most vehicle and train related content, as well as some universal helper functions.
+
+- Added several new controls to data.lua
+
+- Modified some vanilla prototypes collision masks to allow walking through pipes and poles.
+
+- Teleporting function can now also be called silently.
+
+- Future proofing: Renamed all directions in "rails-and-trains.lua" to use the defines instead of hardcoded integers
+
+
 # Version 0.3.1
 
 Updated 10/26/2022

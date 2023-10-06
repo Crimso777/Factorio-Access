@@ -1,6 +1,6 @@
-# Welcome to Factorio Access!
+# Welcome to Factorio Access BETA!
 
-This is an accessibility mod for the popular game Factorio.  The goal of this mod is to make the game completely accessible to the blind and visually impaired.
+This is the BETA VERSION for an accessibility mod for the popular game Factorio.  The goal of this mod is to make the game completely accessible to the blind and visually impaired. This beta version includes the latest additions to the main mod and updated documentation files to match. Meanwhile the Mod Wiki remains on the main version's page. As a beta, this version may have a few more bugs and changes.
 
 This "read me" file covers the basics of the mod, which include the installation guide, the mod controls, the FAQ and links to other information sources.
 

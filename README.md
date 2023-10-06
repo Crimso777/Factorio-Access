@@ -477,7 +477,7 @@ If you want to help others or discuss the development of the mod or the wiki, fe
 
 # Changes
 
-An updated changelog can be found [here](https://github.com/Crimso777/Factorio-Access/blob/main/CHANGES.md).
+An updated changelog for the beta can be found [here](https://github.com/LevFendi/Factorio-Access/blob/main/CHANGES.md).
 
 
 

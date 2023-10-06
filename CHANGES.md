@@ -1,6 +1,8 @@
-# Version 0.4.0
+# Version 0.4.0 BETA
 
-Updated in October of 2023.
+Released on October 6th, 2023.
+
+Note, as a beta release, there may be more bugs and compatibility issues than usual. While we try to minimize these, it is important to protect your save files by saving under a new name as soon as you open a version 0.3 save file in version 0.4.
 
 ## New Features
 
@@ -81,11 +83,11 @@ Updated in October of 2023.
 
 - Added build lock smart placement for medium electric poles. They are placed to allow maxiumum continuous area coverage rather than maximum wire reach.
 
-- Group mining added: If you press SHIFT + X on a tree or a rail, it will mine all of them immediately around you instead of only one.
+- Group mining added for some groups: If you press SHIFT + X on a tree or a rail, it will mine all of them immediately around you instead of only one.
 
 - Mine lock added: Press CONTROL + X to hold the cut-and-paste tool. Every building the cursor touches while holding this tool will be mined instantly if possible. To disable to tool, empty your hand with SHIFT + Q.
 
-- Added support for placing stone bricks and concrete varients as tiles, for making pathways or decoration.
+- Added support for placing stone bricks and concrete varients as paving tiles, for making pathways or decoration.
 
 - Added support for placing landfill over water. Note: This is not reversible.
 
@@ -122,7 +124,14 @@ Updated in October of 2023.
   * If the player inventory being full prevents an item transfer, this should be announced correctly.
   * Added new sound effects for the cursor reaching the borders of inventories.
   
-  
+## Known bugs
+
+- The scanner tool does not update correctly regarding forest patches.
+
+- Sometimes browsing the scanner list can cause crashes.
+
+- Extending a rail after building a train stop sometimes causes problems. For now, you should remove the train stop anyway because they need to be near the ends of rail tracks.  
+
 ## Bugfixes
 
 - Fixed a bug where the inventory is opened directly when a Factorio Access menu is closed.
@@ -135,8 +144,10 @@ Updated in October of 2023.
 
 ## Code Changes
 
-- New helper functions (Todo: copy over the precise names)**
-  * get_direction_of_that_from_this - reports the direction of that position according to this position. Reports 8 main directions, with perfect alignment not being necessary to declare the four cardinal directions.
+- Temporary fixes applied for sweeping scanner bug crashes under the carpet. The bugs will need to be revisted. They are marked with the word "beta" written between two pairs of asterisks.
+
+- New helper functions
+  * get_direction_of_that_from_this - Reports 8 main directions, intentionally biased towards reporting diagonals.
   * direction_lookup - convert direction defines integer to a text.
   * rotate_90 and rotate_180, for changing direcitons
   * mine_trees_and_rocks 

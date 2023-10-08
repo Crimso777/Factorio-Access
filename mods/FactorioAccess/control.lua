@@ -1940,14 +1940,21 @@ function read_scan_summary (pindex)
    end
    if #players[pindex].nearby.ents > 0 then
          local percentages = {}
-         for i, ent in ipairs(players[pindex].nearby.ents) do
+         for i, ent in ipairs(players[pindex].nearby.ents) do--***todo fix cursor nearby population based on size
             local area = 1
-            if ent.name ~= "water" then
-               local box = players[pindex].nearby.ents[i].ents[1].prototype.selection_box
-               local width = math.ceil(box.right_bottom.x * 2)
-               local height = math.ceil(2* box.right_bottom.y)
-               area = width * height
+            -- if ent ~= nil and ent.valid and ent.prototype ~= nil and ent.name ~= "water" then
+               -- local box = ent.prototype.selection_box --*** crashes here for cursor size > 1 and "cursor-left" event, it says "does not have a prototype", might be "i" => ent is no defined correctly!
+               -- local width = math.ceil(box.right_bottom.x * 2)
+               -- local height = math.ceil(2* box.right_bottom.y)
+               -- area = width * height
+            -- end
+            if ent ~= nil and ent.valid and ent.tile_width ~= nil and ent.tile_height ~= nil then 
+               area = ent.tile_width * ent.tile_height
+               game.get_player(pindex).print(ent.name .. " " .. area)--***
+            else
+               area = 1
             end
+            
             table.insert(percentages, {name = ent.name, percent = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)})
          end
          table.sort(percentages, function(k1, k2)
@@ -1965,6 +1972,7 @@ function read_scan_summary (pindex)
       result = result .. "Empty Area  "
    end
    printout(string.sub(result, 1, -3), pindex)
+   --game.get_player(pindex).print("r: " .. string.sub(result, 1, -3))--**
 end
    
 
@@ -2859,7 +2867,7 @@ function read_tile(pindex)
    else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       local ent = players[pindex].tile.ents[1]
       result = ent_info(pindex, ent)
-      --game.get_player(pindex).print(result)--***
+      --game.get_player(pindex).print(result)--**
       players[pindex].tile.previous = players[pindex].tile.ents[#players[pindex].tile.ents]
 
       players[pindex].tile.index = 2
@@ -2869,7 +2877,7 @@ function read_tile(pindex)
 	  --Run build preview checks
 	  if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
 	     result = result .. build_preview_checks_info(stack,pindex)
-		 --game.get_player(pindex).print(result)--***
+		 --game.get_player(pindex).print(result)--**
 	  end
       
    end
@@ -3388,12 +3396,12 @@ function read_coords(pindex, start_phrase)
       for i, v in pairs(recipe.ingredients) do
          result = result .. ", " .. v.name .. " x" .. v.amount
       end
-      result = result .. "Products: "
+      result = result .. ", Products: "
       for i, v in pairs(recipe.products) do
          result = result .. ", " .. v.name .. " x" .. v.amount
       end
 
-      printout(result .. string.sub(result, 3), pindex)
+      printout(result, pindex)
    elseif players[pindex].menu == "technology" then
       local techs = {}
       if players[pindex].technology.category == 1 then
@@ -3406,7 +3414,12 @@ function read_coords(pindex, start_phrase)
    
       if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
          result = result .. "Requires "
-         if #techs[players[pindex].technology.index].prerequisites < 1 then
+         local dict = techs[players[pindex].technology.index].prerequisites 
+         local pre_count = 0
+         for a, b in pairs(dict) do
+            pre_count = pre_count + 1
+         end
+         if pre_count == 0 then
             result = result .. " No prior research "
          end
          for i, preq in pairs(techs[players[pindex].technology.index].prerequisites) do 
@@ -3417,7 +3430,7 @@ function read_coords(pindex, start_phrase)
             result = result .. ingredient.name .. " " .. " , "
          end
          
-         printout(result .. string.sub(result, 1, -3), pindex)
+         printout(result, pindex)
       end
    elseif players[pindex].menu == "building" then
       if players[pindex].building.recipe_selection then
@@ -3426,12 +3439,12 @@ function read_coords(pindex, start_phrase)
          for i, v in pairs(recipe.ingredients) do
             result = result .. ", " .. v.name .. " x" .. v.amount
          end
-         result = result .. "products: "
+         result = result .. ", products: "
          for i, v in pairs(recipe.products) do
             result = result .. ", " .. v.name .. " x" .. v.amount
          end
 
-         printout(result .. string.sub(result, 3), pindex)
+         printout(result, pindex)
       end
    end
 end
@@ -4761,7 +4774,7 @@ end
 
 script.on_event("jump-to-scan", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
    if not (players[pindex].in_menu) then
@@ -4781,54 +4794,62 @@ script.on_event("jump-to-scan", function(event)
             ents = players[pindex].nearby.other
          end
          local ent = nil
-      if ents.aggregate == false then
-         local i = 1
-         while i <= #ents[players[pindex].nearby.index].ents do
-            if ents[players[pindex].nearby.index].ents[i].valid then
-               i = i + 1
-            else
-               table.remove(ents[players[pindex].nearby.index].ents, i)
-               if players[pindex].nearby.selection > i then
-                  players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+         if ents.aggregate == false then
+            local i = 1
+            while i <= #ents[players[pindex].nearby.index].ents do
+               if ents[players[pindex].nearby.index].ents[i].valid then
+                  i = i + 1
+               else
+                  table.remove(ents[players[pindex].nearby.index].ents, i)
+                  if players[pindex].nearby.selection > i then
+                     players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+                  end
                end
             end
-         end
-         if #ents[players[pindex].nearby.index].ents == 0 then
-            table.remove(ents,players[pindex].nearby.index)
-            players[pindex].nearby.index = math.min(players[pindex].nearby.index, #ents)
-            scan_index(pindex)
-            return
-         end
+            if #ents[players[pindex].nearby.index].ents == 0 then
+               table.remove(ents,players[pindex].nearby.index)
+               players[pindex].nearby.index = math.min(players[pindex].nearby.index, #ents)
+               scan_index(pindex)
+               return
+            end
 
-         table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
-            local pos = players[pindex].cursor_pos
-            return distance(pos, k1.position) < distance(pos, k2.position)
-         end)
-      if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
-         players[pindex].selection = 1
-      end
+            table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
+               local pos = players[pindex].cursor_pos
+               return distance(pos, k1.position) < distance(pos, k2.position)
+            end)
+            if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
+               players[pindex].selection = 1
+            end
 
-         ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
-      else
-      if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
-         players[pindex].selection = 1
-      end
-         local name = ents[players[pindex].nearby.index].name
-         local entry = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
-         if table_size(entry) == 0 then
-            table.remove(ents[players[pindex].nearby.index].ents, players[pindex].nearby.selection)
-            players[pindex].nearby.selection = players[pindex].nearby.selection - 1
-            scan_index(pindex)
-            return
+            ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
+         else
+            if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
+               players[pindex].selection = 1
+            end
+            local name = ents[players[pindex].nearby.index].name
+            local entry = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
+            if table_size(entry) == 0 then
+               table.remove(ents[players[pindex].nearby.index].ents, players[pindex].nearby.selection)
+               players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+               scan_index(pindex)
+               return
+            end
+            if entry == nil then
+               printout("Error: This object no longer exists. Try rescanning.", pindex)
+               return
+            end
+            if not entry.valid then
+               printout("Error: This object is no longer valid. Try rescanning.", pindex)
+               return
+            end
+            ent = {name = name, position = table.deepcopy(entry.position)}--**beta** (fixed)
          end
-         ent = {name = name, position = table.deepcopy(entry.position), force = entry.force}--**beta**
-         end
-      if players[pindex].cursor then
-         players[pindex].cursor_pos = center_of_tile(ent.position)
-         printout("Cursor has jumped to " .. ent.name .. " at " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
-      else
-         teleport_to_closest(pindex, ent.position)
-         players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
+         if players[pindex].cursor then
+            players[pindex].cursor_pos = center_of_tile(ent.position)
+            printout("Cursor has jumped to " .. ent.name .. " at " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
+         else
+            teleport_to_closest(pindex, ent.position)
+            players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
 
          end
       end
@@ -7550,10 +7571,10 @@ script.on_event(defines.events.on_chunk_charted,function(event)
                new_group = math.min(new_group, resource_group)
             end
             for resource_group, b in pairs(resource_groups) do
-               if new_group < resource_group and players[pindex].resources[i].patches[resource_group] ~= nil and islands[i] ~= nil and islands[i].resources[p] ~= nil then--**beta**
+               if new_group < resource_group and players[pindex].resources[i].patches ~= nil and players[pindex].resources[i].patches[resource_group] ~= nil and islands[i] ~= nil and islands[i].resources ~= nil and islands[i].resources[b] ~= nil then--**beta** changed "p" to "b"
                   for i1, pos in pairs(players[pindex].resources[i].patches[resource_group].positions) do
                      players[pindex].resources[i].positions[pos] = new_group
-                     players[pindex].resources[i].count = islands[i].resources[p].count
+                     players[pindex].resources[i].count = islands[i].resources[b].count--**beta** "p" to "b"
                   end
                   table_concat(players[pindex].resources[i].patches[new_group].positions, players[pindex].resources[i].patches[resource_group].positions)
                   for pos, val in pairs(players[pindex].resources[i].patches[resource_group].edges) do
@@ -7647,9 +7668,11 @@ script.on_event(defines.events.on_entity_destroyed,function(event)
    
    local str = pos2str(ent.position)
    if ent.type == "resource" then
-      if ent.name ~= "crude-oil" then
+      if ent.name ~= "crude-oil" and players[pindex].resources[ent.name].positions[str] ~= nil then--**beta** added a check here to not run for nil "group"s...
          local group = players[pindex].resources[ent.name].positions[str]
          players[pindex].resources[ent.name].positions[str] = nil
+         --game.get_player(pindex).print("Pos str: " .. str)
+         --game.get_player(pindex).print("group: " .. group)
          players[pindex].resources[ent.name].patches[group].edges[str] = nil
          for i = 1, #players[pindex].resources[ent.name].patches[group].positions do
             if players[pindex].resources[ent.name].patches[group].positions[i] == str then

@@ -33,14 +33,11 @@ Note:  If you have done a full installation using the .zip instructions, there i
 
 ## Mod patch install
 
-1. Download control.lua, data.lua, and config.ini 
-2. Navigate to your Factorio folder
-3. Go to mods/FactorioAccess_0.0.1
-4. Paste both control.lua and data.lua in this folder
-5. Navigate back to your Factorio folder
-6. Go to the config folder
-7. Paste config.ini into this folder
-8. All done! You can now run launcher.exe in administrator mode to play the game with the new patch
+1. Download "control.lua" and "data.lua" from the folder "mods / FactorioAccess"
+2. Navigate to your Factorio folder for your local install.
+3. Go to "mods / FactorioAccess"
+4. Paste the new versions of "control.lua" and "data.lua" in this folder.
+5. All done! You can now run launcher.exe in administrator mode to play the game with the new patch.
    
    
 

@@ -1,4 +1,5 @@
 require('zoom')
+require('rails-and-trains')
 
 groups = {}
 entity_types = {}
@@ -494,13 +495,21 @@ function ent_info(pindex, ent, description)
    if game.players[pindex].name == "Crimso" then
       result = result .. " " .. ent.type .. " "
    end
+   if game.get_player(pindex).driving then
+      return
+   end
    if ent.type == "resource" then
       result = result .. ", x " .. ent.amount
+   end
+   if ent.name == "entity-ghost" then
+      result = result .. " for a " .. ent.ghost_name .. ", "
+   elseif ent.name == "straight-rail" or ent.name == "curved-rail" then
+      return rail_ent_info(pindex, ent, description)
    end
 
    result = result .. (description or "")
    
-   --Explain the contents of a container/pipe/belt without pause and before the direction
+   --Explain the contents of a container
    if ent.type == "container" or ent.type == "logistic-container" then --Chests etc: Report the most common item and say "and other items" if there are other types.
       local itemset = ent.get_inventory(defines.inventory.chest).get_contents()
       local itemtable = {}
@@ -513,15 +522,18 @@ function ent_info(pindex, ent, description)
       if #itemtable == 0 then
          result = result .. " containing nothing "
       else
-         result = result .. " containing " .. itemtable[1].name .. " times " .. itemtable[1].count .. " "
+         result = result .. " containing " .. itemtable[1].name .. " times " .. itemtable[1].count .. ", "
          if #itemtable > 1 then
+            result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. ", "
+         end
+         if #itemtable > 2 then
             result = result .. "and other items "
          end
       end
       
    end  
-   
-   if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" then
+   --Explain the contents of a pipe or storage tank or etc.
+   if ent.type == "pipe" or ent.type == "pipe-to-ground" or ent.type == "storage-tank" or ent.type == "pump" or ent.name == "boiler" or ent.name == "heat-exchanger" then
       local dict = ent.get_fluid_contents()
       local fluids = {}
       for name, count in pairs(dict) do
@@ -532,11 +544,17 @@ function ent_info(pindex, ent, description)
       end)
       if #fluids > 0 then
          result = result .. " containing " .. fluids[1].name .. " "
+		 if #fluids > 1 then
+            result = result .. " and " .. fluids[2].name .. ", "
+		 end
+		 if #fluids > 2 then
+            result = result .. ", and other fluids "
+		 end
       else
       result = result .. " containing no fluid "
       end
    end
-   
+   --Explain the type and content of a transport belt
    if ent.type == "transport-belt" then
       --Check if corner or junction or end
       local sideload_count = 0
@@ -544,6 +562,8 @@ function ent_info(pindex, ent, description)
       local outload_count = 0
       local inputs = ent.belt_neighbours["inputs"]
       local outputs = ent.belt_neighbours["outputs"]
+      local outload_dir = nil
+      local this_dir = ent.direction
       for i, belt in pairs(inputs) do
          if ent.direction ~= belt.direction then
             sideload_count = sideload_count + 1
@@ -553,22 +573,10 @@ function ent_info(pindex, ent, description)
       end
       for i, belt in pairs(outputs) do
          outload_count = outload_count + 1
+         outload_dir = belt.direction--Note: there should be only one of these belts anyway.
       end
-      if sideload_count == 0 and backload_count == 1 and outload_count == 1 then
-         result = result --middle (no need to specify)
-      elseif sideload_count == 0 and backload_count == 0 and outload_count == 0 then
-         result = result .. " unit "
-      elseif sideload_count == 0 and backload_count == 0 and outload_count == 1 then
-         result = result .. " start "
-      elseif sideload_count == 0 and backload_count == 1 and outload_count == 0 then
-         result = result .. " end "
-      elseif sideload_count == 1 and backload_count == 0 and outload_count == 0 then
-         result = result .. " end corner "
-      elseif sideload_count == 1 and backload_count == 0 and outload_count == 1 then
-         result = result .. " corner "
-      elseif sideload_count + backload_count > 1 then
-         result = result .. " junction " --maybe different junction types will be worth specifying in the future
-      end
+      --Check what the neighbor info reveals about the belt
+      result = result .. transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir)
       
       --Check contents
       local left = ent.get_transport_line(1).get_contents()
@@ -598,8 +606,17 @@ function ent_info(pindex, ent, description)
          end
 
       else
-         result = result .. " carrying Nothing"
+         result = result .. " carrying nothing"
       end
+   end
+   
+   --For underground belts, note whether entrance or Exited
+   if ent.type == "underground-belt" then
+      if ent.belt_to_ground_type == "input" then
+	     result = result .. " entrance "
+	  elseif ent.belt_to_ground_type == "output" then
+	     result = result .. " exit "
+	  end
    end
    
    --Explain the recipe of a machine without pause and before the direction
@@ -608,38 +625,80 @@ function ent_info(pindex, ent, description)
          result = result .. " producing " .. ent.get_recipe().name
       end
    end)
+   
+   --State the name of a train stop
+   if ent.name == "train-stop" then
+      result = result .. " " .. ent.backer_name .. " "
+   --State the ID number of a train
+   elseif ent.name == "locomotive" or ent.name == "cargo-wagon" or ent.name == "fluid-wagon" then
+      result = result .. " of train " .. get_train_name(ent.train)
+   end
 
    --Explain the entity facing direction
    if ent.prototype.is_building and ent.supports_direction then
       result = result .. ", Facing "
       if ent.direction == 0 then 
          result = result .. "North "
-      elseif ent.direction == 4 then
-         result = result .. "South "
-      elseif ent.direction == 6 then
-         result = result .. "West "
+      elseif ent.direction == 1 then
+         result = result .. "Northeast "
       elseif ent.direction == 2 then
          result = result .. "East "
+      elseif ent.direction == 3 then
+         result = result .. "Southeast "
+      elseif ent.direction == 4 then
+         result = result .. "South "
+      elseif ent.direction == 5 then
+         result = result .. "Southwest "
+      elseif ent.direction == 6 then
+         result = result .. "West "
+      elseif ent.direction == 7 then
+         result = result .. "Northwest "
       end
+   elseif ent.name == "locomotive" or ent.prototype.type == "car" then
+      result = result .. " facing " .. get_heading(ent)
    end
    if ent.prototype.type == "generator" then
       result = result .. ", "
       local power1 = ent.energy_generated_last_tick * 60
       local power2 = ent.prototype.max_energy_production * 60
       if power2 ~= nil then
-         result = result .. "Producing " .. get_power_string(power1) .. " / " .. get_power_string(power2) .. " "
+         result = result .. "Producing " .. get_power_string(power1) .. " out of " .. get_power_string(power2) .. " capacity, "
       else
          result = result .. "Producing " .. get_power_string(power1) .. " "
       end
    end
-   if ent.prototype.type == "underground-belt" and ent.neighbours ~= nil then
-      result = result .. ", Connected to " ..distance(ent.position, ent.neighbours.position) .. " " .. direction(ent.position, ent.neighbours.position)
-   elseif (ent.prototype.type  == "pipe" or ent.prototype.type == "pipe-to-ground") and ent.neighbours ~= nil then
+   if ent.type == "underground-belt" then
+      if ent.neighbours ~= nil then
+         result = result .. ", Connected to " .. direction(ent.position, ent.neighbours.position) .. " via " .. math.floor(distance(ent.position, ent.neighbours.position)) - 1 .. " tiles underground, "
+      else
+         result = result .. ", not connected " 
+      end
+   elseif (ent.name  == "pipe") and ent.neighbours ~= nil then
       result = result .. ", connected to "
       for i, v in pairs(ent.neighbours) do
          for i1, v1 in pairs(v) do
-            result = result .. ", " .. distance(ent.position, v1.position) .. " " .. direction(ent.position, v1.position)
+            result = result .. ", " .. math.floor(distance(ent.position, v1.position)) .. " " .. direction(ent.position, v1.position)
          end
+      end
+   elseif (ent.name == "pipe-to-ground") and ent.neighbours ~= nil then
+      result = result .. ", connected to "
+      local connections = ent.fluidbox.get_pipe_connections(1)
+      local at_least_one = false
+      for i,con in ipairs(connections) do
+         if con.target ~= nil then
+            local dist = math.ceil(util.distance(ent.position,con.target.get_pipe_connections(1)[1].position))
+            result = result .. direction_lookup(get_direction_of_that_from_this(con.target_position,ent.position)) .. " "
+            if con.connection_type == "underground" then
+               result = result .. " via " .. dist - 1 .. " tiles underground, "
+            else
+               result = result .. " by " .. dist .. " tiles, "
+            end
+            result = result .. ", "
+            at_least_one = true
+         end
+      end
+      if not at_least_one then
+         result = result .. " nothing "
       end
    elseif next(ent.prototype.fluidbox_prototypes) ~= nil then
       local relative_position = {x = players[pindex].cursor_pos.x - ent.position.x, y = players[pindex].cursor_pos.y - ent.position.y}
@@ -669,11 +728,11 @@ function ent_info(pindex, ent, description)
                if ent.type == "assembling-machine" and ent.get_recipe() ~= nil then
                   if ent.name == "oil-refinery" and ent.get_recipe().name == "basic-oil-processing" then
                      if i == 2 then
-                        result = result .. ", crude-oil Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                        result = result .. ", crude-oil Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                      elseif i == 5 then
-                        result = result .. ", petroleum-gas Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                        result = result .. ", petroleum-gas Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                      else
-                        result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                        result = result .. ", " .. "Unused" .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                      end
                   else
                      if pipe.type == "input" then
@@ -689,9 +748,9 @@ function ent_info(pindex, ent, description)
                               i3 = #inputs
                            end
                            local filter = inputs[i3]
-                           result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                           result = result .. ", " .. filter.name .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                         else
-                           result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                           result = result .. ", " .. "Unused" .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                         end
                      else
                         local outputs = ent.get_recipe().products
@@ -706,9 +765,9 @@ function ent_info(pindex, ent, description)
                               i3 = #outputs
                            end
                            local filter = outputs[i3]
-                           result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                           result = result .. ", " .. filter.name .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                         else
-                           result = result .. ", " .. "Unused" .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                           result = result .. ", " .. "Unused" .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                         end
 
                      end
@@ -716,33 +775,72 @@ function ent_info(pindex, ent, description)
 
                else
                   local filter = box.filter or {name = ""}
-                  result = result .. ", " .. filter.name .. "Flow" .. pipe.type .. " 1 " .. adjusted.direction .. " "
+                  result = result .. ", " .. filter.name .. " Flow " .. pipe.type .. " 1 " .. adjusted.direction .. ", at " .. get_entity_part_at_cursor(pindex)
                end
             end
          end
       end
    end
-	
-   if ent.type == "electric-pole" then
-      result = result .. ", Connected to " .. #ent.neighbours.copper .. "buildings, Network currently producing "
-      local power = 0
-      local capacity = 0
-      for i, v in pairs(ent.electric_network_statistics.output_counts) do
-         power = power + (ent.electric_network_statistics.get_flow_count{name = i, input = false, precision_index = defines.flow_precision_index.five_seconds})
-         local cap_add = 0
-         for _, power_ent in pairs(ent.surface.find_entities_filtered{name=i,force = ent.force}) do
-            if power_ent.electric_network_id == ent.electric_network_id then
-               cap_add = cap_add + 1
-            end
-         end
-         cap_add = cap_add * game.entity_prototypes[i].max_energy_production
-         if game.entity_prototypes[i].type == "solar-panel" then
-            cap_add = cap_add * ent.surface.solar_power_multiplier * (1-ent.surface.darkness)
-         end
-         capacity = capacity + cap_add   
+   if ent.name == "cargo-wagon" then
+      --Explain contents
+      local itemset = ent.get_inventory(defines.inventory.cargo_wagon).get_contents()
+      local itemtable = {}
+      for name, count in pairs(itemset) do
+         table.insert(itemtable, {name = name, count = count})
       end
-      result = result .. get_power_string(power*60) .. " / " .. get_power_string(capacity*60) .. " "
+      table.sort(itemtable, function(k1, k2)
+         return k1.count > k2.count
+      end)
+      if #itemtable == 0 then
+         result = result .. " containing nothing "
+      else
+         result = result .. " containing " .. itemtable[1].name .. " times " .. itemtable[1].count .. ", "
+         if #itemtable > 1 then
+            result = result .. " and " .. itemtable[2].name .. " times " .. itemtable[2].count .. ", "
+         end
+         if #itemtable > 2 then
+            result = result .. "and other items "
+         end
+      end
+   elseif ent.type == "electric-pole" then
+      --List connected electric poles
+      if #ent.neighbours.copper == 0 then
+         result = result .. " with no connections, "
+      else
+         result = result .. " connected to "
+         for i,pole in ipairs(ent.neighbours.copper) do
+            local dir = get_direction_of_that_from_this(pole.position,ent.position)
+            local dist = util.distance(pole.position,ent.position)
+            if i > 1 then
+               result = result .. " and "
+            end
+            result = result .. math.ceil(dist) .. " tiles " .. direction_lookup(dir) .. ", "
+         end
+      end
+      --Count number of entities being supplied within supply area.
+      local pos = ent.position
+      local sdist = ent.prototype.supply_area_distance
+      local supply_area = {{pos.x - sdist, pos.y - sdist}, {pos.x + sdist, pos.y + sdist}}
+      local supplied_ents = ent.surface.find_entities_filtered{area = supply_area}
+      local supplied_count = 0
+      local producer_count = 0
+      for i, ent2 in ipairs(supplied_ents) do
+         if ent2.prototype.max_energy_usage ~= nil and ent2.prototype.max_energy_usage > 0 then
+            supplied_count = supplied_count + 1
+         elseif ent2.prototype.max_energy_production ~= nil and ent2.prototype.max_energy_production > 0 then
+            producer_count = producer_count + 1
+         end
+      end
+      result = result .. " supplying " .. supplied_count .. " buildings, " 
+      if producer_count > 0 then
+         result = result .. " drawing from " .. producer_count .. " buildings, " 
+      end
+      result = result .. "Check status for power flow information. "
+      
+   elseif ent.name == "rail-signal" or ent.name == "rail-chain-signal" then
+      result = result .. ", " .. get_signal_state_info(ent)
    end
+   --Give drop position (like for inserters)
    if ent.drop_position ~= nil then
       local position = table.deepcopy(ent.drop_position)
       local direction = ent.direction /2
@@ -798,9 +896,7 @@ function ent_info(pindex, ent, description)
    end
    
    if ent.prototype.burner_prototype ~= nil then
-      if ent.energy == 0 then
---         local inv = ent.get_fuel_inventory()
---         if inv.is_empty() then
+      if ent.energy == 0 and fuel_inventory_info(ent) == "Contains no fuel." then
          result = result .. ", Out of Fuel "
       end
    end
@@ -814,8 +910,7 @@ function ent_info(pindex, ent, description)
       local level = math.ceil(ent.energy / 50000) --In percentage
       local charge = math.ceil(ent.energy / 1000) --In kilojoules
       result = result .. ", " .. level .. " percent full, containing " .. charge .. " kilojoules. "
-   end
-   if ent.type == "solar-panel" then
+   elseif ent.type == "solar-panel" then
       local s_time = ent.surface.daytime*24 --We observed 18 = peak solar start, 6 = peak solar end, 11 = night start, 13 = night end
       local solar_status = ""
       if s_time > 13 and s_time <= 18 then
@@ -828,9 +923,97 @@ function ent_info(pindex, ent, description)
          solar_status = ", zero production, night time. "
       end
       result = result .. solar_status
+   elseif ent.name == "rocket-silo" then
+      if ent.rocket_parts ~= nil and ent.rocket_parts < 100 then
+	     result = result .. ", " .. ent.rocket_parts .. " finished out of 100. "
+	  elseif ent.rocket_parts ~= nil then
+         result = result .. ", rocket ready, press SPACE to launch. "
+	  end
+   elseif ent.name == "beacon" then
+      local modules = ent.get_module_inventory()
+	  if modules.get_item_count() == 0 then
+	     result = result .. " with no modules "
+	  elseif modules.get_item_count() == 1 then
+	     result = result .. " with " .. modules[1].name
+	  elseif modules.get_item_count() == 2 then
+	     result = result .. " with " .. modules[1].name .. " and " .. modules[2].name
+      elseif modules.get_item_count() > 2 then
+	     result = result .. " with " .. modules[1].name .. " and " .. modules[2].name .. " and other modules "
+      end
+   elseif ent.name == "nuclear-reactor" or ent.name == "heat-pipe" or ent.name == "heat-exchanger" then
+      result = result .. ", temperature " .. math.floor(ent.temperature) .. " degrees C "
+	  if ent.name == "nuclear-reactor" then
+	     if ent.temperature > 900 then
+	        result = result .. ", danger "
+		 end
+		 if ent.energy > 0 then
+	        result = result .. ", consuming fuel cell "
+		 end
+	     result = result .. ", neighbour bonus " .. ent.neighbour_bonus * 100 .. " percent "
+	  end
+   elseif ent.name == "item-on-ground" then
+      result = result .. ", " .. ent.stack.name 
    end
    return result
 end
+
+--Explain whether the belt is some type of corner or sideloading junction or etc.
+function transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir, say_middle)
+   local say_middle = say_middle or false
+   local result = ""
+   if     sideload_count == 0 and backload_count == 0 and outload_count == 0 then
+      result = result .. " unit "
+   elseif sideload_count == 0 and backload_count == 1 and outload_count == 0 then
+      result = result .. " stopping end "
+   elseif sideload_count == 1 and backload_count == 0 and outload_count == 0 then
+      result = result .. " stopping end corner "
+   elseif sideload_count == 1 and backload_count == 1 and outload_count == 0 then
+      result = result .. " sideloading stopping end "
+   elseif sideload_count == 2 and backload_count == 1 and outload_count == 0 then
+      result = result .. " double sideloading stopping end "
+   elseif sideload_count == 2 and backload_count == 0 and outload_count == 0 then
+      result = result .. " safe merging stopping end "
+   elseif sideload_count == 0 and backload_count == 0 and outload_count == 1 and this_dir == outload_dir then
+      result = result .. " start "
+   elseif sideload_count == 0 and backload_count == 1 and outload_count == 1 and this_dir == outload_dir then
+      if say_middle then
+         result = result .. " middle "
+      else
+         result = result .. " " 
+      end
+   elseif sideload_count == 1 and backload_count == 0 and outload_count == 1 and this_dir == outload_dir then
+      result = result .. " corner "
+   elseif sideload_count == 1 and backload_count == 1 and outload_count == 1 and this_dir == outload_dir then
+      result = result .. " sideloading junction "
+   elseif sideload_count == 2 and backload_count == 1 and outload_count == 1 and this_dir == outload_dir then
+      result = result .. " double sideloading junction "
+   elseif sideload_count == 2 and backload_count == 0 and outload_count == 1 and this_dir == outload_dir then
+      result = result .. " safe merging junction "
+   elseif sideload_count == 0 and backload_count == 0 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " unit pouring end "
+   elseif sideload_count == 0 and backload_count == 1 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " pouring end "
+   elseif sideload_count == 1 and backload_count == 0 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " corner pouring end "
+   elseif sideload_count == 1 and backload_count == 1 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " sideloading pouring end "
+   elseif sideload_count == 2 and backload_count == 1 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " double sideloading pouring end "
+   elseif sideload_count == 2 and backload_count == 0 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " safe merging pouring end "
+   elseif sideload_count + backload_count > 1 and (outload_count == 0 or (outload_count == 1 and this_dir == outload_dir)) then
+      result = result .. " unidentified junction "--this should not be reachable any more
+   elseif sideload_count + backload_count > 1 and outload_count == 1 and this_dir ~= outload_dir then
+      result = result .. " unidentified pouring end "
+   elseif outload_count > 1 then
+      result = result .. " multiple outputs " --unexpected case
+   else
+      result = result .. " unknown state " --unexpected case
+   end
+   return result
+end
+--Notes for the wiki: A pouring end either pours into a sideloading something, or into a corner. Lanes are preserved if corner.
+
 function compile_building_network (ent, radius)
    local ents = ent.surface.find_entities_filtered{position = ent.position, radius = radius, type = building_types}
    local adj = {hor = {}, vert = {}}
@@ -973,7 +1156,8 @@ function read_travel_slot(pindex)
       printout(entry.name .. " at " .. math.floor(entry.position.x) .. ", " .. math.floor(entry.position.y), pindex)
    end
 end
-function teleport_to_closest(pindex, pos)
+function teleport_to_closest(pindex, pos, muted)
+   local muted = muted or false
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
    local radius = .5
@@ -982,16 +1166,25 @@ function teleport_to_closest(pindex, pos)
       radius = radius + 1 
       new_pos = surf.find_non_colliding_position("character", pos, radius, .1, true)
    end
-
+   
+   if game.get_player(pindex).driving then
+      printout("Cannot teleport while in a vehicle.", pindex)
+      return
+   end
+   
    local can_port = first_player.surface.can_place_entity{name = "character", position = new_pos} 
    if can_port then
       local teleported = first_player.teleport(new_pos)
       if teleported then
          players[pindex].position = table.deepcopy(new_pos)
          if new_pos.x ~= pos.x or new_pos.y ~= pos.y then
-            printout("Teleported " .. math.ceil(distance(pos,new_pos)) .. " " .. direction(pos, new_pos) .. " of target", pindex)
+            if not muted then
+               printout("Teleported " .. math.ceil(distance(pos,new_pos)) .. " " .. direction(pos, new_pos) .. " of target", pindex)
+            end
          else
-            printout("Teleported to target", pindex)
+            if not muted then
+               printout("Teleported to target", pindex)
+            end
          end
 
       else
@@ -1724,14 +1917,37 @@ function get_iterable_array(dict)
    return result
 end
 
-function read_scan_summary (pindex)      
+function get_substring_before_comma(str)
+   local first, final = string.find(str,",")
+   if first == nil or first == 1 then
+      return str
+   else
+      return string.sub(str,1,first-1)
+   end
+end
+
+function get_ent_area_from_name(ent_name,pindex)
+   local ents = game.get_player(pindex).surface.find_entities_filtered{name = ent_name, limit = 1}
+   if #ents == 0 then
+      return 0
+   else
+      return ents[1].tile_height * ents[1].tile_width
+   end
+end
+
+function confirm_is_in_area(ent_name, area_left_top, area_right_bottom, pindex)
+   local ents = game.get_player(pindex).surface.find_entities_filtered{name = ent_name, area = {area_left_top,area_right_bottom}, limit = 1}
+   return #ents > 0
+end
+
+function read_scan_summary(scan_left_top, scan_right_bottom, pindex)      
    local result = ""
-   local left_top = {x = math.floor((players[pindex].cursor_pos.x - 1 - players[pindex].cursor_size) / 32), y = math.floor((players[pindex].cursor_pos.y - 1 - players[pindex].cursor_size)/32)}
-   local right_bottom = {x = math.floor((players[pindex].cursor_pos.x + 1 + players[pindex].cursor_size)/32), y = math.floor((players[pindex].cursor_pos.y + 1 + players[pindex].cursor_size)/32)}
+   local explored_left_top = {x = math.floor((players[pindex].cursor_pos.x - 1 - players[pindex].cursor_size) / 32), y = math.floor((players[pindex].cursor_pos.y - 1 - players[pindex].cursor_size)/32)}
+   local explored_right_bottom = {x = math.floor((players[pindex].cursor_pos.x + 1 + players[pindex].cursor_size)/32), y = math.floor((players[pindex].cursor_pos.y + 1 + players[pindex].cursor_size)/32)}
    local count = 0
    local total = 0
-   for i = left_top.x, right_bottom.x do
-      for i1 = left_top.y, right_bottom.y do
+   for i = explored_left_top.x, explored_right_bottom.x do
+      for i1 = explored_left_top.y, explored_right_bottom.y do
          if game.get_player(pindex).surface.is_chunk_generated({i, i1}) then
             count = count + 1
          end
@@ -1744,33 +1960,36 @@ function read_scan_summary (pindex)
    elseif count ~= total then
       result = result .. "Explored " .. math.floor((count/total) * 100) .. "% "
    end
-   if #players[pindex].nearby.ents > 0 then
-         local percentages = {}
-         for i, ent in ipairs(players[pindex].nearby.ents) do
-            local area = 1
-            if ent.name ~= "water" then
-               local box = players[pindex].nearby.ents[i].ents[1].prototype.selection_box
-               local width = math.ceil(box.right_bottom.x * 2)
-               local height = math.ceil(2* box.right_bottom.y)
-               area = width * height
-            end
-            table.insert(percentages, {name = ent.name, percent = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)})
+   
+   if #players[pindex].nearby.ents > 0 then 
+      local percentages = {}
+      local percent_total = 0
+      for i, ent in ipairs(players[pindex].nearby.ents) do
+         local area = 0
+         if confirm_is_in_area( get_substring_before_comma(ent.name) , scan_left_top , scan_right_bottom, pindex) then --**beta** this check is a temporary solution to the scan_area invert bug
+            area = get_ent_area_from_name(get_substring_before_comma(ent.name),pindex)--this area finding method is necessary because all we have is the ent name
+            --game.get_player(pindex).print(get_substring_before_comma(ent.name) .. " " .. area)--
          end
-         table.sort(percentages, function(k1, k2)
-            return k1.percent > k2.percent
-         end)
-
-         result = result .. "Area contains "
-         local i = 1
-         while i <= # percentages and i <= 5 do
-            result = result .. percentages[i].name .. " " .. percentages[i].percent .. "%, "
-               i = i + 1
-         end
-      
+         local percentage = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+         table.insert(percentages, {name = ent.name, percent = percentage})
+         percent_total = percent_total + percentage
+      end
+      table.sort(percentages, function(k1, k2)
+         return k1.percent > k2.percent
+      end)
+      result = result .. "Area contains "
+      local i = 1
+      while i <= # percentages and (i <= 5 or percentages[i].percent > 1) do
+         result = result .. percentages[i].name .. " " .. percentages[i].percent .. "%, "
+         i = i + 1
+      end
+      result = result .. ", total space occupied " .. math.floor(percent_total) .. " percent " 
    else
       result = result .. "Empty Area  "
    end
-   printout(string.sub(result, 1, -3), pindex)
+   printout(result, pindex)
+   --game.get_player(pindex).print("r: " .. result)--
+   rendering.draw_rectangle{color = {0, 1, 1},surface = game.get_player(pindex).surface, time_to_live = 90, left_top = scan_left_top, right_bottom = scan_right_bottom }
 end
    
 
@@ -1832,18 +2051,18 @@ function get_power_string(power)
    result = ""
    if power > 1000000000000 then
       power = power/1000000000000
-      result = result .. string.format(" %.3f Terawatts", power) 
+      result = result .. string.format(" %.1f Terawatts", power) 
    elseif power > 1000000000 then
       power = power / 1000000000
-      result = result .. string.format(" %.3f Gigawatts", power) 
+      result = result .. string.format(" %.1f Gigawatts", power) 
    elseif power > 1000000 then
       power = power / 1000000
-      result = result .. string.format(" %.3f Megawatts", power) 
+      result = result .. string.format(" %.1f Megawatts", power) 
    elseif power > 1000 then
       power = power / 1000
-      result = result .. string.format(" %.3f Kilowatts", power) 
+      result = result .. string.format(" %.1f Kilowatts", power) 
    else
-      result = result .. string.format(" %.3f Watts", power) 
+      result = result .. string.format(" %.1f Watts", power) 
    end
    return result
 end
@@ -2045,7 +2264,7 @@ function read_building_slot(pindex, start_phrase)
       if fluid ~= nil then
          amount = fluid.amount
          name = fluid.name
-      end
+      end --laterdo use fluidbox.get_locked_fluid(i) if needed.
 
       --Read the fluid ingredients & products
       --Note: We could have separated by input/output but right now the "type" is "input" for all fluids it seeems?
@@ -2303,41 +2522,7 @@ function tile_cycle(pindex)
       if players[pindex].tile.ents[players[pindex].tile.index - 1].valid then
          result = ""
          local ent = players[pindex].tile.ents[players[pindex].tile.index - 1]
-         result = ent.name
-         result = result .. " " .. ent.type .. " "
-         if ent.type == "resource" then
-            result = result .. " x " .. ent.amount
-         end
-         if ent.prototype.is_building and ent.supports_direction then
-            result = result .. "Facing "
-            if ent.direction == 0 then 
-               result = result .. "North "
-            elseif ent.direction == 4 then
-               result = result .. "South "
-            elseif ent.direction == 6 then
-               result = result .. "West "
-            elseif ent.direction == 2 then
-               result = result .. "East "
-            end
-         end
-         if ent.prototype.type == "generator" then
-            local power1 = ent.energy_generated_last_tick * 60
-            local power2 = ent.prototype.max_energy_production * 60
-            if power2 ~= nil then
-               result = result .. "Producing " .. get_power_string(power1) .. " / " .. get_power_string(power2) .. " "
-            else
-               result = result .. "Producing " .. get_power_string(power1) .. " "
-            end
-         end
-         if ent.prototype.type == "underground-belt" and ent.neighbours ~= nil then
-            result = result .. distance(ent.position, ent.neighbours.position) .. " " .. direction(ent.position, ent.neighbours.position)
-         elseif (ent.prototype.type  == "pipe" or ent.prototype.type == "pipe-to-ground") and ent.neighbours ~= nil then
-            for i, v in pairs(ent.neighbours) do
-               for i1, v1 in pairs(v) do
-                  result = result .. distance(ent.position, v1.position) .. " " .. direction(ent.position, v1.position)
-               end
-            end
-         end
+         result = ent_info(pindex, ent, "")
          printout(result, pindex)
 
 
@@ -2365,6 +2550,9 @@ function printout(str, pindex)
       players[pindex].last = str
    end
    localised_print{"","out "..pindex.." ",str}
+   if str ~= "" and pindex > 0 and (game.players[pindex].name == "SirFendi") then 
+      --game.get_player(pindex).print(str)--**Print all to in game console
+   end
 end
 
 function repeat_last_spoken (pindex)
@@ -2586,7 +2774,7 @@ end
 function scan_area (x,y,w,h, pindex)
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
-   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}
+   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}--****bug here about invert, because it inverts everything
    local result = {}
          local pos = players[pindex].cursor_pos
    for name, resource in pairs(players[pindex].resources) do
@@ -2601,7 +2789,7 @@ function scan_area (x,y,w,h, pindex)
       local prod_info = ent_production(ents[i])
       local index = index_of_entity(result, ents[i].name .. prod_info)
       if index == nil then
-         table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}, aggregate = false})
+         table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}, aggregate = false}) --laterdo save ent type here?
 
       elseif #result[index] >= 100 then
          table.remove(result[index].ents, math.random(100))
@@ -2667,8 +2855,9 @@ function toggle_cursor(pindex)
 end
 
 function teleport_to_cursor(pindex)
-teleport_to_closest(pindex, players[pindex].cursor_pos)
+   teleport_to_closest(pindex, players[pindex].cursor_pos)
 end
+
 function jump_to_player(pindex)
    local first_player = game.get_player(pindex)
    players[pindex].cursor_pos.x = math.floor(first_player.position.x)+.5
@@ -2692,78 +2881,403 @@ function read_tile(pindex)
       players[pindex].tile.previous = nil
       result = players[pindex].tile.tile
 
-   else
+   else--laterdo tackle the issue here where entities such as tree stumps block preview info 
       local ent = players[pindex].tile.ents[1]
       result = ent_info(pindex, ent)
+      --game.get_player(pindex).print(result)--**
       players[pindex].tile.previous = players[pindex].tile.ents[#players[pindex].tile.ents]
 
       players[pindex].tile.index = 2
    end
    if next(players[pindex].tile.ents) == nil or players[pindex].tile.ents[1].type == "resource" then
       local stack = game.get_player(pindex).cursor_stack
-      if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.prototype.place_result.type == "electric-pole" then
-         local ent = stack.prototype.place_result
-         local position = table.deepcopy(players[pindex].cursor_pos)
-         local dict = game.get_filtered_entity_prototypes{{filter = "type", type = "electric-pole"}}
-         local poles = {}
-         for i, v in pairs(dict) do
-            table.insert(poles, v)
+	  --Run build preview checks
+	  if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil then
+	     result = result .. build_preview_checks_info(stack,pindex)
+		 --game.get_player(pindex).print(result)--**
+	  end
+      
+   end
+     
+   --If the build lock is on and the player is holding a cut or copy tool, every entity being read gets mined as soon as you read a new tile.
+   local stack = game.get_player(pindex).cursor_stack
+   if stack.valid_for_read and stack.name == "cut-paste-tool" then
+	  local ent = players[pindex].tile.ents[1]
+	  local ent_name = "Ent"
+	  if ent ~= nil and ent.valid then 
+	     ent_name = ent.name
+	  end
+	  game.get_player(pindex).play_sound{path = "Mine-Building"}
+	  if try_to_mine_with_sound(ent,pindex) then
+	     result = ent_name .. " mined."
+	  end
+	  return
+   end
+   
+   printout(result, pindex)
+end
+
+--Cursor building preview checks. NOTE: Only 1 by 1 entities for now
+function build_preview_checks_info(stack, pindex)
+   if stack == nil or not stack.valid_for_read or not stack.valid then
+      return "invalid stack"
+   end
+   local p = game.get_player(pindex)
+   local surf = game.get_player(pindex).surface
+   local pos = table.deepcopy(players[pindex].cursor_pos)
+   local result = ""
+   local build_dir = players[pindex].building_direction * 2--laterdo get building directions to match the official defines
+   local ent_p = stack.prototype.place_result --it is an entity prototype!
+   if ent_p == nil or not ent_p.valid then
+      return "invalid entity"
+   end
+   
+   --Notify before all else if surface/player cannot place this entity. **laterdo extend this check by copying over build offset stuff
+   if ent_p.tile_width <= 1 and ent_p.tile_height <= 1 and not surf.can_place_entity{name = stack.name, position = pos} then
+      return " cannot place this here "
+   end
+   
+   --For belt types, check if it would form a corner or junction here. Laterdo include underground exits.
+   if ent_p.type == "transport-belt" then
+      local ents_north = p.surface.find_entities_filtered{position = {x = pos.x+0 ,y = pos.y-1}, type = "transport-belt"}
+		local ents_south = p.surface.find_entities_filtered{position = {x = pos.x+0 ,y = pos.y+1}, type = "transport-belt"}
+		local ents_east  = p.surface.find_entities_filtered{position = {x = pos.x+1 ,y = pos.y+0}, type = "transport-belt"}
+		local ents_west  = p.surface.find_entities_filtered{position = {x = pos.x-1 ,y = pos.y+0}, type = "transport-belt"}
+      
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y-1}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y+1}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x-1 ,y = pos.y-0}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+1 ,y = pos.y-0}, surface = p.surface, time_to_live = 30}
+
+      if #ents_north > 0 or #ents_south > 0 or #ents_east > 0 or #ents_west > 0 then
+         local sideload_count = 0
+         local backload_count = 0
+         local  outload_count = 0
+         local this_dir = build_dir
+         local outload_dir = nil
+         
+         --Find the outloading belt and its direction, if any 
+         if this_dir == dirs.north and ents_north[1] ~= nil and ents_north[1].valid then
+            rendering.draw_circle{color = {0.5, 0.5, 1},radius = 0.3,width = 2,target = ents_north[1].position,surface = ents_north[1].surface,time_to_live = 30}
+            outload_dir = ents_north[1].direction
+            outload_count = 1
+         elseif this_dir == dirs.east and ents_east[1] ~= nil and ents_east[1].valid then
+            rendering.draw_circle{color = {0.5, 0.5, 1},radius = 0.3,width = 2,target = ents_east[1].position,surface = ents_east[1].surface,time_to_live = 30}
+            outload_dir = ents_east[1].direction
+            outload_count = 1
+         elseif this_dir == dirs.south and ents_south[1] ~= nil and ents_south[1].valid then
+            rendering.draw_circle{color = {0.5, 0.5, 1},radius = 0.3,width = 2,target = ents_south[1].position,surface = ents_south[1].surface,time_to_live = 30}
+            outload_dir = ents_south[1].direction
+            outload_count = 1
+         elseif this_dir == dirs.west and ents_west[1] ~= nil and ents_west[1].valid then
+            rendering.draw_circle{color = {0.5, 0.5, 1},radius = 0.3,width = 2,target = ents_west[1].position,surface = ents_west[1].surface,time_to_live = 30}
+            outload_dir = ents_west[1].direction
+            outload_count = 1
          end
-         table.sort(poles, function(k1, k2) return k1.max_wire_distance < k2.max_wire_distance end)
-         local check = false
-         for i, pole in ipairs(poles) do
-            names = {}
-            for i1 = i, #poles, 1 do
-               table.insert(names, poles[i1].name)
+         
+         --Find the backloading and sideloading belts, if any
+         if ents_north[1] ~= nil and ents_north[1].valid and ents_north[1].direction == dirs.south then
+            rendering.draw_circle{color = {1, 1, 0.2},radius = 0.2,width = 2,target = ents_north[1].position,surface = ents_north[1].surface,time_to_live = 30}
+            if this_dir == dirs.east or this_dir == dirs.west then
+               sideload_count = sideload_count + 1
+            elseif this_dir == dirs.south then
+               backload_count = 1
             end
-            local T = {
-               position = position,
-               radius = pole.max_wire_distance,
-               name = names
-            }
-            if #surf.find_entities_filtered(T) > 0 then
-               check = true
-               break
+         end
+         
+         if ents_south[1] ~= nil and ents_south[1].valid and ents_south[1].direction == dirs.north then
+            rendering.draw_circle{color = {1, 1, 0.4},radius = 0.2,width = 2,target = ents_south[1].position,surface = ents_south[1].surface,time_to_live = 30}
+            if this_dir == dirs.east or this_dir == dirs.west then
+               sideload_count = sideload_count + 1
+            elseif this_dir == dirs.north then
+               backload_count = 1
             end
-         if stack.name == pole.name then
-            break
+         end
+         
+         if ents_east[1] ~= nil and ents_east[1].valid and ents_east[1].direction == dirs.west then
+            rendering.draw_circle{color = {1, 1, 0.6},radius = 0.2,width = 2,target = ents_east[1].position,surface = ents_east[1].surface,time_to_live = 30}
+            if this_dir == dirs.north or this_dir == dirs.south then
+               sideload_count = sideload_count + 1
+            elseif this_dir == dirs.west then
+               backload_count = 1
+            end
+         end
+         
+         if ents_west[1] ~= nil and ents_west[1].valid and ents_west[1].direction == dirs.east then
+            rendering.draw_circle{color = {1, 1, 0.8},radius = 0.2,width = 2,target = ents_west[1].position,surface = ents_west[1].surface,time_to_live = 30}
+            if this_dir == dirs.north or this_dir == dirs.south then
+               sideload_count = sideload_count + 1
+            elseif this_dir == dirs.east then
+               backload_count = 1
+            end
+         end
+            
+         --Determine expected junction info
+         if sideload_count + backload_count + outload_count > 0 then--Skips "unit" because it is obvious
+            result = ", forms belt " .. transport_belt_junction_info(sideload_count, backload_count, outload_count, this_dir, outload_dir, true)
          end
       end
-         if check then
-            result = result .. " " .. "connected"
-         else
-            result = result .. "Not Connected"
+   end
+   
+   --For underground belts, state the potential neighbor: any neighborless matching underground of the same name and same/opposite direction, and along the correct axis
+	if ent_p.type == "underground-belt" then
+      local connected = false
+      local check_dist = 5
+		if stack.name == "fast-underground-belt" then
+		   check_dist = 7
+		elseif stack.name == "express-underground-belt" then
+		   check_dist = 9
+		end
+      local candidates = game.get_player(pindex).surface.find_entities_filtered{ name = stack.name, position = pos, radius = check_dist, direction = rotate_180(build_dir) } 
+		if #candidates > 0 then
+		   for i,cand in ipairs(candidates) do
+			   rendering.draw_circle{color = {1, 1, 0},radius = 0.5,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
+            local dist_x = cand.position.x - pos.x
+            local dist_y = cand.position.y - pos.y
+			   if cand.direction == rotate_180(build_dir)
+			   and (get_direction_of_that_from_this(cand.position,pos) == build_dir) and (dist_x == 0 or dist_y == 0) then
+			      rendering.draw_circle{color = {0, 1, 0},radius = 1.0,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
+               result = result .. " connects " .. direction_lookup(build_dir) .. " with " .. math.floor(util.distance(cand.position,pos)) - 1 .. " tiles underground, "
+               connected = true
+			   end
+         end			
+		end
+      if not connected then
+         result = result .. " not connected "
+      end
+   end
+   
+   --For pipes to ground, state when connected 
+   if stack.name == "pipe-to-ground" then
+      local connected = false
+      local check_dist = 10
+      local candidates = game.get_player(pindex).surface.find_entities_filtered{ name = stack.name, position = pos, radius = check_dist, direction = rotate_180(build_dir) } 
+		if #candidates > 0 then
+		   for i,cand in ipairs(candidates) do
+			   rendering.draw_circle{color = {1, 1, 0},radius = 0.5,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
+            local dist_x = cand.position.x - pos.x
+            local dist_y = cand.position.y - pos.y
+			   if cand.direction == rotate_180(build_dir)
+			   and (get_direction_of_that_from_this(pos,cand.position) == build_dir) and (dist_x == 0 or dist_y == 0) then
+			      rendering.draw_circle{color = {0, 1, 0},radius = 1.0,width = 3,target = cand.position,surface = cand.surface,time_to_live = 60}
+               result = result .. " connects " .. direction_lookup(rotate_180(build_dir)) .. " with " .. math.floor(util.distance(cand.position,pos)) - 1 .. " tiles underground, "
+               connected = true
+			   end
+         end			
+		end
+      if not connected then
+         result = result .. " not connected underground, "
+      end
+   end
+   
+   --For pipes, read the fluids in fluidboxes of surrounding entities, if any. Also warn if there are multiple fluids, hence a mixing error.
+   if stack.name == "pipe" then
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y-1}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+0 ,y = pos.y+1}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x-1 ,y = pos.y-0}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = pos.x+1 ,y = pos.y-0}, surface = p.surface, time_to_live = 30}
+      local ents_north = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y-1} }
+      local ents_south = p.surface.find_entities_filtered{position = {x = pos.x+0, y = pos.y+1} }
+      local ents_east  = p.surface.find_entities_filtered{position = {x = pos.x+1, y = pos.y+0} }
+      local ents_west  = p.surface.find_entities_filtered{position = {x = pos.x-1, y = pos.y+0} }
+      local relevant_fluid_north = nil
+      local relevant_fluid_east  = nil
+      local relevant_fluid_south = nil
+      local relevant_fluid_west  = nil
+      
+      if ents_north[1] ~= nil and ents_north[1].valid and ents_north[1].fluidbox ~= nil then
+         rendering.draw_circle{color = {1, 1, 0},radius = 0.2,width = 2,target = ents_north[1].position, surface = p.surface, time_to_live = 30} 
+         --Run checks to see if we have any fluidboxes that are relevant
+         for i = 1, #ents_north[1].fluidbox, 1 do
+            --p.print("box " .. i .. ": " .. ents_north[1].fluidbox[i].name)
+            for j, con in ipairs(ents_north[1].fluidbox.get_pipe_connections(i)) do
+               local target_pos = con.target_position 
+               --p.print("new connection at: " .. target_pos.x .. "," .. target_pos.y)
+               rendering.draw_circle{color = {1, 0, 0},radius = 0.2,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+               if util.distance(target_pos, pos) < 0.3 and not (ents_north[1].name == "pipe-to-ground" and ents_north[1].direction == dirs.north) then
+                  rendering.draw_circle{color = {0, 1, 0},radius = 0.3,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+                  if ents_north[1].fluidbox[i] ~= nil then
+                     relevant_fluid_north = ents_north[1].fluidbox[i].name
+                  elseif ents_north[1].fluidbox.get_locked_fluid(i) ~= nil then
+                     relevant_fluid_north = ents_north[1].fluidbox.get_locked_fluid(i)
+                  else
+                     relevant_fluid_north = "empty pipe"
+                  end
+               end
+            end
          end
-      elseif stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and  stack.prototype.place_result.electric_energy_source_prototype ~= nil then
-         local ent = stack.prototype.place_result
-         local position = table.deepcopy(players[pindex].cursor_pos)
+      end
+      
+      if ents_south[1] ~= nil and ents_south[1].valid and ents_south[1].fluidbox ~= nil then
+         rendering.draw_circle{color = {1, 1, 0},radius = 0.2,width = 2,target = ents_south[1].position, surface = p.surface, time_to_live = 30} 
+         --Run checks to see if we have any fluidboxes that are relevant
+         for i = 1, #ents_south[1].fluidbox, 1 do
+            --p.print("box " .. i .. ": " .. ents_south[1].fluidbox[i].name)
+            for j, con in ipairs(ents_south[1].fluidbox.get_pipe_connections(i)) do
+               local target_pos = con.target_position 
+               --p.print("new connection at: " .. target_pos.x .. "," .. target_pos.y)
+               rendering.draw_circle{color = {1, 0, 0},radius = 0.2,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+               if util.distance(target_pos, pos) < 0.3 and not (ents_south[1].name == "pipe-to-ground" and ents_south[1].direction == dirs.south) then
+                  rendering.draw_circle{color = {0, 1, 0},radius = 0.3,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+                  if ents_south[1].fluidbox[i] ~= nil then
+                     relevant_fluid_south = ents_south[1].fluidbox[i].name
+                  elseif ents_south[1].fluidbox.get_locked_fluid(i) ~= nil then
+                     relevant_fluid_south = ents_south[1].fluidbox.get_locked_fluid(i)
+                  else
+                     relevant_fluid_south = "empty pipe"
+                  end
+               end
+            end
+         end
+      end
+      
+      if ents_east[1] ~= nil and ents_east[1].valid and ents_east[1].fluidbox ~= nil then
+         rendering.draw_circle{color = {1, 1, 0},radius = 0.2,width = 2,target = ents_east[1].position, surface = p.surface, time_to_live = 30} 
+         --Run checks to see if we have any fluidboxes that are relevant
+         for i = 1, #ents_east[1].fluidbox, 1 do
+            --p.print("box " .. i .. ": " .. ents_east[1].fluidbox[i].name)
+            for j, con in ipairs(ents_east[1].fluidbox.get_pipe_connections(i)) do
+               local target_pos = con.target_position 
+               --p.print("new connection at: " .. target_pos.x .. "," .. target_pos.y)
+               rendering.draw_circle{color = {1, 0, 0},radius = 0.2,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+               if util.distance(target_pos, pos) < 0.3 and not (ents_east[1].name == "pipe-to-ground" and ents_east[1].direction == dirs.east) then
+                  rendering.draw_circle{color = {0, 1, 0},radius = 0.3,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+                  if ents_east[1].fluidbox[i] ~= nil then
+                     relevant_fluid_east = ents_east[1].fluidbox[i].name
+                  elseif ents_east[1].fluidbox.get_locked_fluid(i) ~= nil then
+                     relevant_fluid_east = ents_east[1].fluidbox.get_locked_fluid(i)
+                  else
+                     relevant_fluid_east = "empty pipe"
+                  end
+               end
+            end
+         end
+      end
+      
+      if ents_west[1] ~= nil and ents_west[1].valid and ents_west[1].fluidbox ~= nil then
+         rendering.draw_circle{color = {1, 1, 0},radius = 0.2,width = 2,target = ents_west[1].position, surface = p.surface, time_to_live = 30} 
+         --Run checks to see if we have any fluidboxes that are relevant
+         for i = 1, #ents_west[1].fluidbox, 1 do
+            --p.print("box " .. i .. ": " .. ents_west[1].fluidbox[i].name)
+            for j, con in ipairs(ents_west[1].fluidbox.get_pipe_connections(i)) do
+               local target_pos = con.target_position 
+               --p.print("new connection at: " .. target_pos.x .. "," .. target_pos.y)
+               rendering.draw_circle{color = {1, 0, 0},radius = 0.2,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+               if util.distance(target_pos, pos) < 0.3 and not (ents_west[1].name == "pipe-to-ground" and ents_west[1].direction == dirs.west) then
+                  rendering.draw_circle{color = {0, 1, 0},radius = 0.3,width = 2,target = target_pos, surface = p.surface, time_to_live = 30}
+                  if ents_west[1].fluidbox[i] ~= nil then
+                     relevant_fluid_west = ents_west[1].fluidbox[i].name
+                  elseif ents_west[1].fluidbox.get_locked_fluid(i) ~= nil then
+                     relevant_fluid_west = ents_west[1].fluidbox.get_locked_fluid(i)
+                  else
+                     relevant_fluid_west = "empty pipe"
+                  end
+               end
+            end
+         end
+      end
+      
+      
+      --Assuming empty fluidboxes return nil, we need to check if all none-nil boxes are equal...
+      if relevant_fluid_north ~= nil or relevant_fluid_east ~= nil or relevant_fluid_south ~= nil or relevant_fluid_west ~= nil then
+         local count = 0
+         result = result .. " pipe connects to "
+         
+         if relevant_fluid_north ~= nil then
+            result = result .. relevant_fluid_north .. " at north, "
+            count = count + 1
+         end
+         if relevant_fluid_east ~= nil then
+            result = result .. relevant_fluid_east  .. " at east, "
+            count = count + 1
+         end
+         if relevant_fluid_south ~= nil then
+            result = result .. relevant_fluid_south .. " at south, "
+            count = count + 1
+         end
+         if relevant_fluid_west ~= nil then
+            result = result .. relevant_fluid_west  .. " at west, "
+            count = count + 1
+         end
+         
+         if relevant_fluid_north ~= nil and (relevant_fluid_north == relevant_fluid_south or relevant_fluid_north == relevant_fluid_east or relevant_fluid_north == relevant_fluid_west) then
+            count = count - 1
+         end
+         if relevant_fluid_east ~= nil and (relevant_fluid_east == relevant_fluid_south or relevant_fluid_east == relevant_fluid_west) then
+            count = count - 1
+         end
+         if relevant_fluid_south ~= nil and (relevant_fluid_south == relevant_fluid_west) then
+            count = count - 1
+         end
+         
+         if count > 1 then
+            result = result .. " warning: there may be mixing fluids "
+         end
+      end
+      
+   end
+   
+   --For electric poles, report the directions of up to 5 wire-connectible electric poles that can connect
+   if ent_p.type == "electric-pole" then
+     local pole_dict = surf.find_entities_filtered{type = "electric-pole", position = pos, radius = ent_p.max_wire_distance}
+	  local poles = {}
+	  for i, v in pairs(pole_dict) do
+	     if v.prototype.max_wire_distance ~= nil and v.prototype.max_wire_distance >= ent_p.max_wire_distance then --Select only the poles that can connect back
+		    table.insert(poles, v)
+		 end
+	  end
+	  if #poles > 0 then
+	     --List the first 4 poles within range
+		 result = result .. " connecting "
+	     for i, pole in ipairs(poles) do
+		    if i < 5 then
+			   local dist = math.ceil(util.distance(pole.position,pos))
+			   local dir = get_direction_of_that_from_this(pole.position,pos)
+			   result = result .. dist .. " tiles " .. direction_lookup(dir) .. ", "
+			end
+	     end
+	  else
+	     --Notify if no connections and state nearest electric pole
+	     result = result .. " not connected, "
+		 local nearest_pole, min_dist = find_nearest_electric_pole(nil,false,50,surf,pos)
+		 if min_dist == nil or min_dist >= 1000 then
+		    result = result .. " no electric poles within 1000 tiles, "
+		 else
+		    local dir = get_direction_of_that_from_this(nearest_pole.position,pos)
+		    result = result .. math.ceil(min_dist) .. " tiles " .. direction_lookup(dir) .. " to nearest electric pole, "
+		 end
+	  end
+   end
+   --For all electric powered entities, note whether powered, and from which direction. Otherwise report the nearest power pole.
+   if ent_p.electric_energy_source_prototype ~= nil then
+         local position = pos
          if players[pindex].cursor then
-               position.x = position.x + math.ceil(2*ent.selection_box.right_bottom.x)/2 - .5
-               position.y = position.y + math.ceil(2*ent.selection_box.right_bottom.y)/2 - .5
+               position.x = position.x + math.ceil(2*ent_p.selection_box.right_bottom.x)/2 - .5
+               position.y = position.y + math.ceil(2*ent_p.selection_box.right_bottom.y)/2 - .5
          elseif players[pindex].player_direction == defines.direction.north then
             if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
-               position.y = position.y + math.ceil(2* ent.selection_box.left_top.y)/2 + .5
+               position.y = position.y + math.ceil(2* ent_p.selection_box.left_top.y)/2 + .5
             elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
-            position.y = position.y + math.ceil(2* ent.selection_box.left_top.x)/2 + .5
+            position.y = position.y + math.ceil(2* ent_p.selection_box.left_top.x)/2 + .5
             end
          elseif players[pindex].player_direction == defines.direction.south then
             if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
-               position.y = position.y + math.ceil(2* ent.selection_box.right_bottom.y)/2 - .5
+               position.y = position.y + math.ceil(2* ent_p.selection_box.right_bottom.y)/2 - .5
             elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
-               position.y = position.y + math.ceil(2* ent.selection_box.right_bottom.x)/2 - .5
+               position.y = position.y + math.ceil(2* ent_p.selection_box.right_bottom.x)/2 - .5
             end
          elseif players[pindex].player_direction == defines.direction.west then
             if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
-               position.x = position.x + math.ceil(2* ent.selection_box.left_top.x)/2 + .5
+               position.x = position.x + math.ceil(2* ent_p.selection_box.left_top.x)/2 + .5
             elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
-               position.x = position.x + math.ceil(2* ent.selection_box.left_top.y)/2 + .5
+               position.x = position.x + math.ceil(2* ent_p.selection_box.left_top.y)/2 + .5
             end
 
          elseif players[pindex].player_direction == defines.direction.east then
             if players[pindex].building_direction == 0 or players[pindex].building_direction == 2 then
-               position.x = position.x + math.ceil(2* ent.selection_box.right_bottom.x)/2 - .5
+               position.x = position.x + math.ceil(2* ent_p.selection_box.right_bottom.x)/2 - .5
             elseif players[pindex].building_direction == 1 or players[pindex].building_direction == 3 then
-               position.x = position.x + math.ceil(2* ent.selection_box.right_bottom.y)/2 - .5
+               position.x = position.x + math.ceil(2* ent_p.selection_box.right_bottom.y)/2 - .5
             end
          end
          local dict = game.get_filtered_entity_prototypes{{filter = "type", type = "electric-pole"}}
@@ -2773,34 +3287,67 @@ function read_tile(pindex)
          end
          table.sort(poles, function(k1, k2) return k1.supply_area_distance < k2.supply_area_distance end)
          local check = false
+		 local found_pole = nil
          for i, pole in ipairs(poles) do
             local names = {}
             for i1 = i, #poles, 1 do
                table.insert(names, poles[i1].name)
             end
+			local supply_dist = pole.supply_area_distance
+			if supply_dist > 15 then
+			   supply_dist = supply_dist - 2
+			end
             local area = {
-               left_top = {(position.x + math.ceil(ent.selection_box.left_top.x) - pole.supply_area_distance), (position.y + math.ceil(ent.selection_box.left_top.y) - pole.supply_area_distance)},
-               right_bottom = {position.x + math.floor(ent.selection_box.right_bottom.x) + pole.supply_area_distance, position.y + math.floor(ent.selection_box.right_bottom.y) + pole.supply_area_distance},
+               left_top = {(position.x + math.ceil(ent_p.selection_box.left_top.x) - supply_dist), (position.y + math.ceil(ent_p.selection_box.left_top.y) - supply_dist)},
+               right_bottom = {(position.x + math.floor(ent_p.selection_box.right_bottom.x) + supply_dist), (position.y + math.floor(ent_p.selection_box.right_bottom.y) + supply_dist)},
                orientation = players[pindex].building_direction/4
-           }
+           }--**todo "connected" check is a little buggy at the supply area edges, need to trim and tune, maybe re-enable direction based offset? The offset could be due to the pole width: 1 vs 2
             local T = {
                area = area,
                name = names
             }
-            if #surf.find_entities_filtered(T) > 0 then
+			local supplier_poles = surf.find_entities_filtered(T)
+            if #supplier_poles > 0 then
                check = true
+			   found_pole = supplier_poles[1]
                break
             end
          end
          if check then
-            result = result .. " " .. "connected"
+            result = result .. " Power connected "
+			if found_pole.valid then
+			   local dist = math.ceil(util.distance(found_pole.position,pos))
+			   local dir = get_direction_of_that_from_this(found_pole.position,pos)
+			   result = result .. " from " .. dist .. " tiles " .. direction_lookup(dir) .. ", "
+			end
          else
-            result = result .. "Not Connected"
+             result = result .. " Power Not Connected, "
+			 --Notify if no connections and state nearest electric pole
+			 local nearest_pole, min_dist = find_nearest_electric_pole(nil,false,50,surf,pos)
+			 if min_dist == nil or min_dist >= 1000 then
+				result = result .. " no electric poles within 1000 tiles, "
+			 else
+				local dir = get_direction_of_that_from_this(nearest_pole.position,pos)
+				result = result .. math.ceil(min_dist) .. " tiles " .. direction_lookup(dir) .. " to nearest electric pole, "
+			 end
          end
-      end
    end
-   printout(result, pindex)
+   
+   return result
 end
+
+
+--Turns off the cut paste tool if already held
+script.on_event("control-x", function(event)
+   local pindex = event.player_index
+   local stack = game.get_player(pindex).cursor_stack
+   if stack.valid_for_read and stack.name == "cut-paste-tool" then
+      --game.get_player(pindex).clear_cursor()--does not work
+	  --game.get_player(pindex).cursor_stack.clear()
+	  printout("To disable this tool empty the hand, by pressing SHIFT + Q",pindex)
+   end
+end)
+
 
 --Read the current co-ordinates of the cursor on the map or in a menu. Provides extra information in some menus.
 function read_coords(pindex, start_phrase)
@@ -2812,7 +3359,26 @@ function read_coords(pindex, start_phrase)
       offset = 1
    end
    if not(players[pindex].in_menu) then
-      printout(result .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
+      if game.get_player(pindex).driving then
+         local vehicle = game.get_player(pindex).vehicle
+         result = result .. " in " .. vehicle.name .. " "
+         if vehicle.speed > 0 then
+            result = result .. " heading " .. get_heading(vehicle) .. " at " .. math.floor(vehicle.speed) .. " kilometers per hour, past the location " 
+         elseif vehicle.speed < 0 then
+            result = result .. " reversing while facing" .. get_heading(vehicle) .. " at "  .. math.floor(-vehicle.speed) .. " kilometers per hour, past the location " 
+         else
+            result = result .. " parked facing " .. get_heading(vehicle) .. " at location "
+         end
+         printout(result .. math.floor(vehicle.position.x) .. ", " .. math.floor(vehicle.position.y), pindex)
+      else
+         local location = get_entity_part_at_cursor(pindex)
+		 if location == nil then
+		    location = "point"
+		 end
+		 --Simply give coords
+		 printout(result .. " " .. location .. ", at " .. math.floor(players[pindex].cursor_pos.x) .. ", " .. math.floor(players[pindex].cursor_pos.y), pindex)
+		 --p.print(result .. " " .. location .. ", at " .. (players[pindex].cursor_pos.x) .. ", " .. (players[pindex].cursor_pos.y))
+      end
    elseif players[pindex].menu == "inventory" or (players[pindex].menu == "building" and players[pindex].building.sector > offset + #players[pindex].building.sectors) then
       local x = players[pindex].inventory.index %10
       local y = math.floor(players[pindex].inventory.index/10) + 1
@@ -2847,12 +3413,12 @@ function read_coords(pindex, start_phrase)
       for i, v in pairs(recipe.ingredients) do
          result = result .. ", " .. v.name .. " x" .. v.amount
       end
-      result = result .. "Products: "
+      result = result .. ", Products: "
       for i, v in pairs(recipe.products) do
          result = result .. ", " .. v.name .. " x" .. v.amount
       end
 
-      printout(result .. string.sub(result, 3), pindex)
+      printout(result, pindex)
    elseif players[pindex].menu == "technology" then
       local techs = {}
       if players[pindex].technology.category == 1 then
@@ -2865,7 +3431,12 @@ function read_coords(pindex, start_phrase)
    
       if next(techs) ~= nil and players[pindex].technology.index > 0 and players[pindex].technology.index <= #techs then
          result = result .. "Requires "
-         if #techs[players[pindex].technology.index].prerequisites < 1 then
+         local dict = techs[players[pindex].technology.index].prerequisites 
+         local pre_count = 0
+         for a, b in pairs(dict) do
+            pre_count = pre_count + 1
+         end
+         if pre_count == 0 then
             result = result .. " No prior research "
          end
          for i, preq in pairs(techs[players[pindex].technology.index].prerequisites) do 
@@ -2876,7 +3447,7 @@ function read_coords(pindex, start_phrase)
             result = result .. ingredient.name .. " " .. " , "
          end
          
-         printout(result .. string.sub(result, 1, -3), pindex)
+         printout(result, pindex)
       end
    elseif players[pindex].menu == "building" then
       if players[pindex].building.recipe_selection then
@@ -2885,12 +3456,12 @@ function read_coords(pindex, start_phrase)
          for i, v in pairs(recipe.ingredients) do
             result = result .. ", " .. v.name .. " x" .. v.amount
          end
-         result = result .. "products: "
+         result = result .. ", products: "
          for i, v in pairs(recipe.products) do
             result = result .. ", " .. v.name .. " x" .. v.amount
          end
 
-         printout(result .. string.sub(result, 3), pindex)
+         printout(result, pindex)
       end
    end
 end
@@ -3023,10 +3594,32 @@ function initialize(player)
       index = 0,
       direction = "none"
    }
+   
+   faplayer.rail_builder = faplayer.rail_builder or {
+      index = 0,
+      index_max = 1,
+      rail = nil,
+      rail_type = 0
+   }
+   
+   faplayer.train_menu = faplayer.train_menu or {
+      index = 0,
+      renaming = false,
+      locomotive = nil
+   }
+   
+   faplayer.train_stop_menu = faplayer.train_stop_menu or {
+      index = 0,
+      renaming = false,
+      stop = nil
+   }
+
    if table_size(faplayer.mapped) == 0 then
       player.force.rechart()
    end
+
 end
+
 
 script.on_event(defines.events.on_player_changed_position,function(event)
       local pindex = event.player_index
@@ -3058,7 +3651,7 @@ end)
 
 
 function menu_cursor_move(direction,pindex)
-   players[pindex].setting_inventory_wraps_around = true--**temporary line because I could not find where to initialize this properly
+   players[pindex].setting_inventory_wraps_around = true--laterdo make this a setting to toggle
    if     direction == defines.direction.north then
       menu_cursor_up(pindex)
    elseif direction == defines.direction.south then
@@ -3099,7 +3692,7 @@ function menu_cursor_up(pindex)
             read_inventory_slot(pindex)
          else --Border setting: Undo change and play error sound
             players[pindex].inventory.index = players[pindex].inventory.index +10
-            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
          end
       else
@@ -3253,6 +3846,10 @@ function menu_cursor_up(pindex)
       read_travel_slot(pindex)
    elseif players[pindex].menu == "structure-travel" then
       move_cursor_structure(pindex, 0)
+   elseif players[pindex].menu == "rail_builder" then
+      rail_builder_up(pindex)
+   elseif players[pindex].menu == "train_stop_menu" then
+      train_stop_menu_up(pindex)
    end
 end
 
@@ -3284,7 +3881,7 @@ function menu_cursor_down(pindex)
             read_inventory_slot(pindex)
          else --Border setting: Undo change and play error sound
             players[pindex].inventory.index = players[pindex].inventory.index -10
-            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
          end
       else
@@ -3455,6 +4052,10 @@ function menu_cursor_down(pindex)
       read_travel_slot(pindex)
    elseif players[pindex].menu == "structure-travel" then
       move_cursor_structure(pindex, 4)
+   elseif players[pindex].menu == "rail_builder" then
+      rail_builder_down(pindex)
+   elseif players[pindex].menu == "train_stop_menu" then
+      train_stop_menu_down(pindex)
    end
 end
 
@@ -3472,7 +4073,7 @@ function menu_cursor_left(pindex)
             read_inventory_slot(pindex)
          else --Border setting: Undo change and play error sound
             players[pindex].inventory.index = players[pindex].inventory.index +1
-            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
          end
       else
@@ -3599,7 +4200,7 @@ function menu_cursor_right(pindex)
             read_inventory_slot(pindex)
          else --Border setting: Undo change and play error sound
             players[pindex].inventory.index = players[pindex].inventory.index -1
-            game.get_player(pindex).play_sound{path = "Mine-Building"}--todo set error sound
+            game.get_player(pindex).play_sound{path = "Mine-Building"}
             printout("Border.", pindex)
          end
       else
@@ -3821,6 +4422,17 @@ function on_tick(event)
       global.scheduled_events[event.tick] = nil
    end
    move_characters(event)
+   
+   --Play train track warning sounds at appropriate frequencies
+   if event.tick % 15 == 0 then
+      play_train_track_alert_sounds(3)
+      if event.tick % 30 == 0 then
+         play_train_track_alert_sounds(2)
+         if event.tick % 60 == 0 then
+            play_train_track_alert_sounds(1)
+		 end
+	  end
+   end
 end
 script.on_event(defines.events.on_tick,on_initial_joining_tick)
 
@@ -3892,6 +4504,8 @@ end
 function move(direction,pindex)
    if players[pindex].walk == 2 then
       return
+   elseif game.get_player(pindex).driving then
+      return
    end
    local first_player = game.get_player(pindex)
    local pos = players[pindex].position
@@ -3962,17 +4576,43 @@ function move_key(direction,event)
             build_item_in_hand(pindex, -1)            
          end
       else
+         local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
+         local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
          players[pindex].nearby.index = 1
          players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size, math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size, players[pindex].cursor_size * 2 + 1, players[pindex].cursor_size * 2 + 1, pindex)
          populate_categories(pindex)
-         read_scan_summary(pindex)
+         read_scan_summary(scan_left_top, scan_right_bottom, pindex)
       end
    else
       move(direction,pindex)
    end
 end
 
-
+--Called when a player enters or exits a vehicle
+script.on_event(defines.events.on_player_driving_changed_state, function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if game.get_player(pindex).driving then
+      players[pindex].last_vehicle = game.get_player(pindex).vehicle
+      printout("Entered " .. game.get_player(pindex).vehicle.name ,pindex)
+	  if players[pindex].last_vehicle.train ~= nil and players[pindex].last_vehicle.train.schedule == nil then
+	     players[pindex].last_vehicle.train.manual_mode = true
+	  end
+   elseif players[pindex].last_vehicle ~= nil then
+      printout("Exited " .. players[pindex].last_vehicle.name ,pindex)
+	  if players[pindex].last_vehicle.train ~= nil and players[pindex].last_vehicle.train.schedule == nil then
+	     players[pindex].last_vehicle.train.manual_mode = true
+	  end
+      teleport_to_closest(pindex, players[pindex].last_vehicle.position, true)
+      if players[pindex].menu == "train_menu" then
+         train_menu_close(pindex, false)
+      end
+   else
+      printout("Driving state changed." ,pindex)
+   end
+end)
 
 script.on_event("cursor-up", function(event)
    move_key(defines.direction.north,event)
@@ -3999,24 +4639,57 @@ script.on_event("read-coords", function(event)
    read_coords(pindex)
 end
 )
+
+--J Key
 script.on_event("jump-to-player", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
-   if not (players[pindex].in_menu) then
+   local ent = players[pindex].tile.ents[1] 
+   if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
+      train_read_next_rail_entity_ahead(pindex,false)
+   elseif ent ~= nil and ent.valid and (ent.name == "straight-rail" or ent.name == "curved-rail") then
+      --Report what is along the rail
+      rail_read_next_rail_entity_ahead(pindex, ent, true)
+   elseif not (players[pindex].in_menu) then
       if players[pindex].cursor then jump_to_player(pindex)
       end
    end
 end
 )
+
+
+--SHIFT + J Key
+script.on_event("shift-j", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = players[pindex].tile.ents[1] 
+   if game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
+      train_read_next_rail_entity_ahead(pindex,true)
+   elseif ent ~= nil and ent.valid and (ent.name == "straight-rail" or ent.name == "curved-rail") then
+      --Report what is along the rail
+      rail_read_next_rail_entity_ahead(pindex, ent, false)
+   end
+end
+)
+
+
 script.on_event("teleport-to-cursor", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
+   if game.get_player(pindex).driving then
+      printout("Cannot teleport while in a vehicle.", pindex)
+      return
+   end
    if not (players[pindex].in_menu) then
-   teleport_to_cursor(pindex)
+      teleport_to_cursor(pindex)
+   else
+      printout("Cannot teleport while in a menu.", pindex)
    end
 end
 )
@@ -4124,7 +4797,7 @@ end
 
 script.on_event("jump-to-scan", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
    if not (players[pindex].in_menu) then
@@ -4144,54 +4817,62 @@ script.on_event("jump-to-scan", function(event)
             ents = players[pindex].nearby.other
          end
          local ent = nil
-      if ents.aggregate == false then
-         local i = 1
-         while i <= #ents[players[pindex].nearby.index].ents do
-            if ents[players[pindex].nearby.index].ents[i].valid then
-               i = i + 1
-            else
-               table.remove(ents[players[pindex].nearby.index].ents, i)
-               if players[pindex].nearby.selection > i then
-                  players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+         if ents.aggregate == false then
+            local i = 1
+            while i <= #ents[players[pindex].nearby.index].ents do
+               if ents[players[pindex].nearby.index].ents[i].valid then
+                  i = i + 1
+               else
+                  table.remove(ents[players[pindex].nearby.index].ents, i)
+                  if players[pindex].nearby.selection > i then
+                     players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+                  end
                end
             end
-         end
-         if #ents[players[pindex].nearby.index].ents == 0 then
-            table.remove(ents,players[pindex].nearby.index)
-            players[pindex].nearby.index = math.min(players[pindex].nearby.index, #ents)
-            scan_index(pindex)
-            return
-         end
+            if #ents[players[pindex].nearby.index].ents == 0 then
+               table.remove(ents,players[pindex].nearby.index)
+               players[pindex].nearby.index = math.min(players[pindex].nearby.index, #ents)
+               scan_index(pindex)
+               return
+            end
 
-         table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
-            local pos = players[pindex].cursor_pos
-            return distance(pos, k1.position) < distance(pos, k2.position)
-         end)
-      if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
-         players[pindex].selection = 1
-      end
+            table.sort(ents[players[pindex].nearby.index].ents, function(k1, k2) 
+               local pos = players[pindex].cursor_pos
+               return distance(pos, k1.position) < distance(pos, k2.position)
+            end)
+            if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
+               players[pindex].selection = 1
+            end
 
-         ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
-      else
-      if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
-         players[pindex].selection = 1
-      end
-         local name = ents[players[pindex].nearby.index].name
-         local entry = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
-         if table_size(entry) == 0 then
-            table.remove(ents[players[pindex].nearby.index].ents, players[pindex].nearby.selection)
-            players[pindex].nearby.selection = players[pindex].nearby.selection - 1
-            scan_index(pindex)
-            return
+            ent = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
+         else
+            if players[pindex].nearby.selection > #ents[players[pindex].nearby.index].ents then
+               players[pindex].selection = 1
+            end
+            local name = ents[players[pindex].nearby.index].name
+            local entry = ents[players[pindex].nearby.index].ents[players[pindex].nearby.selection]
+            if table_size(entry) == 0 then
+               table.remove(ents[players[pindex].nearby.index].ents, players[pindex].nearby.selection)
+               players[pindex].nearby.selection = players[pindex].nearby.selection - 1
+               scan_index(pindex)
+               return
+            end
+            if entry == nil then
+               printout("Error: This object no longer exists. Try rescanning.", pindex)
+               return
+            end
+            if not entry.valid then
+               printout("Error: This object is no longer valid. Try rescanning.", pindex)
+               return
+            end
+            ent = {name = name, position = table.deepcopy(entry.position)}--**beta** (fixed)
          end
-         ent = {name = name, position = table.deepcopy(entry.position), group = entry.group}
-         end
-      if players[pindex].cursor then
-         players[pindex].cursor_pos = center_of_tile(ent.position)
-         printout("Cursor has jumped to " .. ent.name .. " at " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
-      else
-         teleport_to_closest(pindex, ent.position)
-         players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
+         if players[pindex].cursor then
+            players[pindex].cursor_pos = center_of_tile(ent.position)
+            printout("Cursor has jumped to " .. ent.name .. " at " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
+         else
+            teleport_to_closest(pindex, ent.position)
+            players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
 
          end
       end
@@ -4376,7 +5057,14 @@ script.on_event("open-inventory", function(event)
       if players[pindex].menu == "structure-travel" then
          game.get_player(pindex).gui.screen["structure-travel"].destroy()
       end
-
+      if players[pindex].menu == "rail_builer" then
+         rail_builder_close(pindex, false)
+      elseif players[pindex].menu == "train_menu" then
+         train_menu_close(pindex, false)
+      elseif players[pindex].menu == "train_stop_menu" then
+         train_stop_menu_close(pindex, false)
+      end
+      
       players[pindex].menu = "none"
       players[pindex].item_selection = false
       players[pindex].item_cache = {}
@@ -4626,6 +5314,76 @@ script.on_event("switch-menu", function(event)
 
       end
    end
+   
+   --Gun related changes
+   local p = game.get_player(pindex)
+   local gun_index = p.character.selected_gun_index
+   local guns_inv = p.get_inventory(defines.inventory.character_guns)
+   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+   local stack = guns_inv[gun_index]
+   local guns_count  = #guns_inv - guns_inv.count_empty_stacks()
+   local ammos_count = #ammo_inv - ammo_inv.count_empty_stacks()
+   local result = ""
+   
+   if not players[pindex].in_menu then
+      --Increment the selected weapon
+	  if gun_index >= guns_count then
+	     gun_index = 1
+	  else
+	     gun_index = gun_index + 1
+	  end
+	  stack = guns_inv[gun_index]
+	  
+	  --Select weapon
+	  if stack ~= nil and stack.valid_for_read and stack.valid then
+	     result = stack.name
+	  else
+	     result = " weapon name error 1"
+	  end
+	  
+	  --Check if need to skip due to no ammo
+	  if guns_count ~= ammos_count then
+	     --Cycle forward until the first filled ammo slot (as the game does)
+		 result = " weapon name error 2 "
+		 local ammo_stack = ammo_inv[gun_index]
+		 local tries = 0
+		 while tries < 4 and not (ammo_stack ~= nil and ammo_stack.valid_for_read and ammo_stack.valid) do
+		    if gun_index >= guns_count then
+	           gun_index = 1
+	        else
+	           gun_index = gun_index + 1
+	        end
+			tries = tries + 1
+			stack = guns_inv[gun_index]
+			ammo_stack = ammo_inv[gun_index]
+		 end
+		 --Now try the name
+		 if stack ~= nil and stack.valid_for_read and stack.valid then
+	        result = stack.name
+		 else
+		    result = " weapon name error 3"
+		 end
+	  end
+	  --Declare the selected weapon
+	  stack = guns_inv[gun_index]
+	  if stack ~= nil and stack.valid_for_read and stack.valid then
+	     result = stack.name
+		 if ammo_inv[gun_index] ~= nil and ammo_inv[gun_index].valid and ammo_inv[gun_index].valid_for_read then
+	        result = result .. " with " .. ammo_inv[gun_index].count .. " " .. ammo_inv[gun_index].name .. "s "
+	     end
+	  else
+	     result = " missing or unknown weapon "
+	  end
+	  --p.print(result)
+	  printout(result,pindex)
+   else
+      --Re-apply the previous gun index so that weapons do not switch when in a menu
+	  if p.character.selected_gun_index == 1 then
+	     p.character.selected_gun_index = guns_count
+	  else
+	     p.character.selected_gun_index = p.character.selected_gun_index - 1
+	  end
+   end
 end)
 
 script.on_event("reverse-switch-menu", function(event)
@@ -4754,9 +5512,44 @@ script.on_event("mine-access", function(event)
 end
 )
 
+--Mines groups of entities depending on the name or type. Includes trees and rocks, rails.
+script.on_event("mine-group", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if not (players[pindex].in_menu) and #players[pindex].tile.ents > 0 then 
+      local ent = players[pindex].tile.ents[1]
+	  if ent == nil or not ent.valid then
+	     return
+	  end
+	  local surf = ent.surface
+	  local pos = ent.position
+	  if ent ~= nil and ent.valid and ent.type == "tree" or ent.name == "rock-big" or ent.name == "rock-huge" or ent.name == "sand-rock-big" then
+	     --Trees and rocks within 5 tiles
+		 game.get_player(pindex).play_sound{path = "Mine-Building"}
+		 game.get_player(pindex).play_sound{path = "Mine-Building"}
+	     mine_trees_and_rocks_in_circle(pos, 5, pindex)
+	  elseif ent ~= nil and ent.valid and ent.name == "straight-rail" then
+	     --Rails within 3 tiles (and their signals)
+		local rails = surf.find_entities_filtered{position = pos, radius = 3, name = "straight-rail"}
+		for i,rail in ipairs(rails) do
+		   mine_signals(rail,pindex)
+		   game.get_player(pindex).play_sound{path = "entity-mined/straight-rail"}
+		   game.get_player(pindex).mine_entity(rail,true)
+		end
+	  elseif ent ~= nil and ent.valid and ent.prototype.is_building and (ent.prototype.mineable_properties.products == nil or ent.prototype.mineable_properties.products[1].name == ent.name) then
+         --All others are treated as single objects
+		 game.get_player(pindex).play_sound{path = "Mine-Building"}
+         schedule(25, "play_mining_sound", pindex)
+      end
+   end
+end
+)
+
 script.on_event("left-click", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
    if players[pindex].in_menu then
@@ -4779,8 +5572,6 @@ script.on_event("left-click", function(event)
             printout("Not enough materials", pindex)
          end
 
-
-
       elseif players[pindex].menu == "crafting_queue" then
          load_crafting_queue(pindex)
          if players[pindex].crafting_queue.max >= 1 then
@@ -4791,8 +5582,8 @@ script.on_event("left-click", function(event)
             game.get_player(pindex).cancel_crafting(T)
             load_crafting_queue(pindex)
             read_crafting_queue(pindex)
-
          end
+         
       elseif players[pindex].menu == "building" then
          if players[pindex].building.sector <= #players[pindex].building.sectors and #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0  then
             if players[pindex].building.sectors[players[pindex].building.sector].name == "Fluid" then
@@ -4834,8 +5625,6 @@ script.on_event("left-click", function(event)
                      printout("Filter set.", pindex)
                      players[pindex].building.item_selection = false
                      players[pindex].item_selection = false
-
-
                   end
                else
                   players[pindex].item_selector.group = 0
@@ -4846,7 +5635,6 @@ script.on_event("left-click", function(event)
                   players[pindex].item_cache = get_iterable_array(game.item_group_prototypes)
                      prune_item_groups(players[pindex].item_cache)                  
                   read_item_selector_slot(pindex)
-
                end
                return
             end
@@ -4902,6 +5690,7 @@ script.on_event("left-click", function(event)
             end
 
          end
+         
       elseif players[pindex].menu == "technology" then
          local techs = {}
          if players[pindex].technology.category == 1 then
@@ -4919,6 +5708,7 @@ script.on_event("left-click", function(event)
                printout("Research locked, first complete the prerequisites.", pindex)
             end
          end
+         
       elseif players[pindex].menu == "pump" then
          if players[pindex].pump.index == 0 then
             printout("Move up and down to select a location.", pindex)
@@ -4929,6 +5719,7 @@ script.on_event("left-click", function(event)
          players[pindex].in_menu = false
          players[pindex].menu = "none"
          printout("Pump placed.", pindex)
+         
       elseif players[pindex].menu == "warnings" then
          local warnings = {}
          if players[pindex].warnings.sector == 1 then
@@ -4996,6 +5787,7 @@ input.select(1, 0)
             input.focus()
 input.select(1, 0)
          end
+         
       elseif players[pindex].menu == "structure-travel" then
          local tar = nil
          local network = players[pindex].structure_travel.network
@@ -5028,11 +5820,21 @@ input.select(1, 0)
             return
          end
          target(pindex)
-  
+      
+      elseif players[pindex].menu == "rail_builder" then
+         rail_builder(pindex, true)
+         rail_builder_close(pindex,false)
+      elseif players[pindex].menu == "train_menu" then
+         train_menu(players[pindex].train_menu.index, pindex, true)
+      elseif players[pindex].menu == "train_stop_menu" then
+         train_stop_menu(players[pindex].train_stop_menu.index, pindex, true)
       end
+      
    else
+      --Not in a menu
       local stack = game.get_player(pindex).cursor_stack
-      if stack.valid_for_read and stack.valid and stack.prototype.place_result ~= nil and stack.name ~= "offshore-pump" then
+      local ent = players[pindex].tile.ents[1] 
+      if stack.valid_for_read and stack.valid and (stack.prototype.place_result ~= nil or stack.prototype.place_as_tile_result ~= nil) and stack.name ~= "offshore-pump" then
          local offset = 0
          if not players[pindex].cursor then
             offset = 1
@@ -5040,9 +5842,20 @@ input.select(1, 0)
          build_item_in_hand(pindex, offset)
       elseif stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
          build_offshore_pump_in_hand(pindex)
+      elseif stack.valid and stack.valid_for_read then
+	     local p = game.get_player(pindex)
+	     p.use_from_cursor{p.position.x+1,p.position.y+1}--tolaterdo adjust it to use an item 3 tiles in front of the player instead.
+      --No more stack related checks after this point
+      elseif game.get_player(pindex).driving and game.get_player(pindex).vehicle.train ~= nil then
+         train_menu_open(pindex)
       elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
-         local ent = players[pindex].tile.ents[1]
-         if ent.operable and ent.prototype.is_building then
+         local ent = players[pindex].tile.ents[1] 
+         --Clicking on an entity in the world
+         if ent.name == "train-stop" then
+            train_stop_menu_open(pindex)
+         elseif ent.name == "locomotive" or ent.name == "cargo-wagon" or ent.name == "fluid-wagon" then
+            train_menu_open(pindex)
+         elseif ent.operable and ent.prototype.is_building then
             if ent.prototype.subgroup.name == "belt" then
                players[pindex].in_menu = true
                players[pindex].menu = "belt"
@@ -5161,6 +5974,19 @@ input.select(1, 0)
 end
 )
 
+--Mines an entity with the right sound
+function try_to_mine_with_sound(ent,pindex)
+   if ent ~= nil and ent.valid and ent.destructible and ent.type ~= "resource" then
+	 local ent_name = ent.name
+	 if game.get_player(pindex).mine_entity(ent,false) and game.is_valid_sound_path("entity-mined/" .. ent_name) then 
+	    game.get_player(pindex).play_sound{path = "entity-mined/" .. ent_name} 
+		return true
+	 else
+	    return false
+	 end
+   end
+end
+
 
 --[[Attempts to build the item in hand.
 * Does nothing if the hand is empty or the item is not a place-able entity.
@@ -5171,8 +5997,32 @@ function build_item_in_hand(pindex, offset_val)
    local stack = game.get_player(pindex).cursor_stack
    local offset = offset_val or 0
    
-   if stack.valid and stack.valid_for_read and stack.name == "offshore-pump" then
+   if not (stack.valid and stack.valid_for_read) then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+      local message =  "Invalid item in hand!"
+	  if game.get_player(pindex).is_cursor_empty() then
+	     local auto_cancel_when_empty = true --laterdo this check may become a toggle-able game setting
+	     if players[pindex].build_lock == true and auto_cancel_when_empty then 
+		    players[pindex].build_lock = false
+		    message = "Build lock disabled, empty hand."
+	     end
+	  end
+	  printout(message,pindex)
+      return
+   end
+   
+   if stack.name == "offshore-pump" then
       build_offshore_pump_in_hand(pindex)
+      return
+   elseif stack.name == "rail" then 
+      if offset_val ~= 1.337 then --only when sentinel value, it allows free building rails
+         local pos = players[pindex].cursor_pos
+         append_rail(pos, pindex)
+         return
+      end
+   elseif stack.name == "rail-signal" or stack.name == "rail-chain-signal" then
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
+	  printout("You need to use the building menu of a rail.",pindex)
       return
    end
    
@@ -5184,7 +6034,10 @@ function build_item_in_hand(pindex, offset_val)
       if not(players[pindex].cursor) then
          local old_pos = game.get_player(pindex).position
          local adjusted_offset = offset
-         if players[pindex].player_direction == 0 or players[pindex].player_direction == 4 then
+         if stack.name == "locomotive" or stack.name == "cargo-wagon" or stack.name == "fluid-wagon" or stack.name == "artillery-wagon" then
+            --Allow easy placement onto rails.
+            adjusted_offset = 2.5
+         elseif players[pindex].player_direction == 0 or players[pindex].player_direction == 4 then
             adjusted_offset = adjusted_offset * (dimensions.y + .5)/2
          else
             adjusted_offset = adjusted_offset * (dimensions.x+.5)/2
@@ -5219,7 +6072,25 @@ function build_item_in_hand(pindex, offset_val)
             game.get_player(pindex).play_sound{path = "Inventory-Move"}
             return
          end
-      end
+	  elseif stack.name == "medium-electric-pole" and players[pindex].build_lock == true then
+         --Place a medium electric pole in this position only if it is within 6.5 to 7.5 tiles of another medium electric pole
+         local surf = game.get_player(pindex).surface
+         local med_poles = surf.find_entities_filtered{position = position, radius = 7.5, name = "medium-electric-pole"}
+         local all_beyond_6_5 = true
+         local any_connects = false
+         for i,pole in ipairs(med_poles) do
+            if util.distance(position, pole.position) < 6.5 then
+               all_beyond_6_5 = false
+            elseif util.distance(position, pole.position) >= 6.5 then
+               any_connects = true
+            end
+         end
+         if not (all_beyond_6_5 and any_connects) then
+            game.get_player(pindex).play_sound{path = "Inventory-Move"}
+            return
+         end 
+	  end
+	  --Build it
       local building = {
          position = position,
          direction = players[pindex].building_direction * 2,
@@ -5237,11 +6108,17 @@ function build_item_in_hand(pindex, offset_val)
             printout("Cannot place that there.", pindex)
          end
       end
+   elseif stack.valid_for_read and stack.valid and stack.prototype.place_as_tile_result ~= nil then
+      --Place tiles 
+	  local p = game.get_player(pindex)
+	  local t_size = 3 --laterdo allow adjusting terrain_building_size
+	  if p.can_build_from_cursor{position = p.position, terrain_building_size = t_size} then
+	     p.build_from_cursor{position = p.position, terrain_building_size = t_size}
+	  else
+	     p.play_sound{path = "utility/cannot_build"}
+	  end 
    else
-      if players[pindex].build_lock == true and 1 == 1 then --This check may become a toggle-able game setting
-         players[pindex].build_lock = false
-         printout("Build lock disabled, empty hand.", pindex)
-      end
+      game.get_player(pindex).play_sound{path = "utility/cannot_build"}
    end
 end
 
@@ -5285,7 +6162,7 @@ end
 
 script.on_event("shift-click", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
    if players[pindex].in_menu then
@@ -5317,7 +6194,8 @@ script.on_event("shift-click", function(event)
          end
       elseif players[pindex].menu == "building" then
          if players[pindex].building.sector <= #players[pindex].building.sectors and #players[pindex].building.sectors[players[pindex].building.sector].inventory > 0 and players[pindex].building.sectors[players[pindex].building.sector].name ~= "Fluid" then
-            local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
+            --Transfer stack from building to player inventory
+			local stack = players[pindex].building.sectors[players[pindex].building.sector].inventory[players[pindex].building.index]
             if stack.valid and stack.valid_for_read then
                if game.get_player(pindex).can_insert(stack) then
                   game.get_player(pindex).play_sound{path = "utility/inventory_move"}
@@ -5327,7 +6205,11 @@ script.on_event("shift-click", function(event)
                   result = "Moved " .. inserted .. " " .. result .. " to player's inventory."
                   printout(result, pindex)
                else
-                  printout("Inventory full.", pindex)
+                  local result = "Cannot insert " .. stack.name .. " to player's inventory, "
+				  if game.get_player(pindex).get_main_inventory().count_empty_stacks() == 0 then
+				     result = result .. "because it is full."
+				  end
+				  printout(result,pindex)
                end
             end
          else
@@ -5336,6 +6218,7 @@ script.on_event("shift-click", function(event)
                offset = offset + 1
             end
             if players[pindex].building.sector == #players[pindex].building.sectors + offset then
+		       --Transfer stack from player inventory to buidling
                local stack = players[pindex].inventory.lua_inventory[players[pindex].inventory.index]
                if stack.valid and stack.valid_for_read then
                   if players[pindex].building.ent.can_insert(stack) then
@@ -5346,13 +6229,28 @@ script.on_event("shift-click", function(event)
                      result = "Moved " .. inserted .. " " .. result .. " to " .. players[pindex].building.ent.name
                      printout(result, pindex)
                   else
-                     printout("Inventory full.", pindex)
+					 local result = "Cannot insert " .. stack.name .. " to " .. players[pindex].building.ent.name
+				     printout(result,pindex)
                   end
                end
             end
          end
-
-
+      elseif players[pindex].menu == "inventory" then
+         --Equip item grabbed in hand
+		 local stack = game.get_player(pindex).cursor_stack
+	     local result = equip_it(stack,pindex)
+	     --game.get_player(pindex).print(result)--
+	     printout(result,pindex)
+      end
+   else
+      local ent = players[pindex].tile.ents[1]
+      if ent ~= nil and ent.valid then 
+         if ent.name == "straight-rail" then
+            --Open rail builder
+            rail_builder_open(pindex, ent)
+         elseif ent.name == "curved-rail" then
+            printout("Rail builder menu cannot use curved rails.", pindex)
+         end
       end
    end
 end
@@ -5373,6 +6271,24 @@ script.on_event("control-click", function(event)
       if players[pindex].menu == "building" then
          do_multi_stack_transfer(1,pindex)
       end
+   else
+      local stack = game.get_player(pindex).cursor_stack
+      local ent = players[pindex].tile.ents[1]
+      if stack == nil or not stack.valid_for_read or not stack.valid then
+         if ent ~= nil and ent.valid and ent.name == "splitter" then
+            --Clear the filter
+            local result = set_splitter_priority(ent, nil, nil, nil, true)
+            printout(result,pindex)
+         end
+         return
+      elseif stack.name == "rail" then
+         --Straight rail free placement
+         build_item_in_hand(pindex, 1.337)--Uses sentinel value
+      elseif ent ~= nil and ent.valid and ent.name == "splitter" then
+         --Set the filter
+         local result = set_splitter_priority(ent, nil, nil, stack)
+         printout(result,pindex)
+      end
    end
 end
 )
@@ -5383,6 +6299,7 @@ end
 ]]
 script.on_event("control-right-click", function(event)
    pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
    if not check_for_player(pindex) then
       return
    end
@@ -5444,7 +6361,7 @@ function do_multi_stack_transfer(ratio,pindex)
          local moved, full = transfer_inventory{from=game.players[pindex].get_main_inventory(),to=players[pindex].building.ent,name=item_name,ratio=ratio}
          
          if full then
-            table.insert(result,"Inventory full. ")
+            table.insert(result,"Inventory full or not applicable. ")
          end
          if table_size(moved) == 0 then
             table.insert(result,{"access.placed-nothing"})
@@ -5498,9 +6415,10 @@ end
 
 script.on_event("right-click", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
+   local stack = game.get_player(pindex).cursor_stack
    if players[pindex].in_menu then
       if players[pindex].menu == "crafting" then
          local recipe = players[pindex].crafting.lua_recipes[players[pindex].crafting.category][players[pindex].crafting.index]
@@ -5561,18 +6479,46 @@ script.on_event("right-click", function(event)
          end
 
       end
+   elseif stack.valid and stack.valid_for_read and stack.name == "rail" then
+      --Append rail
+      build_item_in_hand(pindex, 0)
    elseif next(players[pindex].tile.ents) ~= nil and players[pindex].tile.index > 1 and players[pindex].tile.ents[1].valid then
       --Print out the status of a machine, if it exists.
+      local result = ""
       local ent = players[pindex].tile.ents[1]
       local ent_status_id = ent.status
       local ent_status_text = ""
       local status_lookup = into_lookup(defines.entity_status)
-      if ent_status_id ~= nil then
+      if ent.name == "cargo-wagon" then
+         --Instead of status, read contents   
+         result = " " .. cargo_wagon_top_contents_info(ent)
+      elseif ent.name == "fluid-wagon" then
+         --Instead of status, read contents   
+         result =  " " .. fluid_contents_info(ent)
+      elseif ent_status_id ~= nil then
+         --Print status if it exists
          ent_status_text = status_lookup[ent_status_id]
-         printout(" " .. ent_status_text ,pindex)
-      else
-         printout("No status." ,pindex)
+         result =  " " .. ent_status_text
+      else--There is no status
+	      --When there is no status, for entities with fuel inventories, read that out instead. This is typical for vehicles.
+	      if ent.get_fuel_inventory() ~= nil then
+		      printout(" " .. fuel_inventory_info(ent),pindex)
+		   elseif ent.type == "electric-pole" then
+		    --For electric poles with no power flow, report the nearest electric pole with a power flow.
+            if get_electricity_satisfaction(ent) > 0 then
+               result = get_electricity_satisfaction(ent) .. " percent network satisfaction, with " .. get_electricity_flow_info(ent)
+            else
+               result = "No power, " .. report_nearest_supplied_electric_pole(ent)
+            end
+         else
+            result = "No status."
+         end
       end
+      if result == "" then
+         result = "result error"
+      end
+      printout(result ,pindex)
+      --game.get_player(pindex).print(result)--
    end
 end
 )
@@ -5644,25 +6590,35 @@ script.on_event("rotate-building", function(event)
             printout(ent.name .. " cannot be rotated.", pindex)
          end               
       else
-         print("not a valid stack for rotating")
+         print("not a valid stack for rotating", pindex)
       end
+   elseif players[pindex].menu == "inventory" then
+      --Read Weapon data
+	  local result = read_weapons_and_ammo(pindex)
+	  --game.get_player(pindex).print(result)--
+	  printout(result,pindex)
    end
 end
 )
 
---Reads the custom written description for an item
+--Reads the custom written description for an item, called with L Key
 script.on_event("item-info", function(event)
    pindex = event.player_index
-      if not check_for_player(pindex) then
+   if not check_for_player(pindex) then
       return
    end
+   if game.get_player(pindex).driving then
+      printout(vehicle_info(pindex),pindex)
+      return
+   end
+   
    local offset = 0
    if players[pindex].menu == "building" and players[pindex].building.recipe_list ~= nil then
       offset = 1
    end
    if not players[pindex].in_menu then
       local ent = players[pindex].tile.ents[1]
-      if ent ~= nil then
+      if ent ~= nil and ent.valid then
          local str = ent.localised_description
          printout(str, pindex)
       end
@@ -5756,20 +6712,22 @@ script.on_event("item-info", function(event)
 end
 )
 
+--Gives in-game time. The night darkness is from 11 to 13, and peak daylight hours are 18 to 6.
+--For realism, if we adjust by 12 hours, we get 23 to 1 as midnight and 6 to 18 as peak solar.
 script.on_event("time", function(event)
    pindex = event.player_index
    if not check_for_player(pindex) then
       return
    end
    local surf = game.get_player(pindex).surface
-   local hour = math.floor(24*surf.daytime)
-   local minute = math.floor((24* surf.daytime - hour) * 60)
+   local hour = math.floor((24*surf.daytime + 12) % 24)
+   local minute = math.floor((24* surf.daytime - math.floor(24*surf.daytime)) * 60)
    local progress = math.floor(game.get_player(pindex).force.research_progress* 100)
    local tech = game.get_player(pindex).force.current_research
    if tech ~= nil then
-      printout("The time is " .. hour .. ":" .. string.format("%02d", minute) .. " Researching " .. game.get_player(pindex).force.current_research.name .. " " .. progress .. "%", pindex)
+      printout("The local time is " .. hour .. ":" .. string.format("%02d", minute) .. ", Researching " .. game.get_player(pindex).force.current_research.name .. " " .. progress .. "%", pindex)
    else
-      printout("The time is " .. hour .. ":" .. string.format("%02d", minute), pindex)
+      printout("The local time is " .. hour .. ":" .. string.format("%02d", minute), pindex)
    end
 end)
 
@@ -5952,7 +6910,12 @@ script.on_event("toggle-walk",function(event)
    if not check_for_player(pindex) then
       return
    end
-   players[pindex].walk = (players[pindex].walk + 1) % 3
+   if players[pindex].walk == 0 then --Mode 1 (walk-by-step) is temporarily disabled until it comes back as an in game setting.
+      players[pindex].walk = 2
+   else
+      players[pindex].walk = 0
+   end
+   --players[pindex].walk = (players[pindex].walk + 1) % 3
    printout(walk_type_speech[players[pindex].walk +1], pindex)
 end)
 
@@ -6008,7 +6971,7 @@ script.on_event("open-fast-travel", function(event)
    if not check_for_player(pindex) then
       return
    end
-   if players[pindex].in_menu == false then
+   if players[pindex].in_menu == false and game.get_player(pindex).driving == false then
       game.get_player(pindex).game_view_settings.update_entity_selection = false
       game.get_player(pindex).selected = nil
 
@@ -6025,10 +6988,29 @@ script.on_event("open-fast-travel", function(event)
       game.get_player(pindex).opened = frame      
 
    end
+   
+   --Report disconnect error because the V key normally disconnects rolling stock if driving.
+   local vehicle = nil
+   if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
+      vehicle = game.get_player(pindex).vehicle
+      local connected = 0
+      if vehicle.get_connected_rolling_stock(defines.rail_direction.front) ~= nil then
+         connected = connected + 1
+      end
+      if vehicle.get_connected_rolling_stock(defines.rail_direction.back) ~= nil then
+         connected = connected + 1
+      end
+      if connected == 0 then
+         printout("Warning, this vehicle was disconnected. Please review mod settings.", pindex)
+         --Attempt to reconnect (does not work)
+         --vehicle.connect_rolling_stock(defines.rail_direction.front)
+         --vehicle.connect_rolling_stock(defines.rail_direction.back)
+      end
+   end
 
 end)
 
-
+--GUI action confirmed, such as by pressing ENTER
 script.on_event(defines.events.on_gui_confirmed,function(event)
    local pindex = event.player_index
    if players[pindex].menu == "travel" then
@@ -6046,6 +7028,18 @@ script.on_event(defines.events.on_gui_confirmed,function(event)
       end
       players[pindex].travel.index.x = 1
       event.element.destroy()
+   elseif players[pindex].train_menu.renaming == true then
+      players[pindex].train_menu.renaming = false
+      set_train_name(global.players[pindex].train_menu.locomotive.train,event.element.text)
+      printout("Train renamed to " .. event.element.text .. ", menu closed.", pindex)
+      event.element.destroy()
+      train_menu_close(pindex, false)
+   elseif players[pindex].train_stop_menu.renaming == true then
+      players[pindex].train_stop_menu.renaming = false
+      global.players[pindex].train_stop_menu.stop.backer_name = event.element.text
+      printout("Train stop renamed to " .. event.element.text .. ", menu closed.", pindex)
+      event.element.destroy()
+      train_stop_menu_close(pindex, false)
    end
 end)   
 
@@ -6164,6 +7158,288 @@ script.on_event("scan-selection-down", function(event)
 	  local ent = players[pindex].tile.ents[1]
 	  local result = increment_inventory_bar(ent, -5)
 	  printout(result, pindex)
+   end
+end)
+
+--Mines all trees and rocks in a selected rectangular area. Useful when placing structures. Forces mining.
+function mine_trees_and_rocks_in_circle(position, radius, pindex)
+   local surf = game.get_player(pindex).surface
+   local comment = ""
+   local outcome = true
+   local trees_cleared = 0
+   local rocks_cleared = 0
+   
+   --Find and mine trees
+   local trees = surf.find_entities_filtered{position = position, radius = radius, type = "tree"}
+   for i,tree_ent in ipairs(trees) do
+      rendering.draw_circle{color = {1, 0, 0},radius = 1,width = 1,target = tree_ent.position,surface = tree_ent.surface,time_to_live = 60}
+      game.get_player(pindex).mine_entity(tree_ent,true)
+	  trees_cleared = trees_cleared + 1
+   end
+   
+   --Find and mine rocks. Note that they are resource entities with specific names
+   local resources = surf.find_entities_filtered{position = position, radius = radius, name = {"rock-big","rock-huge","sand-rock-big"}}
+   for i,resource_ent in ipairs(resources) do
+      if resource_ent ~= nil and resource_ent.valid then
+         --game.get_player(pindex).mine_entity(resource_ent,true) --tolaterdo bug with rock group mining or all rock mining?
+		 rendering.draw_circle{color = {1, 0, 0},radius = 2,width = 2,target = resource_ent.position,surface = resource_ent.surface,time_to_live = 60}
+		 rocks_cleared = rocks_cleared + 1
+      end
+   end
+   if trees_cleared + rocks_cleared > 0 then
+      comment = "cleared " .. trees_cleared .. " trees and " .. rocks_cleared .. " rocks. "
+   end
+   rendering.draw_circle{color = {0, 1, 0},radius = radius,width = radius,target = position,surface = surf,time_to_live = 60}
+   return outcome, comment
+end
+
+
+script.on_event("up-arrow", function(event)
+   local pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "train_menu" then
+      train_menu_up(pindex)
+   else
+      printout("Up arrow pressed",pindex)
+   end
+end)
+
+
+script.on_event("down-arrow", function(event)
+   local pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].in_menu and players[pindex].menu == "train_menu" then
+      train_menu_down(pindex)
+   else
+      printout("Down arrow pressed",pindex)
+   end
+end)
+
+
+script.on_event("control-left", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = players[pindex].tile.ents[1]
+   if ent == nil or not ent.valid then
+      return
+   end
+   --Build left turns on end rails
+   if ent.name == "straight-rail" then
+      build_rail_turn_left_45_degrees(ent, pindex)
+   elseif ent.name == "splitter" then
+      local result = set_splitter_priority(ent, false, true, nil)
+      printout(result,pindex)
+   end
+end)
+
+
+script.on_event("control-right", function(event)
+   local pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = players[pindex].tile.ents[1]
+   if ent == nil or not ent.valid then
+      return
+   end
+   --Build left turns on end rails
+   if ent.name == "straight-rail" then
+      build_rail_turn_right_45_degrees(ent, pindex)
+   elseif ent.name == "splitter" then
+      local result = set_splitter_priority(ent, false, false, nil)
+      printout(result,pindex)
+   end
+end)
+
+
+-- G is used to connect rolling stock
+script.on_event("g-key", function(event)
+   local pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
+   local vehicle = nil
+   if not check_for_player(pindex) then
+      return
+   end
+   
+   if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
+      vehicle = game.get_player(pindex).vehicle
+   elseif ent ~= nil and ent.valid and ent.train ~= nil then
+      vehicle = ent
+   end
+   
+   if vehicle ~= nil then
+      --Connect rolling stock (or check if the default key bindings make the connection)
+      local connected = 0
+      if vehicle.connect_rolling_stock(defines.rail_direction.front) then
+         connected = connected + 1
+      end
+      if  vehicle.connect_rolling_stock(defines.rail_direction.back) then
+         connected = connected + 1
+      end
+      if connected > 0 then
+         printout("Connected this vehicle.", pindex)
+      else
+         connected = 0
+         if vehicle.get_connected_rolling_stock(defines.rail_direction.front) ~= nil then
+            connected = connected + 1
+         end
+         if vehicle.get_connected_rolling_stock(defines.rail_direction.back) ~= nil then
+            connected = connected + 1
+         end
+         if connected > 0 then
+            printout("Connected this vehicle.", pindex)
+         else
+            printout("Nothing was connected.", pindex)
+         end
+      end
+   end
+
+   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+	  local result = read_armor_stats(pindex)
+	  --game.get_player(pindex).print(result)--
+	  printout(result,pindex)
+   end   
+end)
+
+
+--SHIFT + G is used to disconnect rolling stock
+script.on_event("shift-g-key", function(event)
+   local pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
+   local vehicle = nil
+   if not check_for_player(pindex) then
+      return
+   end
+   
+   if game.get_player(pindex).vehicle ~= nil and game.get_player(pindex).vehicle.train ~= nil then
+      vehicle = game.get_player(pindex).vehicle
+   elseif ent ~= nil and ent.train ~= nil then
+      vehicle = ent
+   end
+   
+   if vehicle ~= nil then
+      --Disconnect rolling stock
+      local disconnected = 0
+      if vehicle.disconnect_rolling_stock(defines.rail_direction.front) then
+         disconnected = disconnected + 1
+      end
+      if vehicle.disconnect_rolling_stock(defines.rail_direction.back) then
+         disconnected = disconnected + 1
+      end
+      if disconnected > 0 then
+         printout("Disconnected this vehicle.", pindex)
+      else
+         local connected = 0
+         if vehicle.get_connected_rolling_stock(defines.rail_direction.front) ~= nil then
+            connected = connected + 1
+         end
+         if vehicle.get_connected_rolling_stock(defines.rail_direction.back) ~= nil then
+            connected = connected + 1
+         end
+         if connected > 0 then
+            printout("Disconnection error.", pindex)
+         else
+            printout("Disconnected this vehicle.", pindex)
+         end
+      end
+   end
+   
+   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+	  local result = read_equipment_list(pindex)
+	  --game.get_player(pindex).print(result)--
+	  printout(result,pindex)
+   end 
+   
+end)
+
+
+--**Use this unassigned key binding to test stuff
+script.on_event("control-g-key", function(event)
+   local pindex = event.player_index
+   local p = game.get_player(pindex)
+   local ent = players[pindex].tile.ents[1]
+   if not check_for_player(pindex) then
+      return
+   end
+   local stack = game.get_player(pindex).cursor_stack
+   if stack.valid_for_read and stack.valid then
+      --
+   end
+   if ent ~= nil and ent.valid and ent.fluidbox ~= nil then
+     -- p.print(#ent.fluidbox .. " fluids ")
+     -- for i = 1, #ent.fluidbox, 1 do
+        -- if ent.fluidbox[i] ~= nil then
+           -- p.print(ent.fluidbox[i].name) 
+           -- p.print(#ent.fluidbox.get_pipe_connections(i))
+        -- else
+           -- p.print("(nil) " .. i)
+           -- p.print(#ent.fluidbox.get_pipe_connections(i))
+        -- end
+     -- end     
+     --set_temporary_train_stop(ent.train,pindex)
+	  --sub_automatic_travel_to_other_stop(ent.train)
+	  --instant_schedule(ent.train)
+   end
+   
+   
+end)
+
+--
+script.on_event("control-shift-g-key", function(event)
+   local pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
+   local vehicle = nil
+   if not check_for_player(pindex) then
+      return
+   end
+   
+   if players[pindex].in_menu and players[pindex].menu == "inventory" then
+	  local result = remove_equipment_and_armor(pindex)
+	  --game.get_player(pindex).print(result)--
+	  printout(result,pindex)
+   end 
+   
+end)
+
+
+--Attempt to launch a rocket
+script.on_event("prompt", function(event)
+   local pindex = event.player_index
+   local ent = players[pindex].tile.ents[1]
+   if not check_for_player(pindex) then
+      return
+   end
+   --For rocket entities, return the silo instead
+   if ent ~= nil and ent.valid and (ent.name == "rocket-silo-rocket-shadow" or ent.name == "rocket-silo-rocket") then
+      local ents = ent.surface.find_entities_filtered{position = ent.position, radius = 20, name = "rocket-silo"}
+	  for i,silo in ipairs(ents) do
+	     ent = silo
+      end
+   end
+   --Try to launch from the silo
+   if ent ~= nil and ent.valid and ent.name == "rocket-silo" then
+      local try_launch = ent.launch_rocket()
+	  if try_launch then
+	     printout("Launch successful!",pindex)
+	  else
+	     printout("Not ready to launch!",pindex)
+	  end
+   end
+end)
+
+--This event handler patches the unwanted opening of the inventory screen when closing a factorio access menu
+script.on_event(defines.events.on_gui_opened, function(event)
+   if event.gui_type == defines.gui_type.controller and players[event.player_index].menu == "none" then
+      game.get_player(event.player_index).opened = nil
+      --printout("Banana",event.player_index)
    end
 end)
 
@@ -6318,10 +7594,10 @@ script.on_event(defines.events.on_chunk_charted,function(event)
                new_group = math.min(new_group, resource_group)
             end
             for resource_group, b in pairs(resource_groups) do
-               if new_group < resource_group and players[pindex].resources[i].patches[resource_group] ~= nil then
+               if new_group < resource_group and players[pindex].resources[i].patches ~= nil and players[pindex].resources[i].patches[resource_group] ~= nil and islands[i] ~= nil and islands[i].resources ~= nil and islands[i].resources[b] ~= nil then--**beta** changed "p" to "b"
                   for i1, pos in pairs(players[pindex].resources[i].patches[resource_group].positions) do
                      players[pindex].resources[i].positions[pos] = new_group
-                     players[pindex].resources[i].count = islands[i].resources[p].count
+                     players[pindex].resources[i].count = islands[i].resources[b].count--**beta** "p" to "b"
                   end
                   table_concat(players[pindex].resources[i].patches[new_group].positions, players[pindex].resources[i].patches[resource_group].positions)
                   for pos, val in pairs(players[pindex].resources[i].patches[resource_group].edges) do
@@ -6415,9 +7691,11 @@ script.on_event(defines.events.on_entity_destroyed,function(event)
    
    local str = pos2str(ent.position)
    if ent.type == "resource" then
-      if ent.name ~= "crude-oil" then
+      if ent.name ~= "crude-oil" and players[pindex].resources[ent.name].positions[str] ~= nil then--**beta** added a check here to not run for nil "group"s...
          local group = players[pindex].resources[ent.name].positions[str]
          players[pindex].resources[ent.name].positions[str] = nil
+         --game.get_player(pindex).print("Pos str: " .. str)
+         --game.get_player(pindex).print("group: " .. group)
          players[pindex].resources[ent.name].patches[group].edges[str] = nil
          for i = 1, #players[pindex].resources[ent.name].patches[group].positions do
             if players[pindex].resources[ent.name].patches[group].positions[i] == str then
@@ -6446,9 +7724,728 @@ script.on_event(defines.events.on_entity_destroyed,function(event)
       adj[pos2str({x = math.floor(ent.area.left_top.x/32),y = math.floor(ent.area.right_bottom.y/32)})] = true
       adj[pos2str({x = math.floor(ent.area.right_bottom.x/32),y = math.floor(ent.area.right_bottom.y/32)})] = true
       for pos, val in pairs(adj) do
-         players[pindex].tree_chunks[pos].count = players[pindex].tree_chunks[pos].count - 1
+         --players[pindex].tree_chunks[pos].count = players[pindex].tree_chunks[pos].count - 1--**beta**
       end
-         players[pindex].tree_positions[str] = nil
+         --players[pindex].tree_positions[str] = nil--**beta**
    end
    players[pindex].destroyed[event.registration_number] = nil
 end)
+
+--Scripts regarding train state changes
+script.on_event(defines.events.on_train_changed_state,function(event)
+   if event.train.state == defines.train_state.no_schedule then
+      --Trains with no schedule are set back to manual mode
+      event.train.manual_mode = true
+   elseif event.train.state == defines.train_state.arrive_station then
+      --Announce station to players on the train
+	  for i,player in ipairs(event.train.passengers) do
+         local stop = event.train.path_end_stop
+		 if stop ~= nil then
+		    str = " Arriving at station " .. stop.backer_name .. " "
+			players[player.index].last = str
+	        localised_print{"","out ",str}
+		 end
+      end
+   elseif event.train.state == defines.train_state.on_the_path then --laterdo make this announce only when near another trainstop.
+      --Announce station to players on the train
+	  for i,player in ipairs(event.train.passengers) do
+         local stop = event.train.path_end_stop
+		 if stop ~= nil then
+		    str = " Heading to station " .. stop.backer_name .. " "
+			players[player.index].last = str
+	        localised_print{"","out ",str}
+		 end
+      end
+   elseif event.train.state == defines.train_state.wait_signal then
+      --Announce the wait to players on the train
+	  for i,player in ipairs(event.train.passengers) do
+         local stop = event.train.path_end_stop
+		 if stop ~= nil then
+		    str = " Waiting at signal. "
+			players[player.index].last = str
+	        localised_print{"","out ",str}
+		 end
+      end
+   end
+end)
+
+--Returns the direction of that entity from this entity based on the ratios of the x and y distances. Returns 1 of 8 main directions, with a bias towards the diagonals to make it easier to align with the cardinal directions.
+function get_direction_of_that_from_this(pos_that,pos_this)
+   local diff_x = pos_that.x - pos_this.x
+   local diff_y = pos_that.y - pos_this.y
+   local dir = -1
+   
+   if math.abs(diff_x) > 4 * math.abs(diff_y) then --along east-west
+      if diff_x > 0 then 
+	     dir = defines.direction.east 
+	  else 
+	     dir = defines.direction.west 
+	  end
+   elseif math.abs(diff_y) > 4 * math.abs(diff_x) then --along north-south
+      if diff_y > 0 then 
+	     dir = defines.direction.south 
+	  else 
+	     dir = defines.direction.north 
+	  end
+   else --along diagonals
+      if diff_x > 0 and diff_y > 0 then
+	     dir = defines.direction.southeast
+      elseif diff_x > 0 and diff_y < 0 then
+	     dir = defines.direction.northeast
+      elseif diff_x < 0 and diff_y > 0 then
+	     dir = defines.direction.southwest
+	  elseif diff_x < 0 and diff_y < 0 then
+	     dir = defines.direction.northwest
+	  elseif diff_x == 0 and diff_y == 0 then
+        dir = 99--case for "it is right here"
+     else
+	     dir = -2
+	  end
+   end
+   return dir
+end
+
+--Spawns a lamp at the electric pole and uses its energy level to approximate the network satisfaction percentage with high accuracy
+function get_electricity_satisfaction(electric_pole)
+   local satisfaction = -1
+   local test_lamp = electric_pole.surface.create_entity{name = "small-lamp", position = electric_pole.position, raise_built = false, force = electric_pole.force}
+   satisfaction = math.ceil(test_lamp.energy * 9/8)--Experimentally found coefficient
+   test_lamp.destroy{}
+   return satisfaction
+end
+
+function get_electricity_flow_info(ent)
+   local result = ""
+   local power = 0
+   local capacity = 0
+   for i, v in pairs(ent.electric_network_statistics.output_counts) do
+      power = power + (ent.electric_network_statistics.get_flow_count{name = i, input = false, precision_index = defines.flow_precision_index.five_seconds})
+      local cap_add = 0
+      for _, power_ent in pairs(ent.surface.find_entities_filtered{name=i,force = ent.force}) do
+         if power_ent.electric_network_id == ent.electric_network_id then
+            cap_add = cap_add + 1
+         end
+      end
+      cap_add = cap_add * game.entity_prototypes[i].max_energy_production
+      if game.entity_prototypes[i].type == "solar-panel" then
+         cap_add = cap_add * ent.surface.solar_power_multiplier * (1-ent.surface.darkness)
+      end
+      capacity = capacity + cap_add   
+   end
+  power = power * 60
+  capacity = capacity * 60
+  result = result .. get_power_string(power) .. " being produced out of " .. get_power_string(capacity) .. " capacity, "
+  return result
+end
+
+--Finds the neearest electric pole. Can be set to determine whether to check only for poles with electricity flow. Can call using only the first two parameters.
+function find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
+   local nearest = nil
+   local retry = retry or 0
+   local min_dist = 99999
+   local poles = nil
+   local require_supplied = require_supplied or false
+   local radius = radius or 10
+   local surface = nil
+   local pos = nil
+   if ent ~= nil and ent.valid then
+      surface = ent.surface
+	   pos = ent.position
+   else
+      surface = alt_surface
+	  pos = alt_pos
+   end
+   
+   --Scan nearby for electric poles, expand radius if not successful
+   local poles = surface.find_entities_filtered{ type = "electric-pole" , position = pos , radius = radius}
+   if poles == nil or #poles == 0 then
+      if radius < 100 then
+         radius = 100
+         return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
+      elseif radius < 1000 then	 
+         radius = 1000
+         return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
+      elseif radius < 10000 then
+         radius = 10000
+         return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
+      else
+         return nil, nil --Nothing within 10000 tiles!
+      end
+   end
+   
+   --Find the nearest among the poles with electric networks
+   for i,pole in ipairs(poles) do
+      --Check if the pole's network has power producers
+	   local has_power = get_electricity_satisfaction(pole) > 0
+      local dict = pole.electric_network_statistics.output_counts
+      local network_producers = {}
+      for name, count in pairs(dict) do
+         table.insert(network_producers, {name = name, count = count})
+      end
+	   local network_producer_count = #network_producers --laterdo test again if this is working, it should pick up even 0.001% satisfaction...
+      local dist = 0
+	   if has_power or network_producer_count > 0 or (not require_supplied) then
+	      dist = math.ceil(util.distance(pos, pole.position))
+		   --Set as nearest if valid
+		   if dist < min_dist then
+		      min_dist = dist
+			   nearest = pole
+		   end
+	   end
+   end
+   --Return the nearst found, possibly nil
+   if nearest == nil then
+      if radius < 100 then
+	     radius = 100
+		 return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
+	  elseif radius < 1000 then	 
+	     radius = 1000
+		 return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
+	  elseif radius < 10000 then
+	     radius = 10000
+		 return find_nearest_electric_pole(ent, require_supplied, radius, alt_surface, alt_pos)
+	  else
+	     return nil, nil --Nothing within 10000 tiles!
+	  end
+   end
+   rendering.draw_circle{color = {1, 1, 0}, radius = 2, width = 2, target = nearest.position, surface = nearest.surface, time_to_live = 60}
+   return nearest, min_dist
+end
+
+
+--Returns an info string on the nearest supplied electric pole for this entity.
+function report_nearest_supplied_electric_pole(ent)
+   local result = ""
+   local pole, dist = find_nearest_electric_pole(ent, true)
+   local dir = -1
+   if pole ~= nil then
+      dir = get_direction_of_that_from_this(pole.position,ent.position)
+      result = "The nearest powered electric pole is " .. dist .. " tiles to the " .. direction_lookup(dir)
+   else
+      result = "And there are no powered electric poles within ten thousand tiles. Generators may be out of energy."
+   end
+   return result
+end
+
+
+--Reports which part of the selected entity has the cursor. E.g. southwest corner, center...
+function get_entity_part_at_cursor(pindex)
+	 --First check if there is an entity at the cursor
+	 local p = game.get_player(pindex)
+	 local x = players[pindex].cursor_pos.x
+	 local y = players[pindex].cursor_pos.y
+	 local ents = p.surface.find_entities_filtered{position = {x = x,y = y}}
+	 local north_same = false
+	 local south_same = false
+	 local east_same = false
+	 local west_same = false
+	 local location = nil
+	 if #ents > 0 then
+		--Report which part of the entity the cursor covers.
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = x+0 ,y = y-1}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = x+0 ,y = y+1}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = x-1 ,y = y-0}, surface = p.surface, time_to_live = 30}
+      rendering.draw_circle{color = {1, 0.0, 0.5},radius = 0.1,width = 2,target = {x = x+1 ,y = y-0}, surface = p.surface, time_to_live = 30}
+      
+		local ent_north = p.surface.find_entities_filtered{position = {x = x,y = y-1}}
+		if #ent_north > 0 and ent_north[1].unit_number == ents[1].unit_number then north_same = true end
+		local ent_south = p.surface.find_entities_filtered{position = {x = x,y = y+1}}
+		if #ent_south > 0 and ent_south[1].unit_number == ents[1].unit_number then south_same = true end
+		local ent_east = p.surface.find_entities_filtered{position = {x = x+1,y = y}}
+		if #ent_east > 0 and ent_east[1].unit_number == ents[1].unit_number then east_same = true end
+		local ent_west = p.surface.find_entities_filtered{position = {x = x-1,y = y}}
+		if #ent_west > 0 and ent_west[1].unit_number == ents[1].unit_number then west_same = true end
+		
+		if north_same and south_same then
+		   if east_same and west_same then
+			  location = "center"
+		   elseif east_same and not west_same then
+			  location = "west edge"
+		   elseif not east_same and west_same then
+			  location = "east edge"
+		   elseif not east_same and not west_same then
+			  location = "middle"
+		   end
+		elseif north_same and not south_same then
+		   if east_same and west_same then
+			  location = "south edge"
+		   elseif east_same and not west_same then
+			  location = "southwest corner"
+		   elseif not east_same and west_same then
+			  location = "southeast corner"
+		   elseif not east_same and not west_same then
+			  location = "south tip"
+		   end
+		elseif not north_same and south_same then
+		   if east_same and west_same then
+			  location = "north edge"
+		   elseif east_same and not west_same then
+			  location = "northwest corner"
+		   elseif not east_same and west_same then
+			  location = "northeast corner"
+		   elseif not east_same and not west_same then
+			  location = "north tip"
+		   end
+		elseif not north_same and not south_same then
+		   if east_same and west_same then
+			  location = "middle"
+		   elseif east_same and not west_same then
+			  location = "west tip"
+		   elseif not east_same and west_same then
+			  location = "east tip"
+		   elseif not east_same and not west_same then
+			  location = "center"
+		   end
+		end
+	 end
+	 return location
+end
+
+--Tries to equip a stack. For now called only for a stack in hand when the only the inventory is open.
+function equip_it(stack,pindex)
+   local message = "no message"
+   
+   if stack == nil or not stack.valid_for_read or not stack.valid then
+      return "Nothing in hand to equip."
+   end
+   
+   if stack.is_armor then
+      local armor = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
+      if armor.is_empty() then
+         message = " Equipped " .. stack.name
+      else
+         message = " Equipped " .. stack.name .. " and took in hand " .. armor[1].name
+      end
+      stack.swap_stack(armor[1])
+   elseif stack.type == "gun" then
+      --Equip gun ("arms")
+	  local gun_inv = game.get_player(pindex).get_inventory(defines.inventory.character_guns)
+	  if gun_inv.can_insert(stack) then
+	     local inserted = gun_inv.insert(stack)
+		 message = " Equipped " .. stack.name
+		 stack.count = stack.count - inserted
+	  else
+	     if gun_inv.count_empty_stacks() == 0 then 
+		    message = "All gun slots full."
+		 else
+		    message = "Cannot insert " .. stack.name
+		 end
+	  end
+   elseif stack.type == "ammo" then
+      --Equip ammo
+	  local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+	  if ammo_inv.can_insert(stack) then
+	     local inserted = ammo_inv.insert(stack)
+		 message = "Reloaded with " .. stack.name
+		 stack.count = stack.count - inserted
+	  else
+	     if ammo_inv.count_empty_stacks() == 0 then 
+		    message = "All gun slots full."
+		 else
+		    message = "Cannot insert " .. stack.name
+		 end
+	  end
+   elseif stack.prototype.place_as_equipment_result ~= nil then
+      --Equip equipment ("gear")
+      local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
+	  if armor_inv.is_empty() then
+	     return "Equipment requires armor with an equipment grid."
+	  end
+	  if armor_inv[1].grid == nil or not armor_inv[1].grid.valid  then
+	     return "Equipment requires armor with an equipment grid."
+	  end
+	  local grid = armor_inv[1].grid
+	  --Iterate across the whole grid, trying to place the item. 
+	  local placed = nil
+	  for i = 0, grid.width-1, 1 do
+	     for j = 0, grid.height-1, 1 do
+		    placed = grid.put{name = stack.name, position = {i,j}, by_player = pindex}
+			if placed ~= nil then
+			   break
+			end
+		 end
+		 if placed ~= nil then
+		   break
+		 end
+	  end    
+      local slots_left = count_empty_equipment_slots(grid)
+	  if placed ~= nil then
+	     message = "Equipped " .. stack.name .. ", " .. slots_left .. " empty slots remaining."
+		 stack.count = stack.count - 1
+	  else
+	     --Check if the grid is full 
+		 if slots_left == 0 then
+		    message = "All armor equipment slots are full."
+		 else
+		    message = "This equipment does not fit in the remaining ".. slots_left .. " slots."
+		 end
+	  end
+   else
+      message = stack.name .. " cannot be equipped. "
+   end
+   
+   return message
+end
+
+
+function count_empty_equipment_slots(grid)
+    local slots_left = 0
+	for i = 0, grid.width-1, 1 do
+	   for j = 0, grid.height-1, 1 do
+		  local check = grid.get({i,j})
+		  if check == nil then
+			 slots_left = slots_left + 1
+	      end
+	   end
+    end
+    return slots_left
+end
+
+--Returns info on weapons and ammo
+function read_weapons_and_ammo(pindex)
+   local guns_inv = game.get_player(pindex).get_inventory(defines.inventory.character_guns)
+   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+   local guns_count  = #guns_inv - guns_inv.count_empty_stacks()
+   local ammos_count = #ammo_inv - ammo_inv.count_empty_stacks()
+   local result = "Weapons, "
+   
+   for i = 1, guns_count, 1 do
+      if i > 1 then
+	    result = result .. " and "
+	  end
+	  result = result .. guns_inv[i].name
+	  if ammo_inv[i] ~= nil and ammo_inv[i].valid and ammo_inv[i].valid_for_read then
+	     result = result .. " with " .. ammo_inv[i].count .. " " .. ammo_inv[i].name .. "s, "
+	  else
+	     result = result .. " with no ammunition, "
+	  end
+   end
+   if guns_count == 0 then
+      result = " No weapons equipped."
+   end
+   
+   return result
+end
+
+--Reload all ammo possible from the inventory. Existing stacks have priority over fuller stacks.
+function reload_weapons(pindex)
+   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+   local main_inv = game.get_player(pindex).get_inventory(defines.inventory.character_main)
+   --Apply an inventory transfer to the ammo inventory.
+   local res, full = transfer_inventory{from = main_inv, to = ammo_inv}
+   
+   local result = "Reloaded weapons with any available ammunition. "--laterdo fail condition message, and maybe add sound?
+   return result
+end
+
+--Move all weapons and ammo back to inventory
+function remove_weapons_and_ammo(pindex)
+   local guns_inv = game.get_player(pindex).get_inventory(defines.inventory.character_guns)
+   local ammo_inv = game.get_player(pindex).get_inventory(defines.inventory.character_ammo)
+   local main_inv = game.get_player(pindex).get_inventory(defines.inventory.character_main)
+   local guns_count  = #guns_inv - guns_inv.count_empty_stacks()
+   local ammos_count = #ammo_inv - ammo_inv.count_empty_stacks()
+   local expected_remove_count = guns_count + ammos_count
+   local resulted_remove_count = 0
+   local message = ""
+   
+   --Remove all ammo
+   for i = 1, ammos_count, 1 do
+      if main_inv.can_insert(ammo_inv[i]) then
+	     local inserted = main_inv.insert(ammo_inv[i])--laterdo recover the uninserted if cannot insert (which is only when inv full) or maybe fails to remove anyway?
+	     resulted_remove_count = resulted_remove_count + math.ceil(ammo_inv.remove(ammo_inv[i]) / 1000 )--we just want to count stacks
+	  end
+   end
+   
+   --Remove all guns
+   for i = 1, guns_count, 1 do
+      if main_inv.can_insert(guns_inv[i]) then
+	     local inserted = main_inv.insert(guns_inv[i])--laterdo recover the uninserted if cannot insert (which is only when inv full) or maybe fails to remove anyway?
+	     resulted_remove_count = resulted_remove_count + math.ceil(guns_inv.remove(guns_inv[i]) / 1000)--we just want to count stacks
+	  end
+   end
+   
+   message = "Collected " .. resulted_remove_count .. " of " .. expected_remove_count .. " item stacks,"
+   if game.get_player(pindex).get_main_inventory().count_empty_stacks() == 0 then 
+      message = message .. " Inventory full. "
+   end
+   
+   return message
+end
+
+--Read armor stats such as type and bonuses
+function read_armor_stats(pindex)
+   local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
+   local result = ""
+   if armor_inv.is_empty() then
+      return "No armor equipped."
+   end
+   if armor_inv[1].grid == nil or not armor_inv[1].grid.valid  then
+      return armor_inv[1].name .. " equipped, with no equipment grid."
+   end
+   --Armor with Equipment
+   result = armor_inv[1].name .. " equipped, "
+   local grid = armor_inv[1].grid
+   if grid.count() == 0 then
+      return result .. " no armor equipment installed. "
+   end
+   --Read shield level
+   if grid.max_shield > 0 then
+      if grid.shield == grid.max_shield then
+	     result = " shields full, "
+	  else
+	     result = result .. " shields at " .. math.ceil(100 * grid.shield / grid.max_shield) .. " percent, "
+	  end
+   end
+   --Read battery level
+   if grid.battery_capacity > 0 then
+      if grid.available_in_batteries == grid.battery_capacity then
+	     result = result .. " batteries full, "
+	  elseif grid.available_in_batteries == 0 then
+	     result = result .. " batteries empty "
+	  else
+	     result = result .. " batteries at " .. math.ceil(100 * grid.available_in_batteries / grid.battery_capacity) .. " percent, "
+	  end
+   else
+      result = result .. " no batteries, "
+   end   
+   --Energy Producers
+   if grid.generator_energy > 0 or grid.max_solar_energy > 0 then
+      result = result .. " generating "
+	  if grid.generator_energy > 0 then
+	     result = result .. get_power_string(grid.generator_energy*60) .. " nonstop, "
+	  end
+	  if grid.max_solar_energy > 0 then
+	     result = result .. get_power_string(grid.max_solar_energy*60) .. " at daytime, "
+	  end
+   end
+   
+   --Movement bonus
+   if grid.count("exoskeleton-equipment") > 0 then
+      result = result .. " movement bonus " .. grid.count("exoskeleton-equipment") * 30 .. " percent for " .. get_power_string(grid.count("exoskeleton-equipment")*200000)
+   end
+   
+   return result
+end
+
+--List armor equipment
+function read_equipment_list(pindex)
+   local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
+   local result = ""
+   if armor_inv.is_empty() then
+      return "No armor equipped."
+   end
+   if armor_inv[1].grid == nil or not armor_inv[1].grid.valid  then
+      return "No equipment grid."
+   end
+   --Armor with Equipment
+   result = "Equipped, "
+   local grid = armor_inv[1].grid
+   if grid.equipment == nil or grid.equipment == {} then
+      return " No armor equipment installed. "
+   end
+   --Read Equipment List
+   result = "Equipped, "
+   local contents = grid.get_contents() 
+   local itemtable = {}
+   for name, count in pairs(contents) do
+      table.insert(itemtable, {name = name, count = count})
+   end
+   if #itemtable == 0 then
+      result = result .. " nothing, "
+   else
+      for i = 1, #itemtable, 1 do
+         result = result .. itemtable[i].count .. " " .. itemtable[i].name .. ", "
+      end
+   end
+   
+   result = result .. count_empty_equipment_slots(grid) .. " empty slots remaining "
+   
+   return result
+end
+
+--Remove equipment and then armor. laterdo "inv full" checks
+function remove_equipment_and_armor(pindex)
+   local armor_inv = game.get_player(pindex).get_inventory(defines.inventory.character_armor)
+   local result = ""
+   if armor_inv.is_empty() then
+      return "No armor."
+   end
+   
+   local grid = armor_inv[1].grid
+   if grid ~= nil and grid.valid then 
+       local e_count = grid.count()
+	   --Take all items
+	   for i = 0, grid.width-1, 1 do
+	      for j = 0, grid.height-1, 1 do
+		     local check = grid.get({i,j})
+			 local inv = game.get_player(pindex).get_main_inventory()
+		     if check ~= nil and inv.can_insert({name = check.name}) then
+			    inv.insert({name = check.name})
+				grid.take{position = {i,j}}
+	         end
+	      end
+       end
+	   result = "Collected " .. e_count - grid.count() .. " of " .. e_count .. " items, "
+   end
+   
+   --Remove armor
+   if game.get_player(pindex).get_inventory(defines.inventory.character_main).count_empty_stacks() == 0 then
+      return "Inventory full."
+   else
+      result = result .. "removed " .. armor_inv[1].name
+	  game.get_player(pindex).clear_cursor()
+	  local stack2 = game.get_player(pindex).cursor_stack
+	  stack2.swap_stack(armor_inv[1])
+      game.get_player(pindex).clear_cursor()
+      return result
+   end
+   
+   return result
+end
+
+
+
+script.on_event("shift-r", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].menu == "inventory" then
+      --Reload weapons
+	  local result = reload_weapons(pindex)
+	  --game.get_player(pindex).print(result)
+	  printout(result,pindex)
+   end
+end
+)
+
+script.on_event("control-shift-r", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   if players[pindex].menu == "inventory" then
+	  local result = remove_weapons_and_ammo(pindex)
+	  --game.get_player(pindex).print(result)
+	  printout(result,pindex)
+   end
+end
+)
+
+
+--Set the input priority or the output priority or filter for a splitter
+function set_splitter_priority(splitter, is_input, is_left, filter_item_stack, clear)
+   local clear = clear or false
+   local result = "no message"
+   local filter = splitter.splitter_filter
+   
+   if clear then
+      splitter.splitter_filter = nil
+      filter = splitter.splitter_filter
+      result = "Cleared splitter filter"
+      splitter.splitter_output_priority = "none"
+   elseif filter_item_stack ~= nil and filter_item_stack.valid_for_read then
+      splitter.splitter_filter = filter_item_stack.prototype
+      filter = splitter.splitter_filter
+      result = "filter set to " .. filter_item_stack.name
+      if splitter.splitter_output_priority == "none" then
+         splitter.splitter_output_priority = "left"
+         result = result .. ", from the left"
+      end
+   elseif is_input and     is_left then
+      if splitter.splitter_input_priority == "left" then
+         splitter.splitter_input_priority = "none"
+         result = "equal input priority"
+      else
+         splitter.splitter_input_priority = "left"
+         result = "left input priority"
+      end
+   elseif is_input and not is_left then
+      if splitter.splitter_input_priority == "right" then
+         splitter.splitter_input_priority = "none"
+         result = "equal input priority"
+      else
+         splitter.splitter_input_priority = "right"
+         result = "right input priority"
+      end
+   elseif not is_input and is_left then
+      if splitter.splitter_output_priority == "left" then
+         if filter == nil then
+            splitter.splitter_output_priority = "none"
+            result = "equal output priority"
+         else
+            result = "left filter output"
+         end
+      else
+         if filter == nil then
+            splitter.splitter_output_priority = "left"
+            result = "left output priority"
+         else
+            splitter.splitter_output_priority = "left"
+            result = "left filter output"
+         end
+      end
+   elseif not is_input and not is_left then
+      if splitter.splitter_output_priority == "right" then
+         if filter == nil then
+            splitter.splitter_output_priority = "none"
+            result = "equal output priority"
+         else
+            result = "right filter output"
+         end
+      else
+         if filter == nil then
+            splitter.splitter_output_priority = "right"
+            result = "right output priority"
+         else
+            splitter.splitter_output_priority = "right"
+            result = "right filter output"
+         end
+      end
+   else
+      result = "Splitter config error"
+   end
+   
+   return result
+end
+
+
+script.on_event("shift-left", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = players[pindex].tile.ents[1]
+   if ent == nil or not ent.valid then
+      return
+   elseif ent.name == "splitter" then
+      local result = set_splitter_priority(ent, true, true, nil)
+      printout(result,pindex)
+   end
+end
+)
+
+script.on_event("shift-right", function(event)
+   pindex = event.player_index
+   if not check_for_player(pindex) then
+      return
+   end
+   local ent = players[pindex].tile.ents[1]
+   if ent == nil or not ent.valid then
+      return
+   elseif ent.name == "splitter" then
+      local result = set_splitter_priority(ent, true, false, nil)
+      printout(result,pindex)
+   end
+end
+)
+
+function rotate_90(dir)
+   return (dir + dirs.east) % (2 * dirs.south)
+end
+
+function rotate_180(dir)
+   return (dir + dirs.south) % (2 * dirs.south)
+end
+

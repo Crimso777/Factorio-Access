@@ -249,8 +249,7 @@ data:extend({
 {
     type = "custom-input",
     name = "scan-mode-up",
-    key_sequence = "SHIFT + PAGEUP",
-    alternative_key_sequence = "SHIFT + UP",
+    key_sequence = "SHIFT + N",
     consuming = "none"
 },
 
@@ -258,11 +257,25 @@ data:extend({
 {
     type = "custom-input",
     name = "scan-mode-down",
+    key_sequence = "N",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "scan-selection-up",
+    key_sequence = "SHIFT + PAGEUP",
+    alternative_key_sequence = "SHIFT + UP",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "scan-selection-down",
     key_sequence = "SHIFT + PAGEDOWN",
     alternative_key_sequence = "SHIFT + DOWN",
     consuming = "none"
 },
-
 
 {
     type = "custom-input",
@@ -461,6 +474,20 @@ data:extend({
 
 {
     type = "custom-input",
+    name = "control-click",
+    key_sequence = "CONTROL + LEFTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "control-right-click",
+    key_sequence = "CONTROL + RIGHTBRACKET",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
     name = "item-info",
     key_sequence = "L",
     consuming = "none"
@@ -499,6 +526,13 @@ data:extend({
     type = "custom-input",
     name = "save",
     key_sequence = "F1",
+    consuming = "none"
+},
+
+{
+    type = "custom-input",
+    name = "toggle-build-lock",
+    key_sequence = "CONTROL + B",
     consuming = "none"
 },
 

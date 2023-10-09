@@ -1,3 +1,73 @@
+# Version 0.3.1
+
+Updated 10/26/2022
+
+## New Features
+
+-Build lock. When enabled, the game will continuously try to build behind the player as they walk, or under the cursor in cursor mode. Useful for tasks like building long transport belts. Press CONTROL + B to enable or disable. It also automatically gets disabled when you switch into or out of cursor mode or empty your hand and take a step.
+
+-Build lock has a special case for small electric poles where it places an electric pole only if it is within 6.5 to 7.5 tiles of the nearest small electric pole, allowing you to build lines of fully spaced out small electric poles while just walking. Note that not every tile between the fully spaced poles is powered.
+
+## Changes
+
+-Scanner Resource Aggregation: On the scan list, patches of resources will now be read as a group.  This includes all resource types including water, trees, and ores.
+
+-Getting item or entity information with the L key now works for entities on the surface and inside chests and most building menus.
+
+-Getting slot coordinates with the K key now works inside chests and most/all building menus.
+
+-In cursor mode, pressing J will announce that the cursor is returned to the player in addition to doing it.
+
+-Transport belt parts such as corners, junctions, and ends will now be specified when read by the cursor.
+
+## Bug fixes
+
+-Fixed a crash when setting filter inserter filters due to being able to select unsupported fluid recipes.
+
+# Version 0.3.0
+
+Updated 9/30/2022
+
+## New Features
+
+-New scanner categorization format.  Scanned entities will now be categorized by what they produce.  You can now tell the difference between a mining drill producing iron, and one producing copper, all from the scan list.
+
+-New Scanner Controls:  Ppress SHIFT+PAGEUP and SHIFT+PAGEDOWN to select a particular building from the scan list.  For example, if you have 3 mining drills, it is now possible to track the one that is 3rd farthest from your position.
+
+-New info: Fluid input and output tiles of buildings will now identify which fluid they should contain. 
+
+-Building status info. Press RIGHT BRACKET with your hand empty when facing a building to read out its status, such as having its output full or missing ingredients. Great for diagnosing problems.
+
+-Chest inventory limiting (bar). Useful for controlling automatically filled chests. When the chest inventory is open, press PAGE UP or PAGE DOWN to increase or decrease the limit by 1. Hold shift while pressing to increase or decrease by 5. Hold CONTROL while pressing to increase or decrease by the maximum amount.
+
+-New inventory transfer shortcut (same as Vanilla Factorio) between building and player inventories. When you have a building inventory open, pressing CONTROL + LEFT BRACKET for a selected item in an inventory will cause an attempt to transfer the entire supply of this item to the other inventory. Non-transferred items will remain in their original inventory. Similarly, pressing CONTROL + RIGHT BRACKET will try to transfer half of the entire supply of the selected item.
+
+-New inventory smart insert shortcut (same as Vanilla Factorio) between building and player inventories. When you have a building inventory open and select an empty slot, pressing CONTROL + LEFT BRACKET will cause an attempt to transfer the full contents of the selected inventory into the other inventory. This is useful for easily filling up labs and assembling machines with everything applicable from your own inventory instead of searching for items individually. Non-transferred items will remain in their original inventory. Similarly, pressing CONTROL + RIGHT BRACKET on an empty slot will try to transfer half of the entire supply of every item.
+
+-New entity info upon encounter: Chests will announce their main contents. Pipes to ground, pumps, and storage tanks will announce the fluids they contain. Accumulators announce their charge percentage and amount. Solar panels announce their current production level based on the time of day. Electric poles announce the current power usage and then the current power generation capacity.
+
+-New info: Transport belt analyzer now announces the position of each lane on the belt segment in front of you. For example, iron plates could be on the south lane of a belt segment facing west. This info is helpful for building sideloading junctions.
+
+-New info: The reserved empty slots for ingredients and products inside assembling machines and chemical plants now announce what is expected to go in them.
+
+## Changes
+
+-Rocks are now categorized as resources because they can contain stone and coal.
+
+-Entity information will no longer state the type of an entity, which usually was a repeat of the entity’s name.
+
+## Bug fixes
+
+-When you open a menu or an inventory, the item in the first slot was not being read. This should be fixed now for all menus.
+
+-Transport belt analyzer now correctly reads contents of upstream belts
+
+## Other
+
+-Thanks to everyone who filled out the player survey!
+
+
+
 # Version 0.2.0
 
 Updated 07/27/22
@@ -27,6 +97,8 @@ New Features
 -Spaceship containers now include audible feedback when opening and closing.
 
 -Default scan range is now 250 tiles in either direction of the player.
+
+-Added building nudging. Nudge building by one tile by pressing CONTROL + SHIFT + DIRECTION, where the direction is one of W A S D.
 
 And Many Many bug fixes thanks to @MyNameIsTrez
 

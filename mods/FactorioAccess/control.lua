@@ -1918,14 +1918,37 @@ function get_iterable_array(dict)
    return result
 end
 
-function read_scan_summary (pindex)      
+function get_substring_before_comma(str)
+   local first, final = string.find(str,",")
+   if first == nil or first == 1 then
+      return str
+   else
+      return string.sub(str,1,first-1)
+   end
+end
+
+function get_ent_area_from_name(ent_name,pindex)
+   local ents = game.get_player(pindex).surface.find_entities_filtered{name = ent_name, limit = 1}
+   if #ents == 0 then
+      return 0
+   else
+      return ents[1].tile_height * ents[1].tile_width
+   end
+end
+
+function confirm_is_in_area(ent_name, area_left_top, area_right_bottom, pindex)
+   local ents = game.get_player(pindex).surface.find_entities_filtered{name = ent_name, area = {area_left_top,area_right_bottom}, limit = 1}
+   return #ents > 0
+end
+
+function read_scan_summary(scan_left_top, scan_right_bottom, pindex)      
    local result = ""
-   local left_top = {x = math.floor((players[pindex].cursor_pos.x - 1 - players[pindex].cursor_size) / 32), y = math.floor((players[pindex].cursor_pos.y - 1 - players[pindex].cursor_size)/32)}
-   local right_bottom = {x = math.floor((players[pindex].cursor_pos.x + 1 + players[pindex].cursor_size)/32), y = math.floor((players[pindex].cursor_pos.y + 1 + players[pindex].cursor_size)/32)}
+   local explored_left_top = {x = math.floor((players[pindex].cursor_pos.x - 1 - players[pindex].cursor_size) / 32), y = math.floor((players[pindex].cursor_pos.y - 1 - players[pindex].cursor_size)/32)}
+   local explored_right_bottom = {x = math.floor((players[pindex].cursor_pos.x + 1 + players[pindex].cursor_size)/32), y = math.floor((players[pindex].cursor_pos.y + 1 + players[pindex].cursor_size)/32)}
    local count = 0
    local total = 0
-   for i = left_top.x, right_bottom.x do
-      for i1 = left_top.y, right_bottom.y do
+   for i = explored_left_top.x, explored_right_bottom.x do
+      for i1 = explored_left_top.y, explored_right_bottom.y do
          if game.get_player(pindex).surface.is_chunk_generated({i, i1}) then
             count = count + 1
          end
@@ -1938,41 +1961,36 @@ function read_scan_summary (pindex)
    elseif count ~= total then
       result = result .. "Explored " .. math.floor((count/total) * 100) .. "% "
    end
-   if #players[pindex].nearby.ents > 0 then
-         local percentages = {}
-         for i, ent in ipairs(players[pindex].nearby.ents) do--***todo fix cursor nearby population based on size
-            local area = 1
-            -- if ent ~= nil and ent.valid and ent.prototype ~= nil and ent.name ~= "water" then
-               -- local box = ent.prototype.selection_box --*** crashes here for cursor size > 1 and "cursor-left" event, it says "does not have a prototype", might be "i" => ent is no defined correctly!
-               -- local width = math.ceil(box.right_bottom.x * 2)
-               -- local height = math.ceil(2* box.right_bottom.y)
-               -- area = width * height
-            -- end
-            if ent ~= nil and ent.valid and ent.tile_width ~= nil and ent.tile_height ~= nil then 
-               area = ent.tile_width * ent.tile_height
-               game.get_player(pindex).print(ent.name .. " " .. area)--***
-            else
-               area = 1
-            end
-            
-            table.insert(percentages, {name = ent.name, percent = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)})
+   
+   if #players[pindex].nearby.ents > 0 then 
+      local percentages = {}
+      local percent_total = 0
+      for i, ent in ipairs(players[pindex].nearby.ents) do
+         local area = 0
+         if confirm_is_in_area( get_substring_before_comma(ent.name) , scan_left_top , scan_right_bottom, pindex) then --**beta** this check is a temporary solution to the scan_area invert bug
+            area = get_ent_area_from_name(get_substring_before_comma(ent.name),pindex)--this area finding method is necessary because all we have is the ent name
+            --game.get_player(pindex).print(get_substring_before_comma(ent.name) .. " " .. area)--
          end
-         table.sort(percentages, function(k1, k2)
-            return k1.percent > k2.percent
-         end)
-
-         result = result .. "Area contains "
-         local i = 1
-         while i <= # percentages and i <= 5 do
-            result = result .. percentages[i].name .. " " .. percentages[i].percent .. "%, "
-               i = i + 1
-         end
-      
+         local percentage = math.floor((area * players[pindex].nearby.ents[i].count / ((1+players[pindex].cursor_size * 2) ^2) * 100) + .5)
+         table.insert(percentages, {name = ent.name, percent = percentage})
+         percent_total = percent_total + percentage
+      end
+      table.sort(percentages, function(k1, k2)
+         return k1.percent > k2.percent
+      end)
+      result = result .. "Area contains "
+      local i = 1
+      while i <= # percentages and (i <= 5 or percentages[i].percent > 1) do
+         result = result .. percentages[i].name .. " " .. percentages[i].percent .. "%, "
+         i = i + 1
+      end
+      result = result .. ", total space occupied " .. math.floor(percent_total) .. " percent " 
    else
       result = result .. "Empty Area  "
    end
-   printout(string.sub(result, 1, -3), pindex)
-   --game.get_player(pindex).print("r: " .. string.sub(result, 1, -3))--**
+   printout(result, pindex)
+   --game.get_player(pindex).print("r: " .. result)--
+   rendering.draw_rectangle{color = {0, 1, 1},surface = game.get_player(pindex).surface, time_to_live = 90, left_top = scan_left_top, right_bottom = scan_right_bottom }
 end
    
 
@@ -2757,7 +2775,7 @@ end
 function scan_area (x,y,w,h, pindex)
    local first_player = game.get_player(pindex)
    local surf = first_player.surface
-   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}
+   local ents = surf.find_entities_filtered{area = {{x, y},{x+w, y+h}}, type = {"resource", "tree"}, invert = true}--****bug here about invert, because it inverts everything
    local result = {}
          local pos = players[pindex].cursor_pos
    for name, resource in pairs(players[pindex].resources) do
@@ -2772,7 +2790,7 @@ function scan_area (x,y,w,h, pindex)
       local prod_info = ent_production(ents[i])
       local index = index_of_entity(result, ents[i].name .. prod_info)
       if index == nil then
-         table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}, aggregate = false})
+         table.insert(result, {name = ents[i].name .. prod_info, count = 1, ents = {ents[i]}, aggregate = false}) --laterdo save ent type here?
 
       elseif #result[index] >= 100 then
          table.remove(result[index].ents, math.random(100))
@@ -4555,10 +4573,12 @@ function move_key(direction,event)
             build_item_in_hand(pindex, -1)            
          end
       else
+         local scan_left_top = {math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size,math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size}
+         local scan_right_bottom = {math.floor(players[pindex].cursor_pos.x)+players[pindex].cursor_size+1,math.floor(players[pindex].cursor_pos.y)+players[pindex].cursor_size+1}
          players[pindex].nearby.index = 1
          players[pindex].nearby.ents = scan_area(math.floor(players[pindex].cursor_pos.x)-players[pindex].cursor_size, math.floor(players[pindex].cursor_pos.y)-players[pindex].cursor_size, players[pindex].cursor_size * 2 + 1, players[pindex].cursor_size * 2 + 1, pindex)
          populate_categories(pindex)
-         read_scan_summary(pindex)
+         read_scan_summary(scan_left_top, scan_right_bottom, pindex)
       end
    else
       move(direction,pindex)

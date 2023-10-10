@@ -4350,7 +4350,7 @@ function schedule(ticks_in_the_future,func_to_call, data_to_pass)
 end
 
 function on_player_join(pindex)
-   schedule(3, fix_zoom, pindex)
+   schedule(3, "fix_zoom", pindex)
    local playerList={}
    for _ , p in pairs(game.connected_players) do
       playerList["_" .. p.index]=p.name

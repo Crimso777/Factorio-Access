@@ -19,7 +19,7 @@ gui.FAILSAFE = False
 
 
 if len(sys.argv) > 1 and os.path.exists(sys.argv[1]):
-    os.chdir(os.path.dirname(sys.argv[0]))
+    os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
     fa_paths.BIN=sys.argv[1]
 
 
@@ -380,6 +380,17 @@ global_commands = {
     "playerList":set_player_list,
     }
 
+def get_updated_presets():
+    print("Getting Available Settings")
+    #launch_with_params(["--dump-data"])
+    data=json.load(open(os.path.join(fa_paths.WRITE_DIR,'script-output','data-raw-dump.json')))
+    for preset_group in data['map-gen-presets'].values():
+        for preset_name,preset in preset_group.items():
+            if preset_name=='type' or preset_name=='name':
+                continue
+            print(preset_name,len(preset))
+    pass
+
 def process_game_stdout(stdout,player_name,announce_press_e):
     for line in iter(stdout.readline, b''):
         print(line)
@@ -495,7 +506,12 @@ def launch_with_params(params,player_name=False,announce_press_e=False):
 
 
 def newGame():
-    opts = ["Back","Create new map"] + [game[:-4] for game in os.listdir("Maps")]
+
+    opts = ["Back","Create new map"]
+    try:
+        opts+=[game[:-4] for game in os.listdir("Maps")]
+    except:
+        pass
     opt = select_option(opts,"Select a map:",False)
     if opt == 0:
         return
@@ -554,7 +570,8 @@ menu = {
             },
         "Connect to Address": connect_to_address_menu,
         },
-    "Quit": time_to_exit
+    "Quit": time_to_exit,
+    "test": get_updated_presets
     }
 
 do_menu(menu,"Main Menu",False)

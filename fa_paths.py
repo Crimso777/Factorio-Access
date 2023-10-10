@@ -54,7 +54,7 @@ if not BIN:
     exit(1)
 
 factorio_replacements={
-    '__PATH__system-write-data__':os.path.expandvars(WRITE_DATA_MAP[sys.platform]),
+    '__PATH__system-write-data__':os.path.expanduser(os.path.expandvars(WRITE_DATA_MAP[sys.platform])),
     '__PATH__executable__': os.path.dirname(BIN)
     }
 

@@ -8,6 +8,7 @@ import subprocess
 import threading
 import queue
 import json
+import shutil
 
 import fa_paths
 import update_factorio
@@ -139,7 +140,7 @@ def customMapSettings():
     path = "Map Settings/Custom Settings/" + i
     if not os.path.exists(path):
         os.makedirs(path)
-    with open(os.path.join(path, i+"MapGenSettings.json"), 'w') as fp:
+    with open(os.path.join(path, "MapGenSettings.json"), 'w') as fp:
         fp.write(
             """{\n  "_terrain_segmentation_comment": "The inverse of 'water scale' in the map generator GUI.",\n""")
         print("Enter a value for terrain segmentation.  \nIt represents the size of biomes, where 1.0 is default, 2.0 is twice as large .5 is half as large, et cetera.")
@@ -325,18 +326,15 @@ def customMapSettings():
             i = 'null'
         fp.write('  "seed": ' + i + '\n')
         fp.write("}\n")
-#      pass
-    try:
-        proc = subprocess.run([fa_paths.BIN, "--map-gen-settings", os.path.join(path, result+"MapGenSettings.json"), "--map-settings",
-                              "Map Settings/PeacefulSettings.json", "--create", "Maps/"+result], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except:
-        print("Error saving map, make sure the name is a valid filename for windows.")
+
+    shutil.copyfile("Map Settings/PeacefulSettings.json", os.path.join(path, "mapSettings.json"))
     return result
 
 
 def customMapList():
     command = -1
-    while command == -1:
+    name = ""
+    while not name:
         print("Select custom settings:\n")
         print("0 : Create new settings")
         try:
@@ -344,22 +342,21 @@ def customMapList():
         except:
             l = []
         for i in range(len(l)):
-            print(i+1, ": ", l[i][:])
+            print(i+1, ": ", l[i])
         i = input()
-
         try:
             int(i)
         except:
             print("Invalid Command\n")
             continue
         if int(i) == 0:
-            return customMapSettings()
+            name = customMapSettings()
         for k in range(len(l)):
             if int(i) == k+1:
-                print("loading", l[k][:])
-                proc = subprocess.run([fa_paths.BIN, "--map-gen-settings", "Map Settings/Custom Settings/" + l[k] + "/mapGenSettings.json", "--map-settings",
-                                      "Map Settings/Custom Settings/" + l[k] + "/mapSettings.json", "--create", "Maps/"+i1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                command = k+1
+                name = l[k]
+                break
+    path = os.path.join("Map Settings/Custom Settings/", name)
+    create_new_save(os.path.join(path,"mapSettings.json"),os.path.join(path,"mapGenSettings.json"))
 
 def speak_interuptible_text(text):
     ao_output.output(text,True)
@@ -484,6 +481,13 @@ def connect_to_address(address,player_name):
     launch_with_params(["--mp-connect",address],player_name)
     return 5
 
+def create_new_save(map_setting,map_gen_setting):
+    # try:
+        # os.remove('saves/_autosave-manual.zip')
+    # except:
+        # pass
+    launch_with_params(["--map-gen-settings", map_gen_setting, "--map-settings",map_setting,'--create','saves/_autosave-manual.zip'])
+
 def launch(path):
     launch_with_params(["--load-game", path])
     save_game_rename()
@@ -505,23 +509,6 @@ def launch_with_params(params,player_name=False,announce_press_e=False):
     
 
 
-def newGame():
-
-    opts = ["Back","Create new map"]
-    try:
-        opts+=[game[:-4] for game in os.listdir("Maps")]
-    except:
-        pass
-    opt = select_option(opts,"Select a map:",False)
-    if opt == 0:
-        return
-    if opt == 1:
-        return chooseDifficulty()
-    load_map=opts[opt]
-    print("loading", load_map[:-4])
-    return launch("Maps/"+load_map)
-
-
 def chooseDifficulty():
     command = 0
     types={
@@ -538,28 +525,19 @@ def chooseDifficulty():
         return 0
     key = opts[opt]
     if types[key]:
-        while True:
-            name = input("Please enter a name for your new map:\n")
-            try:
-                proc = subprocess.run([fa_paths.BIN, "--map-gen-settings", f"Map Settings/gen/{key.replace(' ','')}Map.json", "--map-settings",
-                              "Map Settings/"+types[key], "--create", "Maps/"+name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            except:
-                print("Error saving map, make sure the name is a valid filename for windows.")
-                continue
-            break
+        create_new_save("Map Settings/"+types[key],f"Map Settings/gen/{key.replace(' ','')}Map.json")
     else:
-        name = customMapList()
-        print("Creating Custom game...")
-    return launch("Maps/"+name+".zip")
+        customMapList()
+    return launch("saves/_autosave-manual.zip")
     
 def time_to_exit():
     ao_output.output("Goodbye Factorio", False)
-    exit(0)
+    sys.exit(0)
     
     
 menu = {
     "Single Player":{
-        "New Game" : newGame,
+        "New Game" : chooseDifficulty,
         "Load Game" : {
             get_menu_saved_games:launch,
             },
@@ -571,7 +549,6 @@ menu = {
         "Connect to Address": connect_to_address_menu,
         },
     "Quit": time_to_exit,
-    "test": get_updated_presets
     }
 
 do_menu(menu,"Main Menu",False)

@@ -7,8 +7,9 @@ import urllib.request
 import os
 import getpass
 import zipfile
-import webbrowser  
+import webbrowser
 import fa_paths
+import time
 
 from shutil import rmtree
 from sys import platform
@@ -55,7 +56,7 @@ class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
 opener = urllib.request.build_opener(
     NoRedirection_for_get_token_e(),
     urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()),
-    urllib.request.HTTPSHandler(debuglevel=1) #change to 1 for testing
+    urllib.request.HTTPSHandler(debuglevel=0) #change to 1 for testing 0 for production
     )
 #cloudfare rejects the default user agent
 opener.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36')]
@@ -175,6 +176,7 @@ def get_latest_stable():
 
 def download(url,filename):
     with open(filename,'wb') as fp, opener.open(url) as dl:
+        print(f"saving {url} to {filename}")
         length = dl.getheader('content-length')
         buffsize = 4096
 
@@ -185,6 +187,7 @@ def download(url,filename):
           
         bytes_done = 0
         last_percent = -1
+        last_reported=time.time()
         while True:
             buffer = dl.read(buffsize)
             if not buffer:
@@ -193,9 +196,10 @@ def download(url,filename):
             bytes_done += len(buffer)
             if length:
                 percent = bytes_done*100//length
-                if percent>last_percent:
+                if percent>last_percent and time.time()>= 5 + last_reported:
                     print(f"{percent}%")
                     last_percent=percent
+                    last_reported= time.time()
         if length and length > 4096*20:
             print("Done")
 
@@ -278,6 +282,8 @@ def get_current_version():
 
 def check_for_updates(credentials,connection,current_version):
     print("cheing for factotio updates...")
+    params=credentials.copy()
+    params["apiVersion"]=2
     connection.request("GET",'/get-available-versions?'+urllib.parse.urlencode(credentials))
     resp = connection.getresponse()
     if resp.status != 200:
@@ -310,20 +316,20 @@ def check_for_updates(credentials,connection,current_version):
     return upgrade_list
 
 def update_filename(current_version,update):
-    return TEMP_PATH+current_version['package']+'-'+update['from']+'-'+update['to']+'-update.zip'
+    return os.path.join(TEMP_PATH,current_version['package']+'-'+update['from']+'-'+update['to']+'-update.zip')
 
-def prep_update(credentials, connection, current_version, update_canidates):
+def prep_update(credentials, current_version, update_canidates):
     os.makedirs(TEMP_PATH, exist_ok=True)
     params=credentials.copy()
     params['package']=current_version['package']
-    for update in update_canidates:
+    params['apiVersion']=2
+    params['isTarget']='false'
+    for i, update in enumerate(update_canidates):
+        if i+1 == len(update_canidates):
+            params['isTarget']='true'
         this_params = params | update
-        connection.request("GET",'/get-download-link?'+urllib.parse.urlencode(this_params))
-        resp = connection.getresponse()
-        resp_str=resp.read()
-        link = json.loads(resp_str)[0]
         print('Downloading '+update['to'])
-        download(link,update_filename(params,update))
+        download(f"https://updater.factorio.com/updater/get-download?"+urllib.parse.urlencode(this_params),update_filename(params,update))
     print('Finished Downloads')
     return
     
@@ -336,6 +342,12 @@ def execute_update(current_version, update_canidates):
         params.append(file)
     print(params)
     print(subprocess.check_output(params).decode('utf-8'))
+    #todo subprocess spawns another process and exits, casueing the cleanup to proceed before the update completes.
+
+def cleanup_update(current_version, update_canidates):
+    for update in update_canidates:
+        file = os.path.abspath(update_filename(current_version,update))
+        os.remove(file)
 
 def do_update(confirm=True):
     credentials = get_credentials()
@@ -345,8 +357,8 @@ def do_update(confirm=True):
     if not current_version:
         return False
     connection = http.client.HTTPSConnection("updater.factorio.com")
-    #todo: check connection success
     update_canidates = check_for_updates(credentials,connection,current_version)
+    connection.close()
     if not update_canidates:
         print('no updates available')
         return False
@@ -354,12 +366,12 @@ def do_update(confirm=True):
         input("update to "+update_canidates[-1]['to']+'? Enter to continue.')
     else:
         print("updating to "+update_canidates[-1]['to'])
-    prep_update(credentials, connection, current_version, update_canidates)
-    connection.close()
+    prep_update(credentials, current_version, update_canidates)
     execute_update(current_version, update_canidates)
+    cleanup_update(current_version, update_canidates)
     print("all-done")
     
     
     
 if "__main__" == __name__:
-    execute_update({'from': '1.1.59', 'package': 'core-win64'},[{'from': '1.1.59', 'to': '1.1.60'}, {'from': '1.1.60', 'to': '1.1.61'}])
+    do_update()

@@ -22,7 +22,7 @@ download_package_map = {
 download_package = download_package_map[platform]
 
 if not download_package:
-    raise Error("Unsupported Platform:"+platform)
+    raise ValueError("Unsupported Platform:"+platform)
     
 package_map = {
     ('win64','full'):"core-win64",

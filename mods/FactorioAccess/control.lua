@@ -351,6 +351,7 @@ function nudge_key(direction, event)
             printout("Moved building 1 " .. adjusted[direction], pindex)
             if players[pindex].cursor then
                players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos,direction,1)
+               sync_build_arrow(pindex)
             end
          else
             printout("Cannot move building, something is in the way.", pindex)
@@ -2848,6 +2849,7 @@ function toggle_cursor(pindex)
       printout("Cursor disabled", pindex)
       players[pindex].cursor = false
       players[pindex].cursor_pos = offset_position(players[pindex].position,players[pindex].player_direction,1)
+      sync_build_arrow(pindex)
       target(pindex)
       players[pindex].player_direction = game.get_player(pindex).character.direction
       players[pindex].build_lock = false
@@ -3483,6 +3485,7 @@ function initialize(player)
    faplayer.walk = faplayer.walk or 0
    faplayer.move_queue = faplayer.move_queue or {}
    faplayer.building_direction = faplayer.building_direction or 0
+   faplayer.building_direction_arrow = faplayer.building_direction_arrow or rendering.draw_text({text="↑",color={r = 0.5, a = 0.5},target={0,0},surface=character.surface,players={pindex}})
    faplayer.direction_lag = faplayer.direction_lag or true
    faplayer.previous_item = faplayer.previous_item or ""
    faplayer.last = faplayer.last or ""
@@ -3633,6 +3636,7 @@ script.on_event(defines.events.on_player_changed_position,function(event)
             local new_pos = offset_position(pos,players[pindex].direction,1)
             players[pindex].cursor_pos = new_pos
             players[pindex].position = pos
+            sync_build_arrow(pindex)
 --            target(pindex)
          else
          
@@ -4523,6 +4527,7 @@ function move(direction,pindex)
          end
          players[pindex].position = new_pos
          players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction,1)
+         sync_build_arrow(pindex)
          if players[pindex].tile.previous ~= nil
             and players[pindex].tile.previous.valid
             and players[pindex].tile.previous.type == "transport-belt"
@@ -4553,6 +4558,7 @@ function move(direction,pindex)
       end
       players[pindex].player_direction = direction
       players[pindex].cursor_pos = new_pos
+      sync_build_arrow(pindex)
       read_tile(pindex)
       target(pindex)
    end
@@ -4568,6 +4574,7 @@ function move_key(direction,event)
       menu_cursor_move(direction,pindex)
    elseif players[pindex].cursor then
       players[pindex].cursor_pos = offset_position(players[pindex].cursor_pos, direction,1 + players[pindex].cursor_size*2)
+      sync_build_arrow(pindex)
       if players[pindex].cursor_size == 0 then
          read_tile(pindex)
          target(pindex)
@@ -4869,11 +4876,12 @@ script.on_event("jump-to-scan", function(event)
          end
          if players[pindex].cursor then
             players[pindex].cursor_pos = center_of_tile(ent.position)
+            sync_build_arrow(pindex)
             printout("Cursor has jumped to " .. ent.name .. " at " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
          else
             teleport_to_closest(pindex, ent.position)
             players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
-
+            sync_build_arrow(pindex)
          end
       end
    end
@@ -5734,6 +5742,7 @@ script.on_event("left-click", function(event)
             if ent ~= nil and ent.valid then
                players[pindex].cursor = true
                players[pindex].cursor_pos = center_of_tile(ent.position)
+               sync_build_arrow(pindex)
                printout("Teleported the cursor to " .. math.floor(players[pindex].cursor_pos.x) .. " " .. math.floor(players[pindex].cursor_pos.y), pindex)
 --               players[pindex].menu = ""
 --               players[pindex].in_menu = false
@@ -5756,6 +5765,7 @@ script.on_event("left-click", function(event)
             else
                players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
             end
+            sync_build_arrow(pindex)
             game.get_player(pindex).opened = nil
             local surf = game.get_player(pindex).surface
             players[pindex].tile.ents = surf.find_entities_filtered{area = {{players[pindex].cursor_pos.x - .5, players[pindex].cursor_pos.y - .5}, {players[pindex].cursor_pos.x+ .29 , players[pindex].cursor_pos.y + .29}}} 
@@ -5810,6 +5820,7 @@ input.select(1, 0)
          else
             players[pindex].cursor_pos = offset_position(players[pindex].position, players[pindex].player_direction, 1)
          end
+         sync_build_arrow(pindex)
          game.get_player(pindex).opened = nil
          local surf = game.get_player(pindex).surface
          players[pindex].tile.ents = surf.find_entities_filtered{area = {{players[pindex].cursor_pos.x - .5, players[pindex].cursor_pos.y - .5}, {players[pindex].cursor_pos.x+ .29 , players[pindex].cursor_pos.y + .29}}} 
@@ -6598,6 +6609,7 @@ script.on_event("rotate-building", function(event)
 	  --game.get_player(pindex).print(result)--
 	  printout(result,pindex)
    end
+   sync_build_arrow(pindex)
 end
 )
 
@@ -8449,3 +8461,19 @@ function rotate_180(dir)
    return (dir + dirs.south) % (2 * dirs.south)
 end
 
+function sync_build_arrow(pindex)
+   local player=players[pindex]
+   local arrow = player.building_direction_arrow
+   print(arroe,serpent.line(player.cursor_pos))
+   rendering.set_target(arrow,player.cursor_pos)
+   local stack = player.player.cursor_stack
+   if stack and stack.valid and stack.valid_for_read and stack.prototype.place_result then
+      local proto_to_place = stack.prototype.place_result
+      local dir = player.building_direction*2
+      --todo modify direction by it's direction placement possiblies
+      rendering.set_orientation(arrow,dir/2/defines.direction.south)
+      rendering.set_visible(arrow,true)
+   else
+      rendering.set_visible(arrow,false)
+   end
+end

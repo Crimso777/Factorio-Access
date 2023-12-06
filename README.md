@@ -1,10 +1,12 @@
-# Welcome to Factorio Access!
+# [Note: This is the page for the old and outdated mod version. Click here to go to the new Beta page](https://github.com/LevFendi/Factorio-Access)
+
+# Old: Welcome to Factorio Access!
 
 This is an accessibility mod for the popular game Factorio.  The goal of this mod is to make the game completely accessible to the blind and visually impaired.
 
 This "read me" file covers the basics of the mod, which include the installation guide, the mod controls, the FAQ and links to other information sources.
 
-# Installing Factorio
+# Old: Installing Factorio
 
 The game can be purchased from Factorio.com or from Steam.
 
@@ -14,7 +16,7 @@ If you have a steam key, you can have it connected with your account, or you can
 
 From Factorio.com, either from the main page or the downloads page, you can download the latest stable release.
 
-# Installing Factorio Access
+# Old: Installing Factorio Access
 
 To install the full version, follow the instructions below for the .zip file install.
 
@@ -44,7 +46,7 @@ Note:  If you have done a full installation using the .zip instructions, there i
    
    
 
-# Mod controls
+# Old: Mod controls
 
 ## Movement
 
@@ -287,7 +289,7 @@ Select category from currently selected tier: A and D
 
 
 
-# FAQ:
+# Old: FAQ:
 
 Q: Does this mod work with the steam version?
 
@@ -330,14 +332,16 @@ If you want to help others or discuss the development of the mod or the wiki, fe
 
 
 
-# Changes
+# Old: Changes
 
 An updated changelog can be found [here](https://github.com/Crimso777/Factorio-Access/blob/main/CHANGES.md).
 
 
 
-# Donations
+# Old: Donations
 
 While this mod is completely free for all, I am a full time student working on this mod in my free time, thus any and all support is greatly appreciated.
 
 If you are so inclined, you can donate at my [Patreon](https://www.patreon.com/Crimso777).
+
+# [Note: This is the page for the old and outdated mod version. Click here to go to the new Beta page](https://github.com/LevFendi/Factorio-Access)
